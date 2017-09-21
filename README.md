@@ -1,5 +1,5 @@
 # webweb
-MATLAB + d3js. Webweb is a tool for creating interactive visualizations of networks on the web. 
+This is basically MATLAB + d3js. Webweb is a tool for creating interactive visualizations of networks on the web. 
 
 Webpage here: [http://danlarremore.com/webweb/](http://danlarremore.com/webweb/)
 
@@ -12,7 +12,8 @@ I got tired of having an adjacency matrix for a network in MATLAB with no way to
 Grab the files above and put them into your current MATLAB directory. Then either check out the MATLAB help for webweb.m, try opening webwebTest.m for some worked examples, or view the [webweb examples page](http://danlarremore.com/webweb/). 
 
 -	[Example 1 - A single network](http://danlarremore.com/webweb/example2/)
-```
+
+```matlab
 % create a 100 node adjacency matrix A
 A = floor(1.01*rand(100,100)); A=A+A'; A(A>0) = 1;
 % call webweb
