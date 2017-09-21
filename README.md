@@ -19,13 +19,13 @@ A = floor(1.01*rand(100,100)); A=A+A'; A(A>0) = 1;
 % call webweb
 webweb(A);
 ```
-	- [Example 2 - Node names](http://danlarremore.com/webweb/example2/)
-	- [Example 3 - Two networks](http://danlarremore.com/webweb/example3/)
-	- [Example 4 - Two networks + Node names](http://danlarremore.com/webweb/example4/)
-	- [Example 5 - Name the networks](http://danlarremore.com/webweb/example5/)
-	- [Example 6 - Multiple networks, with node and network names](http://danlarremore.com/webweb/example6/)
-	- [Advanced Example - Customized](http://danlarremore.com/webweb/advanced/)
-	- [All Examples](http://danlarremore.com/webweb/examples.html)
+- [Example 2 - Node names](http://danlarremore.com/webweb/example2/)
+- [Example 3 - Two networks](http://danlarremore.com/webweb/example3/)
+- [Example 4 - Two networks + Node names](http://danlarremore.com/webweb/example4/)
+- [Example 5 - Name the networks](http://danlarremore.com/webweb/example5/)
+- [Example 6 - Multiple networks, with node and network names](http://danlarremore.com/webweb/example6/)
+- [Advanced Example - Customized](http://danlarremore.com/webweb/advanced/)
+- [All Examples](http://danlarremore.com/webweb/examples.html)
 
 ## Feedback and Bugs
 
