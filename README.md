@@ -33,4 +33,4 @@ The code provided here is provided as-is, with no warranty, with no guarantees o
 
 Fork away!
 
-If you repurpose or hack this code to do something else, I would love to hear about it. If you use webweb to make figures for an academic paper, no citation is needed, but please let me know and I will post a link here to your publication.
+If you repurpose or hack this code to do something else, I would love to hear about it. If you use webweb to make figures for an academic paper, no citation is needed, but please let me know and I will post a link to your publication [here](http://danlarremore.com/webweb/).
