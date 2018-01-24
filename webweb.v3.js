@@ -29,6 +29,7 @@ if (a.display.c !== undefined){c = a.display.c;}
 if (a.display.l !== undefined){l = a.display.l;}
 if (a.display.r !== undefined){r = a.display.r;}
 if (a.display.g !== undefined){g = a.display.g;}
+
 // set up the DOM
 var center = d3.select("body").append("div").attr("id","center");
 var menu = center.append("div").attr("id","menu");
@@ -43,6 +44,7 @@ var netNames = Object.keys(a.network);
 var netLabels = Object.keys(a.display.labels);
 var nodeSizeLabelsBase = ["none","degree"];
 var nodeColorLabelsBase = ["none","degree"];
+
 for (i in netLabels) {
     if (a.display.labels[netLabels[i]].type=="categorical") {
         nodeColorLabelsBase.push(" " + netLabels[i]);
@@ -73,19 +75,21 @@ if (a.display.name !== undefined){
     d3.select("title").text("webweb");
 }
 vis = chart.append("svg")
-.attr("width",w)
-.attr("height",h)
-.attr("id","vis");
+    .attr("width",w)
+    .attr("height",h)
+    .attr("id","vis");
+
 var node = vis.selectAll(".node");
 link = vis.selectAll(".link");
 var force = d3.layout.force()
-.links(links)
-.nodes(nodes)
-.charge(-c)
-.gravity(g)
-.linkDistance(l)
-.size([w,h])
-.on("tick",tick);
+    .links(links)
+    .nodes(nodes)
+    .charge(-c)
+    .gravity(g)
+    .linkDistance(l)
+    .size([w,h])
+    .on("tick",tick);
+
 var scaleSize = d3.scale.linear().range([1,1]);
 var scaleColorScalar = d3.scale.linear().range([1,1]);
 var scaleColorCategory = d3.scale.ordinal().range([1,1]);
@@ -136,7 +140,7 @@ function computeLinks(net) {
     removeLinks();
     nodeSizeLabels = nodeSizeLabelsBase.slice(0);
     nodeColorLabels = nodeColorLabelsBase.slice(0);
-    
+
     adj = d3.values(a["network"][netName]["adjList"]);
     scaleLink.domain(d3.extent(d3.transpose(adj)[2]));
     scaleLinkOpacity.domain(d3.extent(d3.transpose(adj)[2]));
@@ -152,7 +156,7 @@ function computeLinks(net) {
         }
     }
     draw();
-    
+
     writeMenuB();
     if (nodeSizeLabelsBase.indexOf(sizeKey) == -1){
         changeSizes("none");
@@ -160,7 +164,7 @@ function computeLinks(net) {
         changeSizes(sizeKey);
     }
     sizeSelect.selectedIndex = nodeSizeLabels.indexOf(sizeKey);
-    
+
     writeMenuC();
     if (nodeColorLabelsBase.indexOf(colorKey) == -1){
         changeColors("none");
@@ -269,7 +273,7 @@ function computeColors(x) {
         else {
             y = a.network[netName].labels[x];
         }
-        
+
         for (var i in nodes){
             // Load raw values from the data structure
             rawColors[i] = y.value[i];
@@ -300,7 +304,7 @@ function computeColors(x) {
                 };
             }
         }
-        
+
         // We think it's categorical...
         if (colorType == "categorical") {
             // but let's check because we can only have up to 9 categorical colors
@@ -711,32 +715,57 @@ function draw() {
  */
 function writeMenuL() {
     writeMenuA();
-    
+
     var menuL4 = menuL.append("div").attr("id","menuL4");
     var menuL5 = menuL.append("div").attr("id","menuL5");
 	var menuL6 = menuL.append("div").attr("id","menuL6");
-    
+    var menuL7 = menuL.append("div").attr("id","menuL7");
+
     menuL4.text("Scale link width ");
     var linkWidthCheck = menuL4.append("input")
     .attr("id","linkWidthCheck")
     .attr("type","checkbox")
     .attr("onchange","toggleLinkWidth(this)");
-    
+
     menuL5.text("Scale link opacity ");
     var linkOpacityCheck = menuL5.append("input")
     .attr("id","linkOpacityCheck")
     .attr("type","checkbox")
     .attr("checked","")
     .attr("onchange","toggleLinkOpacity(this)");
-    
+
     menuL6.text("Allow nodes to move");
     var nodesMoveCheck = menuL6.append("input")
     .attr("id","onoffSelect")
     .attr("type","checkbox")
     .attr("checked","")
     .attr("onchange","toggleDynamics(this)");
-    
+
+    menuL7.text("Save SVG");
+    var saveSVGButton = menuL7.append("input")
+    .attr("id", "saveSVGButton")
+    .attr("type", "button")
+    .attr("value", "Save")
+    .on("click", writeDownloadLink);
 }
+
+function writeDownloadLink(){
+    try {
+        var isFileSaverSupported = !!new Blob();
+    } catch (e) {
+        alert("blob not supported");
+    }
+
+    var html = d3.select("svg")
+        .attr("title", "test2")
+        .attr("version", 1.1)
+        .attr("xmlns", "http://www.w3.org/2000/svg")
+        .node().parentNode.innerHTML;
+
+    var blob = new Blob([html], {type: "image/svg+xml"});
+    saveAs(blob, "myProfile.svg");
+};
+
 function writeMenuA() {
     menuA.text("Display data from ");
     var netSelect = menuA.append("select")
@@ -771,7 +800,7 @@ function writeMenuR() {
     var menuR3 = menuR.append("div").attr("id","menuR3");
     var menuR4 = menuR.append("div").attr("id","menuR4");
     var menuR6 = menuR.append("div").attr("id","menuR6");
-    
+
     menuR1.text("Node charge: ");
     var chargeText = menuR1.append("input")
     .attr("id","chargeText")
@@ -779,7 +808,7 @@ function writeMenuR() {
     .attr("onchange","changeCharge(this.value)")
     .attr("value",-force.charge())
     .attr("size",3);
-    
+
     menuR2.text("Link length: ");
     var distanceText = menuR2.append("input")
     .attr("id","distanceText")
@@ -787,7 +816,7 @@ function writeMenuR() {
     .attr("onchange","changeDistance(this.value)")
     .attr("value",force.distance())
     .attr("size",3);
-    
+
     menuR2B.text("Link strength: ");
     var distanceText = menuR2B.append("input")
     .attr("id","linkStrengthText")
@@ -795,7 +824,7 @@ function writeMenuR() {
     .attr("onchange","changeLinkStrength(this.value)")
     .attr("value",force.linkStrength())
     .attr("size",3);
-    
+
     menuR3.text("Gravity: ");
     var gravityText = menuR3.append("input")
     .attr("id","gravityText")
@@ -803,7 +832,7 @@ function writeMenuR() {
     .attr("onchange","changeGravity(this.value)")
     .attr("value",force.gravity())
     .attr("size",3);
-    
+
     menuR4.text("Node r: ");
     var rText = menuR4.append("input")
     .attr("id","rText")
@@ -811,14 +840,14 @@ function writeMenuR() {
     .attr("onchange","changer(this.value)")
     .attr("value",r)
     .attr("size",3);
-    
+
     menuR6.text("Highlight nodes whose name matches ");
     var matchText = menuR6.append("input")
     .attr("id","matchText")
     .attr("type","text")
     .attr("onchange","matchNodes(this.value)")
     .attr("size",3);
-    
+
 }
 // This product includes color specifications and designs developed by Cynthia Brewer (http://colorbrewer.org/).
 function loadColors() {
