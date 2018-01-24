@@ -282,24 +282,24 @@ for i=1:length(networkNames)
     if isfield(p,'labels')
         q = p.labels;
         qNames = fieldnames(q);
-        for i=1:length(qNames)
-            fprintf(fid,'"%s":{',qNames{i});
-            fprintf(fid,'"type":"%s",',q.(qNames{i}).type);
+        for ii=1:length(qNames)
+            fprintf(fid,'"%s":{',qNames{ii});
+            fprintf(fid,'"type":"%s",',q.(qNames{ii}).type);
             fprintf(fid,'"value":[');
-            if iscell(q.(qNames{i}).values)
-                for j=1:length(q.(qNames{i}).values)
-                    fprintf(fid,'"%s",',q.(qNames{i}).values{j});
+            if iscell(q.(qNames{ii}).values)
+                for j=1:length(q.(qNames{ii}).values)
+                    fprintf(fid,'"%s",',q.(qNames{ii}).values{j});
                 end
             else
-                for j=1:length(q.(qNames{i}).values)
-                    fprintf(fid,'%i,',q.(qNames{i}).values(j));
+                for j=1:length(q.(qNames{ii}).values)
+                    fprintf(fid,'%i,',q.(qNames{ii}).values(j));
                 end
             end
             fprintf(fid,'],');
-            if isfield(q.(qNames{i}),'categories')
+            if isfield(q.(qNames{ii}),'categories')
                 fprintf(fid,'"categories":[');
-                for j=1:length(q.(qNames{i}).categories)
-                    fprintf(fid,'"%s",',q.(qNames{i}).categories{j});
+                for j=1:length(q.(qNames{ii}).categories)
+                    fprintf(fid,'"%s",',q.(qNames{ii}).categories{j});
                 end
                 fprintf(fid,'],');
             end
@@ -311,6 +311,18 @@ for i=1:length(networkNames)
 end
 fprintf(fid,'}}');
 fclose(fid);
+
+% Strip out all instances of ,] and ,} which are not JSONic.
+fid = fopen([webwebloc name '.json'],'r');
+tline = fgetl(fid);
+fclose(fid);
+
+tline = strrep(tline,',]',']');
+tline = strrep(tline,',}','}');
+
+fid = fopen([webwebloc name '.json'],'w');
+fprintf(fid,tline);
+fclose(fid)
 
 %%%%%%%%%%
 fid = fopen([webwebloc name '.html'],'w');
