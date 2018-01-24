@@ -645,7 +645,7 @@ function writeMenuL() {
 	var menuL6 = menuL.append("div").attr("id","menuL6");
     var menuL7 = menuL.append("div").attr("id","menuL7");
     var menuL8 = menuL.append("div").attr("id","menuL8");
-    var menuL9 = menuL.append("div").attr("id","menuL9").html("Drop files here");
+    var menuL9 = d3.select("#chart").append("div").attr("id","menuL9").html("Drop files here");
 
     menuL4.text("Scale link width ");
     var linkWidthCheck = menuL4.append("input")
@@ -686,7 +686,7 @@ function writeMenuL() {
     });
 
     // Setup the dnd listeners.
-    d3.select("#menuL9")
+    d3.select("#chart")
         .style("border", "2px dashed")
         .style("border-radius", "5px")
         .style("padding", "25px")
@@ -694,7 +694,8 @@ function writeMenuL() {
         .style("color", "#bbb");
 
 
-    var dropZone = document.getElementById('menuL9');
+    // var dropZone = document.getElementById('menuL9');
+var dropZone = document.getElementById('chart');
     dropZone.addEventListener('dragover', handleDragOver, false);
     dropZone.addEventListener('drop', read_JSON_drop, false);
 }
@@ -704,7 +705,7 @@ function handleDragOver(evt) {
     evt.preventDefault();
     evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
 
-    d3.select("#menuL9")
+    d3.select("#chart")
         .style("border", "5px dashed")
         .style("border-radius", "10px")
         .style("color", "#fbb")
@@ -756,6 +757,7 @@ function read_JSON(files, method) {
         console.log("HERE");
         if (evt.target.readyState == FileReader.DONE) { // DONE == 2
             var json_string = evt.target.result;
+            json_string = json_string.replace("var a = ", "");
             a = JSON.parse(json_string);
             console.log(a);
             updateVis(a);
@@ -766,12 +768,7 @@ function read_JSON(files, method) {
     reader.readAsBinaryString(blob);
 }
 
-function create_json(dataUrl) {
-    console.log(JSON.stringify( dataUrl ));
-    d3.json( dataUrl, function( data ) {
-        console.log(data);
-    });
-}
+
 
 function writeDownloadLink(){
     try {
