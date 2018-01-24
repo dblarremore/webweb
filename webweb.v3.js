@@ -20,102 +20,30 @@ c = 60,
 l = 20,
 r = 5,
 g = 0.1;
-/*
- * Don't modify below this line.
- */
-if (a.display.w !== undefined){w = a.display.w;}
-if (a.display.h !== undefined){h = a.display.h;}
-if (a.display.c !== undefined){c = a.display.c;}
-if (a.display.l !== undefined){l = a.display.l;}
-if (a.display.r !== undefined){r = a.display.r;}
-if (a.display.g !== undefined){g = a.display.g;}
-// set up the DOM
-var center = d3.select("body").append("div").attr("id","center");
-var menu = center.append("div").attr("id","menu");
-var menuL = menu.append("div").attr("id","menuL").attr("class","left");
-var menuA = menuL.append("div").attr("id","menuA");
-var menuB = menuL.append("div").attr("id","menuB");
-var menuC = menuL.append("div").attr("id","menuC");
-var menuR = menu.append("div").attr("id","menuR").attr("class","right").attr("style","text-align:right");
-var chart = center.append("div").attr("id","chart").attr("style","clear:both");
 
-var netNames = Object.keys(a.network);
-var netLabels = Object.keys(a.display.labels);
 var nodeSizeLabelsBase = ["none","degree"];
 var nodeColorLabelsBase = ["none","degree"];
-for (i in netLabels) {
-    if (a.display.labels[netLabels[i]].type=="categorical") {
-        nodeColorLabelsBase.push(" " + netLabels[i]);
-    }
-    else {
-        nodeSizeLabelsBase.push(" " + netLabels[i])
-        nodeColorLabelsBase.push(" " + netLabels[i])
-    }
-}
-var N = a.display.N;
-var links = []
-nodes=[];
-// Define nodes
-for (var i=0; i<N; i++) {
-    newNode = {
-        "idx":i,
-    }
-    nodes.push(newNode);
-}
-if (a.display.nodeNames !== undefined){
-    for (var i in nodes) {
-        nodes[i]["name"] = a.display.nodeNames[i];
-    }
-}
-if (a.display.name !== undefined){
-    d3.select("title").text("webweb - " + a.display.name);
-}else{
-    d3.select("title").text("webweb");
-}
-vis = chart.append("svg")
-.attr("width",w)
-.attr("height",h)
-.attr("id","vis");
-var node = vis.selectAll(".node");
-link = vis.selectAll(".link");
-var force = d3.layout.force()
-.links(links)
-.nodes(nodes)
-.charge(-c)
-.gravity(g)
-.linkDistance(l)
-.size([w,h])
-.on("tick",tick);
-var scaleSize = d3.scale.linear().range([1,1]);
-var scaleColorScalar = d3.scale.linear().range([1,1]);
-var scaleColorCategory = d3.scale.ordinal().range([1,1]);
-var scaleLink = d3.scale.linear().range([1,1]);
-var scaleLinkOpacity = d3.scale.linear().range([0.4,0.9]);
-var colorType = "none";
-var sizeType = "none";
-var colorKey = "none";
-var sizeKey = "none";
-var rawColors = [],
-rawSizes = [],
-sizes = [],
-degrees = [],
-colors = [],
-sizesLegend = [],
-colorsLegend = [],
-cats = [],
-catNames = [],
-nameToMatch = "",
-R=0,
-isHighlightText=true;
-for (var i=0; i<N; i++){colors[i] = d3.rgb(100,100,100); rawColors[i] = 1;};
-var isStartup = 1,
-isOpacity = 1;
+
+// set up the DOM
+var center, menu, menuL, menuA, menuB, menuC, menuR, chart;
+var netNames, newLabels;
+var N;
+var links = [];
+var nodes = [];
+var node, force;
+
+var scaleSize, scaleColorScalar, scaleColorCategory;
+var scaleLink, scaleLinkOpacity;
+
+var colorType, sizeType, colorKey, sizeKey;
+var rawColors, rawSizes, sizes, degrees, colors, sizesLegend, colorsLegend, cats, catNames;
+var nameToMatch, R, isHighlightText;
+
+var isStartup, isOpacity;
 var netName;
 var colorbrewer;
-writeMenuL();
-writeMenuR();
-loadColors();
-computeLinks(netNames[0]);
+
+
 /*
  * Dynamics and colors
  */
@@ -136,7 +64,7 @@ function computeLinks(net) {
     removeLinks();
     nodeSizeLabels = nodeSizeLabelsBase.slice(0);
     nodeColorLabels = nodeColorLabelsBase.slice(0);
-    
+
     adj = d3.values(a["network"][netName]["adjList"]);
     scaleLink.domain(d3.extent(d3.transpose(adj)[2]));
     scaleLinkOpacity.domain(d3.extent(d3.transpose(adj)[2]));
@@ -152,7 +80,7 @@ function computeLinks(net) {
         }
     }
     draw();
-    
+
     writeMenuB();
     if (nodeSizeLabelsBase.indexOf(sizeKey) == -1){
         changeSizes("none");
@@ -160,7 +88,7 @@ function computeLinks(net) {
         changeSizes(sizeKey);
     }
     sizeSelect.selectedIndex = nodeSizeLabels.indexOf(sizeKey);
-    
+
     writeMenuC();
     if (nodeColorLabelsBase.indexOf(colorKey) == -1){
         changeColors("none");
@@ -269,7 +197,7 @@ function computeColors(x) {
         else {
             y = a.network[netName].labels[x];
         }
-        
+
         for (var i in nodes){
             // Load raw values from the data structure
             rawColors[i] = y.value[i];
@@ -300,7 +228,7 @@ function computeColors(x) {
                 };
             }
         }
-        
+
         // We think it's categorical...
         if (colorType == "categorical") {
             // but let's check because we can only have up to 9 categorical colors
@@ -711,49 +639,174 @@ function draw() {
  */
 function writeMenuL() {
     writeMenuA();
-    
+
     var menuL4 = menuL.append("div").attr("id","menuL4");
     var menuL5 = menuL.append("div").attr("id","menuL5");
 	var menuL6 = menuL.append("div").attr("id","menuL6");
-    
+    var menuL7 = menuL.append("div").attr("id","menuL7");
+    var menuL8 = menuL.append("div").attr("id","menuL8");
+    var menuL9 = menuL.append("div").attr("id","menuL9").html("Drop files here");
+
     menuL4.text("Scale link width ");
     var linkWidthCheck = menuL4.append("input")
     .attr("id","linkWidthCheck")
     .attr("type","checkbox")
     .attr("onchange","toggleLinkWidth(this)");
-    
+
     menuL5.text("Scale link opacity ");
     var linkOpacityCheck = menuL5.append("input")
     .attr("id","linkOpacityCheck")
     .attr("type","checkbox")
     .attr("checked","")
     .attr("onchange","toggleLinkOpacity(this)");
-    
+
     menuL6.text("Allow nodes to move");
     var nodesMoveCheck = menuL6.append("input")
     .attr("id","onoffSelect")
     .attr("type","checkbox")
     .attr("checked","")
     .attr("onchange","toggleDynamics(this)");
-    
+
+    menuL7.text("Save SVG");
+    var saveSVGButton = menuL7.append("input")
+    .attr("id", "saveSVGButton")
+    .attr("type", "button")
+    .attr("value", "Save")
+    .on("click", writeDownloadLink);
+
+    menuL8.text("Load JSON");
+    var loadJSONButton = menuL8.append("input")
+    .attr("type", "file")
+    .attr("id", "json_files")
+    .attr("name", "uploadJSON")
+    .attr("accept", ".json")
+    .on("change", function(evt) {
+        var evt = d3.event;
+        read_JSON();
+    });
+
+    // Setup the dnd listeners.
+    d3.select("#menuL9")
+        .style("border", "2px dashed")
+        .style("border-radius", "5px")
+        .style("padding", "25px")
+        .style("text-align", "center")
+        .style("color", "#bbb");
+
+
+    var dropZone = document.getElementById('menuL9');
+    dropZone.addEventListener('dragover', handleDragOver, false);
+    dropZone.addEventListener('drop', read_JSON_drop, false);
 }
+
+function handleDragOver(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+    evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+
+    d3.select("#menuL9")
+        .style("border", "5px dashed")
+        .style("border-radius", "10px")
+        .style("color", "#fbb")
+        .transition().duration(500)
+        .style("border", "2px dashed")
+        .style("border-radius", "5px")
+        .style("color", "#bbb");
+}
+
+function read_JSON_drop(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+
+    var files = evt.dataTransfer.files; // FileList object.
+
+    var text = d3.select("#menuL9")
+
+    text.html(function() {
+        return "Loading " + files[0].name + "...";
+    });
+
+    setTimeout(function() {
+        text.html("Drop files here")
+    }, 2000);
+
+    console.log("FILES");
+    console.log(files);
+
+    read_JSON(files);
+}
+
+
+
+function read_JSON(files, method) {
+    var file;
+
+    if (files === undefined) {
+        files = document.getElementById('json_files').files;
+    }
+    file = files[0]
+
+    var start = 0;
+    var stop = file.size - 1;
+
+    var reader = new FileReader();
+
+    // If we use onloadend, we need to check the readyState.
+    reader.onloadend = function(evt) {
+        console.log("HERE");
+        if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+            var json_string = evt.target.result;
+            a = JSON.parse(json_string);
+            console.log(a);
+            updateVis(a);
+        }
+    };
+
+    var blob = file.slice(start, stop + 1);
+    reader.readAsBinaryString(blob);
+}
+
+function create_json(dataUrl) {
+    console.log(JSON.stringify( dataUrl ));
+    d3.json( dataUrl, function( data ) {
+        console.log(data);
+    });
+}
+
+function writeDownloadLink(){
+    try {
+        var isFileSaverSupported = !!new Blob();
+    } catch (e) {
+        alert("blob not supported");
+    }
+
+    var html = d3.select("svg")
+        .attr("title", "test2")
+        .attr("version", 1.1)
+        .attr("xmlns", "http://www.w3.org/2000/svg")
+        .node().parentNode.innerHTML;
+
+    var blob = new Blob([html], {type: "image/svg+xml"});
+    saveAs(blob, "myProfile.svg");
+};
+
 function writeMenuA() {
     menuA.text("Display data from ");
     var netSelect = menuA.append("select")
-    .attr("id","netSelect")
-    .attr("onchange","computeLinks(this.value)")
-    .selectAll("option").data(netNames).enter().append("option")
-    .attr("value",function(d){return d;})
-    .text(function(d){return d;});
+        .attr("id","netSelect")
+        .attr("onchange","computeLinks(this.value)")
+        .selectAll("option").data(netNames).enter().append("option")
+        .attr("value",function(d){return d;})
+        .text(function(d){return d;});
 }
 function writeMenuB() {
     menuB.text("Compute node size from ");
     var sizeSelect = menuB.append("select")
-    .attr("id","sizeSelect")
-    .attr("onchange","changeSizes(this.value)")
-    .selectAll("option").data(nodeSizeLabels).enter().append("option")
-    .attr("value",function(d){return d;})
-    .text(function(d){return d;});
+        .attr("id","sizeSelect")
+        .attr("onchange","changeSizes(this.value)")
+        .selectAll("option").data(nodeSizeLabels).enter().append("option")
+        .attr("value",function(d){return d;})
+        .text(function(d){return d;});
 }
 function writeMenuC() {
     menuC.text("Compute node color from ");
@@ -771,7 +824,7 @@ function writeMenuR() {
     var menuR3 = menuR.append("div").attr("id","menuR3");
     var menuR4 = menuR.append("div").attr("id","menuR4");
     var menuR6 = menuR.append("div").attr("id","menuR6");
-    
+
     menuR1.text("Node charge: ");
     var chargeText = menuR1.append("input")
     .attr("id","chargeText")
@@ -779,7 +832,7 @@ function writeMenuR() {
     .attr("onchange","changeCharge(this.value)")
     .attr("value",-force.charge())
     .attr("size",3);
-    
+
     menuR2.text("Link length: ");
     var distanceText = menuR2.append("input")
     .attr("id","distanceText")
@@ -787,7 +840,7 @@ function writeMenuR() {
     .attr("onchange","changeDistance(this.value)")
     .attr("value",force.distance())
     .attr("size",3);
-    
+
     menuR2B.text("Link strength: ");
     var distanceText = menuR2B.append("input")
     .attr("id","linkStrengthText")
@@ -795,7 +848,7 @@ function writeMenuR() {
     .attr("onchange","changeLinkStrength(this.value)")
     .attr("value",force.linkStrength())
     .attr("size",3);
-    
+
     menuR3.text("Gravity: ");
     var gravityText = menuR3.append("input")
     .attr("id","gravityText")
@@ -803,7 +856,7 @@ function writeMenuR() {
     .attr("onchange","changeGravity(this.value)")
     .attr("value",force.gravity())
     .attr("size",3);
-    
+
     menuR4.text("Node r: ");
     var rText = menuR4.append("input")
     .attr("id","rText")
@@ -811,14 +864,14 @@ function writeMenuR() {
     .attr("onchange","changer(this.value)")
     .attr("value",r)
     .attr("size",3);
-    
+
     menuR6.text("Highlight nodes whose name matches ");
     var matchText = menuR6.append("input")
     .attr("id","matchText")
     .attr("type","text")
     .attr("onchange","matchNodes(this.value)")
     .attr("size",3);
-    
+
 }
 // This product includes color specifications and designs developed by Cynthia Brewer (http://colorbrewer.org/).
 function loadColors() {
@@ -1175,3 +1228,209 @@ function roundup(x,dec) {
 function rounddown(x,dec) {
     return (Math.floor(x*dec)/dec);
 }
+
+function updateVis(a) {
+    console.log(a);
+    d3.select("#vis").remove();
+
+    netNames = Object.keys(a.network);
+    netLabels = Object.keys(a.display.labels);
+    for (i in netLabels) {
+        if (a.display.labels[netLabels[i]].type=="categorical") {
+            nodeColorLabelsBase.push(" " + netLabels[i]);
+        }
+        else {
+            nodeSizeLabelsBase.push(" " + netLabels[i])
+            nodeColorLabelsBase.push(" " + netLabels[i])
+        }
+    }
+    N = a.display.N;
+    links = []
+    nodes = [];
+    // Define nodes
+    for (var i=0; i<N; i++) {
+        newNode = {
+            "idx":i,
+        }
+        nodes.push(newNode);
+    }
+    if (a.display.nodeNames !== undefined){
+        for (var i in nodes) {
+            nodes[i]["name"] = a.display.nodeNames[i];
+        }
+    }
+    if (a.display.name !== undefined){
+        d3.select("title").text("webweb - " + a.display.name);
+    }else{
+        d3.select("title").text("webweb");
+    }
+
+    vis = d3.select("#chart").append("svg")
+        .attr("width",w)
+        .attr("height",h)
+        .attr("id","vis");
+
+    node = vis.selectAll(".node");
+    link = vis.selectAll(".link");
+    force = d3.layout.force()
+        .links(links)
+        .nodes(nodes)
+        .charge(-c)
+        .gravity(g)
+        .linkDistance(l)
+        .size([w,h])
+        .on("tick",tick);
+
+    scaleSize = d3.scale.linear().range([1,1]);
+    scaleColorScalar = d3.scale.linear().range([1,1]);
+    scaleColorCategory = d3.scale.ordinal().range([1,1]);
+    scaleLink = d3.scale.linear().range([1,1]);
+    scaleLinkOpacity = d3.scale.linear().range([0.4,0.9]);
+    colorType = "none";
+    sizeType = "none";
+    colorKey = "none";
+    sizeKey = "none";
+    rawColors = [],
+    rawSizes = [],
+    sizes = [],
+    degrees = [],
+    colors = [],
+    sizesLegend = [],
+    colorsLegend = [],
+    cats = [],
+    catNames = [],
+    nameToMatch = "",
+    R=0,
+    isHighlightText=true;
+    for (var i=0; i<N; i++){colors[i] = d3.rgb(100,100,100); rawColors[i] = 1;};
+    isStartup = 1,
+    isOpacity = 1;
+    netName;
+    colorbrewer;
+    updateMenuA();
+    computeLinks(netNames[0]);
+}
+
+function updateMenuA() {
+    // var netSelect = d3.select("#netSelect")
+    //     .selectAll("option").data(netNames).enter().append("option")
+    //     .attr("value",function(d){return d;})
+    //     .text(function(d){return d;});
+
+    var netSelect = d3.select("#netSelect");
+
+    netSelect.selectAll("option").remove();
+
+    netSelect.selectAll("option")
+        .data(netNames).enter()
+        .append("option")
+        .attr("value",function(d){return d;})
+        .text(function(d){return d;});
+
+}
+
+function initializeVis() {
+    console.log(a);
+
+    /*
+     * Don't modify below this line.
+     */
+    if (a.display.w !== undefined){w = a.display.w;}
+    if (a.display.h !== undefined){h = a.display.h;}
+    if (a.display.c !== undefined){c = a.display.c;}
+    if (a.display.l !== undefined){l = a.display.l;}
+    if (a.display.r !== undefined){r = a.display.r;}
+    if (a.display.g !== undefined){g = a.display.g;}
+
+    // set up the DOM
+    center = d3.select("body").append("div").attr("id","center");
+    menu = center.append("div").attr("id","menu");
+    menuL = menu.append("div").attr("id","menuL").attr("class","left");
+    menuA = menuL.append("div").attr("id","menuA");
+    menuB = menuL.append("div").attr("id","menuB");
+    menuC = menuL.append("div").attr("id","menuC");
+    menuR = menu.append("div").attr("id","menuR").attr("class","right").attr("style","text-align:right");
+    chart = center.append("div").attr("id","chart").attr("style","clear:both");
+
+    netNames = Object.keys(a.network);
+    netLabels = Object.keys(a.display.labels);
+    for (i in netLabels) {
+        if (a.display.labels[netLabels[i]].type=="categorical") {
+            nodeColorLabelsBase.push(" " + netLabels[i]);
+        }
+        else {
+            nodeSizeLabelsBase.push(" " + netLabels[i])
+            nodeColorLabelsBase.push(" " + netLabels[i])
+        }
+    }
+    N = a.display.N;
+    links = []
+    nodes = [];
+    // Define nodes
+    for (var i=0; i<N; i++) {
+        newNode = {
+            "idx":i,
+        }
+        nodes.push(newNode);
+    }
+    if (a.display.nodeNames !== undefined){
+        for (var i in nodes) {
+            nodes[i]["name"] = a.display.nodeNames[i];
+        }
+    }
+    if (a.display.name !== undefined){
+        d3.select("title").text("webweb - " + a.display.name);
+    }else{
+        d3.select("title").text("webweb");
+    }
+    vis = chart.append("svg")
+        .attr("width",w)
+        .attr("height",h)
+        .attr("id","vis");
+
+    node = vis.selectAll(".node");
+    link = vis.selectAll(".link");
+    force = d3.layout.force()
+        .links(links)
+        .nodes(nodes)
+        .charge(-c)
+        .gravity(g)
+        .linkDistance(l)
+        .size([w,h])
+        .on("tick",tick);
+
+    scaleSize = d3.scale.linear().range([1,1]);
+    scaleColorScalar = d3.scale.linear().range([1,1]);
+    scaleColorCategory = d3.scale.ordinal().range([1,1]);
+    scaleLink = d3.scale.linear().range([1,1]);
+    scaleLinkOpacity = d3.scale.linear().range([0.4,0.9]);
+    colorType = "none";
+    sizeType = "none";
+    colorKey = "none";
+    sizeKey = "none";
+    rawColors = [],
+    rawSizes = [],
+    sizes = [],
+    degrees = [],
+    colors = [],
+    sizesLegend = [],
+    colorsLegend = [],
+    cats = [],
+    catNames = [],
+    nameToMatch = "",
+    R=0,
+    isHighlightText=true;
+    for (var i=0; i<N; i++){colors[i] = d3.rgb(100,100,100); rawColors[i] = 1;};
+    isStartup = 1,
+    isOpacity = 1;
+    netName;
+    colorbrewer;
+    writeMenuL();
+    writeMenuR();
+    loadColors();
+    computeLinks(netNames[0]);
+}
+
+window.onload = function() {
+    initializeVis();
+};

@@ -36,9 +36,9 @@ function [] = webweb(varargin)
 %
 % WEBWEB(nets)
 % WEBWEB(dis,nets)                  (see ADVANCED EXAMPLE in webwebTest.m)
-% 
+%
 % where dis and nets are structs with optional fields as described below:
-% 
+%
 % dis
 %     .name (str)
 %     .w,h,l,r,c,g (ints: width,height,linklength,radius,charge,gravity)
@@ -147,7 +147,7 @@ if nargin==2
         end
         dis.nodeNames = varargin{2};
     end
-    
+
     webwebWrite(dis,nets);
     return
 end
@@ -177,19 +177,19 @@ if nargin==3
             nodeNames = varargin{2};
         end
     end
-    
+
     for m=1:M
         nets.(netNames{m}).adj = varargin{1}(:,:,m);
     end
     dis.nodeNames = nodeNames;
-    
+
     webwebWrite(dis,nets);
     return
 end
 
 end
 
-function webwebWrite(dis,nets)
+function webwebWrite(dis, nets)
 %webwebloc = '~/Desktop/webweb/';
 webwebloc = '';
 
@@ -241,7 +241,7 @@ fprintf(fid,'"labels":{');
 if isfield(dis,'labels')
     q = dis.labels;
     qNames = fieldnames(q);
-    for i=1:length(qNames);
+    for i=1:length(qNames)
         fprintf(fid,'"%s":{',qNames{i});
         fprintf(fid,'"type":"%s",',q.(qNames{i}).type);
         fprintf(fid,'"value":[');
@@ -255,7 +255,7 @@ if isfield(dis,'labels')
             end
         end
         fprintf(fid,'],');
-        if isfield(q.(qNames{i}),'categories');
+        if isfield(q.(qNames{i}),'categories')
             fprintf(fid,'"categories":[');
             for j=1:length(q.(qNames{i}).categories)
                 fprintf(fid,'"%s",',q.(qNames{i}).categories{j});
@@ -282,7 +282,7 @@ for i=1:length(networkNames)
     if isfield(p,'labels')
         q = p.labels;
         qNames = fieldnames(q);
-        for i=1:length(qNames);
+        for i=1:length(qNames)
             fprintf(fid,'"%s":{',qNames{i});
             fprintf(fid,'"type":"%s",',q.(qNames{i}).type);
             fprintf(fid,'"value":[');
@@ -296,7 +296,7 @@ for i=1:length(networkNames)
                 end
             end
             fprintf(fid,'],');
-            if isfield(q.(qNames{i}),'categories');
+            if isfield(q.(qNames{i}),'categories')
                 fprintf(fid,'"categories":[');
                 for j=1:length(q.(qNames{i}).categories)
                     fprintf(fid,'"%s",',q.(qNames{i}).categories{j});
@@ -323,6 +323,8 @@ fprintf(fid,'<link   type="text/css"         rel="stylesheet" href="style.css"/>
 fprintf(fid,'<script type="text/javascript"  src="%s.json"></script>',name);
 fprintf(fid,'</head>');
 fprintf(fid,'<body>');
+fprintf(fid,'<script type="text/javascript"  src ="Blob.js"></script>');
+fprintf(fid,'<script type="text/javascript"  src ="FileSaver.min.js"></script>');
 fprintf(fid,'<script type="text/javascript"  src ="webweb.v3.js"></script>');
 fprintf(fid,'</body>');
 fprintf(fid,'</html>');
