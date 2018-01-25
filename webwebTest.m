@@ -30,12 +30,13 @@ function [] = webwebTest(varargin)
     % Set example num
     if nargin < 1
         example_num = 1;
-        fprintf('Note: to run a different test, pass webwebTest(n) any n between 1 and 7!\n');
+        fprintf('To run a different test, pass webwebTest(n) any n from 1 to 7.\n');
     else
         example_num =  varargin{1};
     end
     
-    examples = {@run_example_1, @run_example_2, @run_example_3, @run_example_4, @run_example_5, @run_example_6, @run_example_7};
+    examples = {@run_example_1, @run_example_2, @run_example_3,...
+        @run_example_4, @run_example_5, @run_example_6, @run_example_7};
     examples{example_num}();
 
 end
