@@ -27,11 +27,10 @@
 
 function [] = webwebTest(varargin)
 
-    fprintf('To use this test, open the M file and uncomment one of the examples!\n');
-
     % Set example num
     if nargin < 1
         example_num = 1;
+        fprintf('Note: to run a different test, pass webwebTest(n) any n between 1 and 7!\n');
     else
         example_num =  varargin{1};
     end
