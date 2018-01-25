@@ -210,30 +210,28 @@ function webwebWrite(dis, nets)
     end
 
     %%%%%%%%%%
-    
     fid = fopen([webwebloc name '.json'],'w');
-    
     fprintf(fid,'var a = {');
     fprintf(fid,'"display":{');
-    fprintf(fid,'"N":%i,', N);
-    fprintf(fid,'"name":"%s",', name);
+    fprintf(fid,'"N":%i,',N);
+    fprintf(fid,'"name":"%s",',name);
     if isfield(dis,'w')
-        fprintf(fid,'"w":%i,', dis.w);
+        fprintf(fid,'"w":%i,',dis.w);
     end
     if isfield(dis,'h')
-        fprintf(fid,'"h":%i,', dis.h);
+        fprintf(fid,'"h":%i,',dis.h);
     end
     if isfield(dis,'l')
-        fprintf(fid,'"l":%i,', dis.l);
+        fprintf(fid,'"l":%i,',dis.l);
     end
     if isfield(dis,'r')
-        fprintf(fid,'"r":%i,', dis.r);
+        fprintf(fid,'"r":%i,',dis.r);
     end
     if isfield(dis,'c')
-        fprintf(fid,'"c":%i,', dis.c);
+        fprintf(fid,'"c":%i,',dis.c);
     end
     if isfield(dis,'g')
-        fprintf(fid,'"g":%i,', dis.g);
+        fprintf(fid,'"g":%i,',dis.g);
     end
     if isfield(dis,'nodeNames')
         fprintf(fid,'"nodeNames":[');
@@ -242,92 +240,81 @@ function webwebWrite(dis, nets)
         end
         fprintf(fid,'],');
     end
-   
     fprintf(fid,'"labels":{');
     if isfield(dis,'labels')
         q = dis.labels;
         qNames = fieldnames(q);
         for i=1:length(qNames)
             fprintf(fid,'"%s":{',qNames{i});
-            fprintf(fid,'"type":"%s",', q.(qNames{i}).type);
+            fprintf(fid,'"type":"%s",',q.(qNames{i}).type);
             fprintf(fid,'"value":[');
             if iscell(q.(qNames{i}).values)
                 for j=1:length(q.(qNames{i}).values)
-                    fprintf(fid,'"%s",', q.(qNames{i}).values{j});
+                    fprintf(fid,'"%s",',q.(qNames{i}).values{j});
                 end
             else
                 for j=1:length(q.(qNames{i}).values)
-                    fprintf(fid,'%i,', q.(qNames{i}).values(j));
+                    fprintf(fid,'%i,',q.(qNames{i}).values(j));
                 end
             end
             fprintf(fid,'],');
             if isfield(q.(qNames{i}),'categories')
                 fprintf(fid,'"categories":[');
                 for j=1:length(q.(qNames{i}).categories)
-                    fprintf(fid,'"%s",', q.(qNames{i}).categories{j});
+                    fprintf(fid,'"%s",',q.(qNames{i}).categories{j});
                 end
                 fprintf(fid,'],');
             end
             fprintf(fid,'},');
         end
     end
-    fprintf(fid,'}');
     fprintf(fid,'},');
-    
-    % NETWORK PARAMS
-    % -------------------------------------------------------
+    fprintf(fid,'},');
+
     fprintf(fid,'"network":{');
-    for i=1:length(networkNames)       
+    for i=1:length(networkNames)
         p = getfield(nets,networkNames{i});
         fprintf(fid,'"%s":{',networkNames{i});
-        
-        % ADJACENY LIST
-        % -------------------------
         fprintf(fid,'"adjList":[');
         [r,c,v] = find(p.adj);
         for j=1:length(v)
-            fprintf(fid,'[%i,%i,%i],', r(j)-1, c(j)-1, v(j));
+            fprintf(fid,'[%i,%i,%i],',r(j)-1,c(j)-1,v(j));
         end
         fprintf(fid,'],');
-        % -------------------------
-        
-        % LABELS
-        % -------------------------
         fprintf(fid,'"labels":{');
         if isfield(p,'labels')
             q = p.labels;
             qNames = fieldnames(q);
             for ii=1:length(qNames)
                 fprintf(fid,'"%s":{',qNames{ii});
-                fprintf(fid,'"type":"%s",', q.(qNames{ii}).type);
+                fprintf(fid,'"type":"%s",',q.(qNames{ii}).type);
                 fprintf(fid,'"value":[');
                 if iscell(q.(qNames{ii}).values)
                     for j=1:length(q.(qNames{ii}).values)
-                        fprintf(fid,'"%s",', q.(qNames{ii}).values{j});
+                        fprintf(fid,'"%s",',q.(qNames{ii}).values{j});
                     end
                 else
                     for j=1:length(q.(qNames{ii}).values)
-                        fprintf(fid,'%i,', q.(qNames{ii}).values(j));
+                        fprintf(fid,'%i,',q.(qNames{ii}).values(j));
                     end
                 end
                 fprintf(fid,'],');
                 if isfield(q.(qNames{ii}),'categories')
                     fprintf(fid,'"categories":[');
                     for j=1:length(q.(qNames{ii}).categories)
-                        fprintf(fid,'"%s",', q.(qNames{ii}).categories{j});
+                        fprintf(fid,'"%s",',q.(qNames{ii}).categories{j});
                     end
                     fprintf(fid,'],');
                 end
                 fprintf(fid,'},');
             end
         end
-        fprintf(fid,'}');
-        % -------------------------
+        fprintf(fid,'},');
         fprintf(fid,'},');
     end
     fprintf(fid,'}}');
     fclose(fid);
-
+    
     % Strip out all instances of ,] and ,} which are not JSONic.
     fid = fopen([webwebloc name '.json'],'r');
     tline = fgetl(fid);
