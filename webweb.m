@@ -244,24 +244,24 @@ function webwebWrite(dis, nets)
     if isfield(dis,'labels')
         q = dis.labels;
         qNames = fieldnames(q);
-        for i=1:length(qNames)
-            fprintf(fid,'"%s":{',qNames{i});
-            fprintf(fid,'"type":"%s",',q.(qNames{i}).type);
+        for ii=1:length(qNames)
+            fprintf(fid,'"%s":{',qNames{ii});
+            fprintf(fid,'"type":"%s",',q.(qNames{ii}).type);
             fprintf(fid,'"value":[');
-            if iscell(q.(qNames{i}).values)
-                for j=1:length(q.(qNames{i}).values)
-                    fprintf(fid,'"%s",',q.(qNames{i}).values{j});
+            if iscell(q.(qNames{ii}).values)
+                for j=1:length(q.(qNames{ii}).values)
+                    fprintf(fid,'"%s",',q.(qNames{ii}).values{j});
                 end
             else
-                for j=1:length(q.(qNames{i}).values)
-                    fprintf(fid,'%i,',q.(qNames{i}).values(j));
+                for j=1:length(q.(qNames{ii}).values)
+                    fprintf(fid,'%i,',q.(qNames{ii}).values(j));
                 end
             end
             fprintf(fid,'],');
-            if isfield(q.(qNames{i}),'categories')
+            if isfield(q.(qNames{ii}),'categories')
                 fprintf(fid,'"categories":[');
-                for j=1:length(q.(qNames{i}).categories)
-                    fprintf(fid,'"%s",',q.(qNames{i}).categories{j});
+                for j=1:length(q.(qNames{ii}).categories)
+                    fprintf(fid,'"%s",',q.(qNames{ii}).categories{j});
                 end
                 fprintf(fid,'],');
             end
@@ -352,5 +352,4 @@ function webwebWrite(dis, nets)
     else
         unix(['open ' webwebloc name '.html']);
     end
-
 end
