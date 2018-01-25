@@ -25,7 +25,7 @@
 %     .values (int Nx1)
 %     .categories (cell{str}, categorical names corresponding to values)
 
-function [] = webwebTest(varargin)
+function webwebTest(varargin)
 
     % Set example num
     if nargin < 1
