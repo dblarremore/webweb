@@ -1,10 +1,7 @@
 % WEBWEB makes pretty interactive network diagrams in your browser
-% version 3.3
-%
-% Daniel Larremore
-% May 22, 2015
-% daniel.larremore@gmail.com, http://danlarremore.com, @danlarremore
-% Comments and suggestions always welcome.
+% http://github.com/dblarremore/webweb
+% Daniel Larremore + Contributors
+% Comments, suggestions, or forks always welcome.
 
 
 % Constructing your own structs:
