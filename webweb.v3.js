@@ -1262,7 +1262,7 @@ function updateVis(a) {
         d3.select("title").text("webweb");
     }
 
-    vis = d3.select("#chart").append("svg")
+    vis = d3.select("#svg_div").append("svg")
         .attr("width",w)
         .attr("height",h)
         .attr("id","vis");
@@ -1380,7 +1380,7 @@ function initializeVis() {
     }else{
         d3.select("title").text("webweb");
     }
-    vis = chart.append("svg")
+    vis = d3.select("#chart").append("div").attr("id", "svg_div").append("svg")
         .attr("width",w)
         .attr("height",h)
         .attr("id","vis");

@@ -1,5 +1,4 @@
 function [] = webweb(varargin)
-
 % WEBWEB makes pretty interactive network diagrams in your browser
 % http://github.com/dblarremore/webweb
 % Daniel Larremore + Contributors
