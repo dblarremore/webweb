@@ -1,5 +1,4 @@
 function [] = webweb(varargin)
-    
     % WEBWEB makes pretty interactive network diagrams in your browser
     % version 3.3
     %
@@ -60,9 +59,7 @@ function [] = webweb(varargin)
     %
     % For all usage examples, see webwebTest.m
     % http://danlarremore.com for updates.
-    
-    % Check if varargin has nodeNames. 
-    % ------------------------------------------------
+
     if isstruct(varargin{1}) % nodeNames exists as second element of varargin
         if nargin==1
             dis = struct;
@@ -82,15 +79,14 @@ function [] = webweb(varargin)
                     || isfield(a,'labels')
                 webwebWrite(a,b);
             else
-                webwebWrite(b,a);
+                webwebWrite(b,a);    
             end
         end
         return
     end
-    % ------------------------------------------------
+
 
     M = size(varargin{1}, 3);
-    
     if M==1
         if ~sum(sum(varargin{1}~=varargin{1}'))
             varargin{1} = triu(varargin{1});
@@ -196,6 +192,7 @@ end
 function webwebWrite(dis, nets)
     %webwebloc = '~/Desktop/webweb/';
     webwebloc = '';
+
 
     if isfield(dis,'name')
         name = dis.name;
@@ -314,7 +311,7 @@ function webwebWrite(dis, nets)
     end
     fprintf(fid,'}}');
     fclose(fid);
-    
+
     % Strip out all instances of ,] and ,} which are not JSONic.
     fid = fopen([webwebloc name '.json'],'r');
     tline = fgetl(fid);
