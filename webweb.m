@@ -211,7 +211,7 @@ function webwebWrite(dis, nets)
 
     %%%%%%%%%%
     
-    fid = fopen('example_network.json','w');
+    fid = fopen([webwebloc name '.json'],'w');
     
     fprintf(fid,'var a = {');
     fprintf(fid,'"display":{');
@@ -329,14 +329,14 @@ function webwebWrite(dis, nets)
     fclose(fid);
 
     % Strip out all instances of ,] and ,} which are not JSONic.
-    fid = fopen('example_network.json', 'r');
+    fid = fopen([webwebloc name '.json'],'r');
     tline = fgetl(fid);
     fclose(fid);
 
     tline = strrep(tline,',]',']');
     tline = strrep(tline,',}','}');
 
-    fid = fopen('example_network.json','w');
+    fid = fopen([webwebloc name '.json'],'w');
     fprintf(fid,tline);
     fclose(fid)
 
@@ -348,7 +348,7 @@ function webwebWrite(dis, nets)
     fprintf(fid,'<title>webweb</title>');
     fprintf(fid,'<script src="d3.v3.min.js"></script>');
     fprintf(fid,'<link   type="text/css"         rel="stylesheet" href="style.css"/>');
-    fprintf(fid,'<script type="text/javascript"  src="example_network.json"></script>');
+    fprintf(fid,'<script type="text/javascript"  src="%s.json"></script>', name);
     fprintf(fid,'</head>');
     fprintf(fid,'<body>');
     fprintf(fid,'<script type="text/javascript"  src ="Blob.js"></script>');
