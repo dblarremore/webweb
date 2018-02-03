@@ -12,7 +12,7 @@ Python is open source, powerful, and ubiquitous. The MATLAB version of webweb is
 Grab the files above and put them into your current Python directory. Although the syntax for webweb Python is eerily similar to MATLAB, it is slightly different. Check out examples.py for some fully worked examples, but here is a general outline:
 
 - Create an adjacency list, `<your_adj_list>`
-- Import webweb into your script via `import modules.webweb as webweb`
+- Import webweb into your script via `from modules.webweb import webweb`
 - Instantiate a webweb object with the number of nodes in your network: `web = webweb(N=5)`
 - Set any display parameters by calling appropriate methods on the object, `web.display`
 - Set any networks parameters by calling appropriate methods on the object, `web.networks`
