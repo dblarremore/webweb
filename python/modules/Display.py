@@ -2,7 +2,7 @@ from modules.Labels import Labels
 
 class Display(dict):
 
-    def __init__(self, N):
+    def __init__(self, N=100):
         self.N = N
         self.name = None
         self._w = None
