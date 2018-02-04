@@ -13,8 +13,9 @@ Grab the files above and put them into your current Python directory. Although t
 
 - Create an adjacency list, `<your_adj_list>`
 - Import webweb into your script via `from modules.webweb import webweb`
-- Instantiate a webweb object with the number of nodes in your network: `web = webweb(N=5)`
+- Instantiate a webweb object: `web = webweb()`
 - Set any display parameters by calling appropriate methods on the object, `web.display`
+    - E.g., Apply a charge of 5: `web.display.c = 5`
 - Set any networks parameters by calling appropriate methods on the object, `web.networks`
     - E.g., To create a new network and assign your adjacency list, <br>
      `web.networks.<name_of_network>.adjList = <your_adj_list>`
