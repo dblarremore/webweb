@@ -94,9 +94,6 @@ function read_JSON_drop(evt) {
         text.html("Drop files here")
     }, 2000);
 
-    console.log("FILES");
-    console.log(files);
-
     read_JSON(files);
 }
 
@@ -159,10 +156,12 @@ function updateVis() {
 
     var i;
 
-    network_width = (current_network.display.width !== undefined) ? current_network.display.width : WIDTH_DEFAULT;
-    network_height = (current_network.display.height !== undefined) ? current_network.display.height : HEIGHT_DEFAULT;
-    network_charge = (current_network.display.charge !== undefined) ? current_network.display.charge : CHARGE_DEFAULT;
-    network_gravity = (current_network.display.gravity !== undefined) ? current_network.display.gravity : GRAVITY_DEFAULT;
+    console.log("HERE");
+    console.log(current_network);
+    network_width = (current_network.display.w !== undefined) ? current_network.display.w : WIDTH_DEFAULT;
+    network_height = (current_network.display.h !== undefined) ? current_network.display.h : HEIGHT_DEFAULT;
+    network_charge = (current_network.display.c !== undefined) ? current_network.display.c : CHARGE_DEFAULT;
+    network_gravity = (current_network.display.g !== undefined) ? current_network.display.g : GRAVITY_DEFAULT;
     network_link_distance = (current_network.display.l !== undefined) ? current_network.display.l : L_DEFAULT;
     network_node_r = (current_network.display.r !== undefined) ? current_network.display.r : R_DEFAULT;
 
@@ -185,6 +184,13 @@ function updateVis() {
 function initializeVis() {
 
     var i;
+
+    network_width = (current_network.display.w !== undefined) ? current_network.display.w : WIDTH_DEFAULT;
+    network_height = (current_network.display.h !== undefined) ? current_network.display.h : HEIGHT_DEFAULT;
+    network_charge = (current_network.display.c !== undefined) ? current_network.display.c : CHARGE_DEFAULT;
+    network_gravity = (current_network.display.g !== undefined) ? current_network.display.g : GRAVITY_DEFAULT;
+    network_link_distance = (current_network.display.l !== undefined) ? current_network.display.l : L_DEFAULT;
+    network_node_r = (current_network.display.r !== undefined) ? current_network.display.r : R_DEFAULT;
 
     createNetwork();
 
@@ -249,12 +255,13 @@ function createNetwork() {
 
     vis = svg.append("g").attr("id","vis_g");
 
-    var title = svg.append("text")
-        .attr("id", "partition_type_label")
-        .attr("y", 20)
-        .style("fill", "black")
-        .text("Partition Type")
-        .style("opacity", 0.0);
+    // var title = svg.append("text")
+    //     .attr("id", "partition_type_label")
+    //     .attr("y", 20)
+    //     .style("fill", "black")
+    //     .text("Partition Type")
+    //     .style("opacity", 0.0);
+
 
     node = vis.selectAll(".node");
     link = vis.selectAll(".link");
@@ -315,7 +322,7 @@ function addFeatureRequestForm() {
     // TODO: Add mail-to reference for offline / local development
     // TODO: check to see if able to detect if running on local server
     // TODO: Put php message on div rather than new window?
-    var request_form_div = d3.select("body").append("div").attr("id", "request_form_div").attr("class", "container");
+    var request_form_div = d3.select("#overlay_div").append("div").attr("id", "request_form_div");
 
     request_form_div.append("a")
         .attr("href", "mailto:michael.iuzzolino@colorado.edu,daniel.larremore@colorado.edu?Subject=WebWeb_Feature_Request")
@@ -334,7 +341,17 @@ function sendEmail() {$.get('email.php');}
 function initializeDOM() {
     var center = d3.select("body").append("div").attr("id", "center");
     initMenuDOM();  // located in menus.js
-    center.append("div").attr("id","chart").attr("style","clear:both");
+
+    var chart_container = center.append("div").attr("id", "chart_container");
+
+    chart_container.append("div").attr("id", "chart").attr("style", "clear:both");
+
+    var overlay_div = chart_container.append("div").attr("id", "overlay_div").attr("class", "container")
+    .append("div").attr("class", "row");
+    // Setup svg overlay menu
+    addFeatureRequestForm();
+    overlay_div.append("div").attr('class', "w-100");
+    initOverlayMenu();
 }
 
 
@@ -373,7 +390,7 @@ function checkCDN(callBack) {
     css.rel = "stylesheet";
     css3.rel = "stylesheet";
     css3.href = "static/css/style.css";
-    head.appendChild(css3);
+
 
     if (online) {
         console.log("Online Mode");
@@ -393,6 +410,7 @@ function checkCDN(callBack) {
 
     head.appendChild(js);
     head.appendChild(css);
+    head.appendChild(css3);
 
     return callBack(true);
 }
@@ -402,7 +420,7 @@ $(function() {
         if (callBack === true) {
             initializeDOM();
             initializeVis();
-            addFeatureRequestForm();
+
         }
         else {
             console.log("Fail to load.");

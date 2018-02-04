@@ -57,10 +57,10 @@ def advanced_example():
 
     # Set Display settings
     # ----------------------------------------
-    web.display.w = 100
-    web.display.h = 100
+    web.display.w = 200
+    web.display.h = 200
     # Increase the charge and the gravity
-    web.display.c = 100
+    web.display.c = 50
     web.display.g = 0.3
     # Give the file a name
     web.display.name = 'Advanced'
@@ -97,8 +97,8 @@ def advanced_example():
 
 def main():
     # simple_example()
-    simple_example_2()
-    # advanced_example()
+    # simple_example_2()
+    advanced_example()
 
 if __name__ == '__main__':
     main()
