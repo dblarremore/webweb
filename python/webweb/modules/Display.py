@@ -1,4 +1,4 @@
-from modules.Labels import Labels
+from webweb.modules.Labels import Labels
 
 class Display(dict):
 

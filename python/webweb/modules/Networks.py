@@ -1,6 +1,7 @@
+import os
 import json
 
-from modules.Labels import Labels
+from webweb.modules.Labels import Labels
 
 class Nets(dict):
     def __init__(self):

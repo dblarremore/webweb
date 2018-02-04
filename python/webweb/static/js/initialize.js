@@ -198,6 +198,9 @@ function initializeVis() {
     network_link_distance = (current_network.display.l !== undefined) ? current_network.display.l : L_DEFAULT;
     network_node_r = (current_network.display.r !== undefined) ? current_network.display.r : R_DEFAULT;
 
+    console.log("NETWORK");
+    console.log(current_network);
+    
     createNetwork();
 
     // Set Scales
