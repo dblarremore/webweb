@@ -91,7 +91,7 @@ function read_JSON_drop(evt) {
     });
 
     setTimeout(function() {
-        text.html("Drop files here")
+        text.transition().duration(500).style("opacity", 0.0).remove();
     }, 2000);
 
     read_JSON(files);
@@ -124,6 +124,12 @@ function read_JSON(files, method) {
             json_string = json_string.replace("var current_network = ", "");
             current_network = JSON.parse(json_string);
             updateVis();
+            var menuL9 = d3.select("#chart").append("div")
+                .attr("id", "menuL9")
+                .style("opacity", 0.0)
+                .html("Drop json network files here.");
+
+            menuL9.transition().duration(1000).style("opacity", 1.0);
         }
     };
 
@@ -208,6 +214,7 @@ function initializeVis() {
     writeMenus(); // located in menus.js
     loadColors();
     computeLinks(netNames[0]);
+    var menuL9 = d3.select("#chart").append("div").attr("id", "menuL9").html("Drop json network files here");
 }
 
 function createNetwork() {
@@ -346,7 +353,7 @@ function initializeDOM() {
 
     chart_container.append("div").attr("id", "chart").attr("style", "clear:both");
 
-    var overlay_div = chart_container.append("div").attr("id", "overlay_div").attr("class", "container")
+    var overlay_div = chart_container.append("div").attr("id", "overlay_div")
     .append("div").attr("class", "row");
     // Setup svg overlay menu
     addFeatureRequestForm();
