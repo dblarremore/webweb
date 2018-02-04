@@ -2,14 +2,12 @@ from modules.webweb import webweb
 import random
 
 def simple_example():
-    # Set number of nodes
-    N = 100
-
     # Build a simple network
+    N = 100
     adjaceny_list = [[random.randint(0, N-1), random.randint(0, N-1), 1] for _ in range(100)]
 
     # Instantiate webweb object
-    web = webweb(N)
+    web = webweb()
 
     # Assign adjaceny lists in network
     web.networks.simple.adj = adjaceny_list
@@ -22,15 +20,14 @@ def simple_example():
 
 
 def simple_example_2():
-    # Set number of nodes
-    N = 100
 
     # Build a simple network
-    adjaceny_list = [[random.randint(0, N-1), random.randint(0, N-1), 1] for _ in range(N)]
+    N = 100
+    adjaceny_list = [[random.randint(0, N), random.randint(0, N), 1] for _ in range(N)]
     node_names = ["example class {}".format(node_i) for node_i in range(N)]
 
     # Instantiate webweb object
-    web = webweb(N)
+    web = webweb()
 
     # Assign adjaceny lists in network
     web.networks.simple.adj = adjaceny_list
@@ -45,27 +42,28 @@ def simple_example_2():
     web.draw()
 
 def advanced_example():
-    # Set number of nodes
-    N = 6
-
     # Build a few networks
-    snake_adacency_list = [[i, i+1, 1] for i in range(N-1)]
-    starfish_adacency_list = [[0, i+1, 1] for i in range(N-1)]
+    snake_adacency_list = [[i, i+1, 1] for i in range(5)]
+    starfish_adacency_list = [[0, i+1, 1] for i in range(5)]
 
     # Instantiate webweb object
-    web = webweb(N)
+    web = webweb()
 
     # Set Display settings
     # ----------------------------------------
-    web.display.w = 100
-    web.display.h = 100
+    web.display.w = 200
+    web.display.h = 200
+
     # Increase the charge and the gravity
-    web.display.c = 100
+    web.display.c = 50
     web.display.g = 0.3
+
     # Give the file a name
     web.display.name = 'Advanced'
+
     # Name the nodes
     web.display.nodeNames = ['dane','sebastian','manny','brock','ted','donnie']
+
     # Give the nodes some labels called hunger that are scalars
     web.display.labels.hunger.type = 'scalar'
     web.display.labels.hunger.value = [4,9,2,4,12.1,5]
@@ -96,9 +94,14 @@ def advanced_example():
     web.draw()
 
 def main():
-    # simple_example()
-    simple_example_2()
-    # advanced_example()
+    examples = {
+        "simple" : simple_example,
+        "simple_2" : simple_example_2,
+        "advanced" : advanced_example
+    }
+
+    # Run example
+    examples["advanced"]()
 
 if __name__ == '__main__':
     main()

@@ -1,10 +1,4 @@
-#request_form_div {
-    opacity: 0;
-    position: absolute;
-    top: 550px;
-    width: 400px;
-    left: 75px;
-}
+
 
 text.shadow {
     stroke: #fff;
@@ -15,11 +9,13 @@ text.shadow {
 
 #chart {
     margin-top: 20px;
+    position: relative;
 }
 
 #vis {
     border-style: solid;
     border-width: 1px;
+    /* z-index: -1; */
 }
 #chartInfo {
     text-align: center;
@@ -167,10 +163,30 @@ li.indent {
     float: right;
 }
 
-#menu_overlay {
+#request_form_div {
+    opacity: 0;
     position: absolute;
-    top: 300px;
+    top: -70px;
+    left: 50px;
+    border-radius: 15px;
+    background: white;
+    /* top: 550px; */
+    /* width: 400px; */
+    /* left: 75px; */
+}
+
+#overlay_div {
+    position: absolute;
+    bottom: 0px;
+    margin-bottom: 30px;
+}
+
+#menu_overlay {
+    /* position: absolute;
+    bottom: 0px; */
     font-size: 10px;
+    /* margin-bottom: 30px;
+    width: 900px; */
 }
 
 #email_feature_request {
@@ -178,8 +194,23 @@ li.indent {
     text-align: center;
     width: 250px;
     left: 50px;
+    border-radius: 15px;
 }
 
 #email_feature_request p{
     margin-top: 10px;
+}
+
+#json_files {
+    margin-right: -35px;
+}
+
+/* @media (min-width: 1200px) {
+    .container{
+        max-width: 470px;
+    }
+} */
+
+#menuL9 {
+    margin-top: 20px;
 }

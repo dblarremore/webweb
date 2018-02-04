@@ -59,10 +59,12 @@ function initMenuDOM() {
         .append("h1")
         .html("Network Parameters");
 
-    // Setup svg overlay menu
-    var menu_overlay = d3.select("#center").append("div")
-        .attr("id", "menu_overlay")
-        .attr("class", "container");
+
+}
+
+function initOverlayMenu() {
+    var menu_overlay = d3.select("#overlay_div").append("div")
+        .attr("id", "menu_overlay").attr("class", "container");
 
     var menu_overlay_row = menu_overlay.append("div")
         .attr("id", "menu_overlay_row")
@@ -74,8 +76,8 @@ function initMenuDOM() {
 
     menuSVGOveraly.append("div")
         .attr("id", "menuSVGOverlay_header")
-        .append("h1")
-        .html("SVG Overlay");
+        .append("h1");
+        // .html("SVG Overlay");
 }
 
 function writeMenus() {
@@ -99,6 +101,8 @@ function writeMenuLeft() {
     var menuL5 = menuL.append("div").attr("id","menuL5").attr("class", "menu_row");
     var menuL6 = menuL.append("div").attr("id","menuL6").attr("class", "menu_row");
     var menuL6B = menuL.append("div").attr("id","menuL6B").attr("class", "menu_row");
+
+
 
     menuL4.text("Scale link width ");
     var linkWidthCheck = menuL4.append("input")

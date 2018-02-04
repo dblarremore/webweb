@@ -282,15 +282,15 @@ function changeColors(x) {
     try {
         color_key_legend = current_network["network"][netName]["labels"][colorKey]["value_keys"];
 
-        d3.select("#partition_type_label")
-            .style("opacity", 1.0)
-            .text("Partition Type: " + x)
-            .attr("x", function () {
-                var bbox = this.getBBox();
-                var width = bbox.width;
-                console.log(bbox);
-                return (network_height / 2) - (width / 2.0);
-            });
+        // d3.select("#partition_type_label")
+        //     .style("opacity", 1.0)
+        //     .text("Partition Type: " + x)
+        //     .attr("x", function () {
+        //         var bbox = this.getBBox();
+        //         var width = bbox.width;
+        //         console.log(bbox);
+        //         return (network_height / 2) - (width / 2.0);
+        //     });
     }
     catch (err) {
         d3.select("#partition_type_label")
