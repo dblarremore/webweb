@@ -1,7 +1,11 @@
 import os
 import json
 
-from webweb.modules.Labels import Labels
+try:
+    from webweb.modules.Labels import Labels
+except:
+    from modules.Labels import Labels
+
 
 class Nets(dict):
     def __init__(self):
@@ -39,8 +43,11 @@ class Net(dict):
         return self._adjList
     @adj.setter
     def adj(self, adj_list):
+
+        # Ensure weight is added
         if len(adj_list[0]) == 2:
-            adj_list = [list([[ele[0], ele[1], 1]]) for ele in adj_list]
+            adj_list = [list(ele) + [1] for ele in adj_list]
+
         self._adjList = adj_list
 
     def get_dict(self):

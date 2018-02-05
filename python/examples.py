@@ -1,4 +1,4 @@
-from webweb.webweb import webweb
+from webwebpy.webweb import webweb
 import random
 
 def simple_example():
@@ -7,7 +7,7 @@ def simple_example():
     adjaceny_list = [[random.randint(0, N-1), random.randint(0, N-1), 1] for _ in range(100)]
 
     # Instantiate webweb object
-    web = webweb()
+    web = webweb(num_nodes=N)
 
     # Assign adjaceny lists in network
     web.networks.simple.adj = adjaceny_list
@@ -27,7 +27,7 @@ def simple_example_2():
     node_names = ["example class {}".format(node_i) for node_i in range(N)]
 
     # Instantiate webweb object
-    web = webweb()
+    web = webweb(num_nodes=N)
 
     # Assign adjaceny lists in network
     web.networks.simple.adj = adjaceny_list
@@ -42,12 +42,15 @@ def simple_example_2():
     web.draw()
 
 def advanced_example():
+    # Set number of nodes
+    N = 6
+
     # Build a few networks
-    snake_adacency_list = [[i, i+1, 1] for i in range(5)]
-    starfish_adacency_list = [[0, i+1, 1] for i in range(5)]
+    snake_adacency_list = [[i, i+1, 1] for i in range(N-1)]
+    starfish_adacency_list = [[0, i+1, 1] for i in range(N-1)]
 
     # Instantiate webweb object
-    web = webweb()
+    web = webweb(num_nodes=N)
 
     # Set Display settings
     # ----------------------------------------

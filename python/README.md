@@ -9,11 +9,11 @@ webweb is a front end to a clever library called d3. Learn more about d3 at [d3j
 Python is open source, powerful, and ubiquitous. The MATLAB version of webweb is great, but a Python implementation expands webweb's reach and potential impact.
 
 ## How to use it
-Grab the files above and put them into your current Python directory. Although the syntax for webweb Python is eerily similar to MATLAB, it is slightly different. Check out examples.py for some fully worked examples, but here is a general outline:
+Grab the `webwebpy` directory above and place it into your current Python script's directory. Although the syntax for webweb Python is eerily similar to MATLAB, it is slightly different. Check out examples.py for some fully worked examples, but here is a general outline:
 
 - Create an adjacency list, `<your_adj_list>`
-- Import webweb into your script via `from modules.webweb import webweb`
-- Instantiate a webweb object: `web = webweb()`
+- Import webweb into your script via `from webwebpy.webweb import webweb`
+- Instantiate a webweb object, specifying number of nodes, N, in network: `web = webweb(num_nodes=N)`
 - Set any display parameters by calling appropriate methods on the object, `web.display`
     - E.g., Apply a charge of 5: `web.display.c = 5`
 - Set any networks parameters by calling appropriate methods on the object, `web.networks`

@@ -1,12 +1,13 @@
 import os
 import json
 
+webweb_dir_path = os.path.dirname(os.path.realpath(__file__))
+os.chdir(webweb_dir_path)
+
 from modules.Display import Display
 from modules.Networks import Net, Nets
 from modules.Server import Server
 
-webweb_dir_path = os.path.dirname(os.path.realpath(__file__))
-os.chdir(webweb_dir_path)
 
 class webweb(dict):
 

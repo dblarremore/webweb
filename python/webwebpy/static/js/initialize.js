@@ -123,6 +123,7 @@ function read_JSON(files, method) {
             var json_string = evt.target.result;
             json_string = json_string.replace("var current_network = ", "");
             current_network = JSON.parse(json_string);
+            current_network = check_current_network_tuples(current_network);
             updateVis();
             var menuL9 = d3.select("#chart").append("div")
                 .attr("id", "menuL9")
@@ -137,6 +138,40 @@ function read_JSON(files, method) {
     reader.readAsBinaryString(blob);
 }
 
+function check_current_network_tuples(network) {
+    console.log("HERE");
+    console.log(network);
+
+    for (network_id in network.network) {
+        var num_tuples = network.network[network_id].adjList[0].length;
+        adjList = network.network[network_id].adjList;
+        if (num_tuples === 3) {
+            return network;
+        }
+        else if (num_tuples === 2) {
+            new_network = [];
+            for (var i=0; i < adjList.length; i++) {
+                var element = adjList[i];
+                var new_tuple = [];
+                for (var j=0; j < element.length; j++) {
+                    new_tuple.push(element[j]);
+                }
+                new_tuple.push(1);
+                new_network.push(new_tuple);
+            }
+
+            network.network[network_id].adjList = adjList;
+            return network;
+        }
+        else {
+            alert("Adjaceny list formatted incorrectly! \nExample of your format: [[" + adjList[0] + "], ...]\n\n Ensure format of either \n 1. [[nodeX, nodeY], ...], or \n 2. [[nodeX, nodeY, weightZ], ...]");
+        }
+        console.log(network_id);
+        console.log(network.network[network_id].adjList);
+        console.log();
+    }
+
+}
 function writeDownloadLink(){
     try {
         var isFileSaverSupported = !!new Blob();
@@ -162,8 +197,6 @@ function updateVis() {
 
     var i;
 
-    console.log("HERE");
-    console.log(current_network);
     network_width = (current_network.display.w !== undefined) ? current_network.display.w : WIDTH_DEFAULT;
     network_height = (current_network.display.h !== undefined) ? current_network.display.h : HEIGHT_DEFAULT;
     network_charge = (current_network.display.c !== undefined) ? current_network.display.c : CHARGE_DEFAULT;
@@ -191,6 +224,8 @@ function initializeVis() {
 
     var i;
 
+    // current_network = check_current_network_tuples(current_network);
+
     network_width = (current_network.display.w !== undefined) ? current_network.display.w : WIDTH_DEFAULT;
     network_height = (current_network.display.h !== undefined) ? current_network.display.h : HEIGHT_DEFAULT;
     network_charge = (current_network.display.c !== undefined) ? current_network.display.c : CHARGE_DEFAULT;
@@ -198,9 +233,7 @@ function initializeVis() {
     network_link_distance = (current_network.display.l !== undefined) ? current_network.display.l : L_DEFAULT;
     network_node_r = (current_network.display.r !== undefined) ? current_network.display.r : R_DEFAULT;
 
-    console.log("NETWORK");
-    console.log(current_network);
-    
+
     createNetwork();
 
     // Set Scales
