@@ -2,9 +2,13 @@ import os
 import json
 
 try:
-    from webweb.modules.Labels import Labels
+    from webwebpy.modules.Labels import Labels
 except:
-    from modules.Labels import Labels
+    try:
+        from modules.Labels import Labels
+    except:
+        print("Failed import.")
+        exit(1)
 
 
 class Nets(dict):
