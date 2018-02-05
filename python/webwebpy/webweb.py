@@ -1,13 +1,18 @@
+import os
 import json
+
+webweb_dir_path = os.path.dirname(os.path.realpath(__file__))
+os.chdir(webweb_dir_path)
 
 from modules.Display import Display
 from modules.Networks import Net, Nets
 from modules.Server import Server
 
+
 class webweb(dict):
 
-    def __init__(self, save_name="network.json", *args):
-        self._display = Display(*args)
+    def __init__(self, save_name="network.json", *args, **kwargs):
+        self._display = Display(*args, **kwargs)
         self._networks = Nets()
         self._save_name = save_name
         self._web_server = Server(network_name=save_name)
@@ -38,12 +43,6 @@ class webweb(dict):
 
     def save_json(self, save_name=None):
 
-        # Find max number of nodes and set Display
-        get_unique_nodes = lambda x: len(set(sum(x, [])))
-        network_node_counts = [get_unique_nodes(network_vals["adjList"]) for network_id, network_vals in self._networks.to_dict().items()]
-        N = max(network_node_counts)
-        self._display.N = N
-
         # Reset save name
         self._save_name = save_name if save_name else self._save_name
         self._save_name.replace(".json", "")
@@ -53,6 +52,8 @@ class webweb(dict):
             "network" : { nets_key : nets_val for nets_key, nets_val in self._networks.to_dict().items() }
         }
 
-        with open("data/{}.json".format(self._save_name), "w") as outfile:
+        json_filepath = os.path.join("data", "{}.json".format(self._save_name))
+
+        with open(json_filepath, "w") as outfile:
             outfile.write("var current_network = ")
             json.dump(network_json, outfile)

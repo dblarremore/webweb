@@ -1,9 +1,16 @@
-from modules.Labels import Labels
+try:
+    from webwebpy.modules.Labels import Labels
+except:
+    try:
+        from modules.Labels import Labels
+    except:
+        print("Failed import.")
+        exit(1)
 
 class Display(dict):
 
-    def __init__(self, N=100):
-        self.N = N
+    def __init__(self, num_nodes=100):
+        self.N = num_nodes
         self.name = None
         self._w = None
         self._h = None

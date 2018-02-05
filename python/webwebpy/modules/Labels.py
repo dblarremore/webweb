@@ -22,6 +22,8 @@ class Label(dict):
         self._value = None
         self._categories = None
 
+        self.valid_labels = ["type", "value", "categories"]
+
     def write_json(self):
         json_obj = { "{}".format(str(key).replace("_", "")) : val for key, val in self.__dict__.items() if val != None }
         return json_obj
