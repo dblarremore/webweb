@@ -1,21 +1,15 @@
-
-
 text.shadow {
     stroke: #fff;
     stroke-width: 3px;
     stroke-opacity: .8;
 }
 
-
-#chart {
-    margin-top: 20px;
-    position: relative;
+#chart{
+    font-size: 10px;
 }
-
 #vis {
     border-style: solid;
     border-width: 1px;
-    /* z-index: -1; */
 }
 #chartInfo {
     text-align: center;
@@ -46,7 +40,7 @@ a:visited {
     font-weight: 500;
 }
 /* headings */
-h1,h2,h3,h4 {
+h1,h2,h3,h4 { 
     font-family: palatino, georgia, verdana, arial, sans-serif;
 	font-weight: bold; padding-bottom: 1ex; }
 h1 { font-size: 175%;
@@ -55,10 +49,10 @@ h1 { font-size: 175%;
     padding: 0px 0px 0px 0px;
 }
 h2 { font-size: 125%;
-    text-align: center;
-	text-transform: uppercase;
+    text-align: center; 
+	text-transform: uppercase; 
 }
-h3 {
+h3 { 
     font-size: 125%;
 }
 h4 {
@@ -78,7 +72,7 @@ h5 {
     background-color: #F7F7F7;
 }
 /* center */
-#center {
+#center { 
     margin-left: auto;
     margin-right: auto;
     background-color: white;
@@ -110,107 +104,12 @@ li.indent {
     clear: both;
 }
 
-
+.left{ 
+    float: left;
+}
+.right{
+    float: right;
+}
 #footer{
     font-size: 12px;
-}
-
-.menu_row {
-    margin: 5px 0px 5px 0px;
-}
-
-.menu_row_right {
-    margin: 5px 0px 5px 0px;
-}
-
-.floatLeft {
-    float: left;
-}
-
-.floatRight {
-    float: right;
-}
-
-.center_menu_div {
-    margin: 15px 0px 15px 0px;
-    padding: 0px 25px 0px 25px;
-}
-
-.center_menu_button {
-    text-align: center;
-}
-
-.div_text_right {
-    float: left;
-}
-
-.networkConntectionStrengthslider
-{
-    float: right;
-    width: 100px !important;
-}
-
-.connectionFactorSliderText {
-    margin-top: 4px;
-    margin-left: 110px;
-}
-
-#slider_low_text {
-    float: left;
-}
-
-#slider_high_text {
-    float: right;
-}
-
-#request_form_div {
-    opacity: 0;
-    position: absolute;
-    top: -70px;
-    left: 50px;
-    border-radius: 15px;
-    background: white;
-    /* top: 550px; */
-    /* width: 400px; */
-    /* left: 75px; */
-}
-
-#overlay_div {
-    position: absolute;
-    bottom: 0px;
-    margin-bottom: 30px;
-}
-
-#menu_overlay {
-    /* position: absolute;
-    bottom: 0px; */
-    font-size: 10px;
-    /* margin-bottom: 30px;
-    width: 900px; */
-}
-
-#email_feature_request {
-    border: 1px solid black;
-    text-align: center;
-    width: 250px;
-    left: 50px;
-    border-radius: 15px;
-}
-
-#email_feature_request p{
-    margin-top: 10px;
-}
-
-#json_files {
-    margin-right: -35px;
-}
-
-/* @media (min-width: 1200px) {
-    .container{
-        max-width: 470px;
-    }
-} */
-
-#menuL9 {
-    margin-top: 20px;
 }

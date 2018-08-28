@@ -17,39 +17,18 @@ class Server(object):
         html_str = """
             <html>
                 <head>
-                    <title> {} Vis </title>
-                    <meta charset="utf-8">
-
-                    <!-- ==================================================================== -->
-                    <!-- =================          JAVASCRIPT              ================= -->
-                    <!-- ==================================================================== -->
-
-                    <!-- PNG SAVER -->
-                    <!-- ======================== -->
-                    <script src="static/js/Blob.min.js"></script>
-                    <script src="static/js/FileSaver.min.js"></script>
-                    <!-- ======================== -->
-
-                    <!-- Library JS scripts -->
-                    <!-- ================== -->
-                    <script src="static/js/jquery-3.2.1.min.js"></script>
-                    <script src="static/js/d3.v3.min.js"></script>
-
-                    <!-- Custom JS scripts -->
-                    <!-- ================= -->
-                    <script src="static/js/initialize.js"></script>
-                    <script src="static/js/menus.js"></script>
-                    <script src="static/js/helpers.js"></script>
-                    <script src="static/js/webweb.v3.js"></script>
-
+                    <title> webweb {} </title>
+                    <script src="webwebStuff/d3.v3.min.js"></script>
+                    <link type="text/css" rel="stylesheet" href="webwebStuff/style.css"/>
+                    <script type="text/javascript" src="{}.json"></script>
                 </head>
                 <body>
-                    <!-- JSON -->
-                    <script type="text/javascript"  src="data/{}.json"></script>;
+                    <script type="text/javascript" src ="webwebStuff/Blob.js"></script>
+                    <script type="text/javascript" src ="webwebStuff/FileSaver.min.js"></script>
+                    <script type="text/javascript" src ="webwebStuff/webweb.v3.js"></script>
                 </body>
 
             </html>
-        """.format(self.network_name.capitalize(), self.network_name)
-
-        with open("index.html", "w") as outfile:
+        """.format(self.network_name, self.network_name)
+        with open("{}.html".format(self.network_name), "w") as outfile:
             outfile.write(html_str)

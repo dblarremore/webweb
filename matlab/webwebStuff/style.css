@@ -4,10 +4,8 @@ text.shadow {
     stroke-opacity: .8;
 }
 
-#menuL9{
-}
-#chart {
-    
+#chart{
+    font-size: 10px;
 }
 #vis {
     border-style: solid;

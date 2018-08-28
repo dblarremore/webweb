@@ -190,7 +190,7 @@ end
 end
 
 function webwebWrite(dis, nets)
-%webwebloc = '~/Desktop/webweb/';
+% webwebloc = '~/Desktop/webweb/';
 webwebloc = '';
 
 if isfield(dis,'name')
@@ -325,20 +325,20 @@ fclose(fid)
 
 %%%%%%%%%%
 fid = fopen([webwebloc name '.html'],'w');
-fprintf(fid,'<!DOCTYPE html>');
-fprintf(fid,'<html>');
-fprintf(fid,'<head>');
-fprintf(fid,'<title>webweb</title>');
-fprintf(fid,'<script src="d3.v3.min.js"></script>');
-fprintf(fid,'<link   type="text/css"         rel="stylesheet" href="style.css"/>');
-fprintf(fid,'<script type="text/javascript"  src="%s.json"></script>', name);
-fprintf(fid,'</head>');
-fprintf(fid,'<body>');
-fprintf(fid,'<script type="text/javascript"  src ="Blob.js"></script>');
-fprintf(fid,'<script type="text/javascript"  src ="FileSaver.min.js"></script>');
-fprintf(fid,'<script type="text/javascript"  src ="webweb.v3.js"></script>');
-fprintf(fid,'</body>');
-fprintf(fid,'</html>');
+fprintf(fid,'<!DOCTYPE html>\n');
+fprintf(fid,'<html>\n');
+fprintf(fid,'<head>\n');
+fprintf(fid,'\t<title>webweb</title>\n');
+fprintf(fid,'\t<script src="webwebStuff/d3.v3.min.js"></script>\n');
+fprintf(fid,'\t<link type="text/css" rel="stylesheet" href="webwebStuff/style.css"/>\n');
+fprintf(fid,'\t<script type="text/javascript" src="%s.json"></script>\n', name);
+fprintf(fid,'</head>\n');
+fprintf(fid,'<body>\n');
+fprintf(fid,'\t<script type="text/javascript" src ="webwebStuff/Blob.js"></script>\n');
+fprintf(fid,'\t<script type="text/javascript" src ="webwebStuff/FileSaver.min.js"></script>\n');
+fprintf(fid,'\t<script type="text/javascript" src ="webwebStuff/webweb.v3.js"></script>\n');
+fprintf(fid,'</body>\n');
+fprintf(fid,'</html>\n');
 fclose(fid);
 fclose('all');
 %%%%%%%%%%
