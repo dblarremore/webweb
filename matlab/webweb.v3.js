@@ -1323,7 +1323,6 @@ function rounddown(x,dec) {
 // It's the update version of initializeVis
 function updateVis(wwdata) {
     console.log(wwdata);
-    d3.select("#vis").remove();
 
     netNames = Object.keys(wwdata.network);
     netLabels = Object.keys(wwdata.display.labels);
@@ -1340,6 +1339,12 @@ function updateVis(wwdata) {
         }
     }
     N = wwdata.display.N;
+    if (wwdata.display.w !== undefined){w = wwdata.display.w;}
+    if (wwdata.display.h !== undefined){h = wwdata.display.h;}
+    if (wwdata.display.c !== undefined){c = wwdata.display.c;}
+    if (wwdata.display.l !== undefined){l = wwdata.display.l;}
+    if (wwdata.display.r !== undefined){r = wwdata.display.r;}
+    if (wwdata.display.g !== undefined){g = wwdata.display.g;}
     links = []
     nodes = [];
     // Define nodes
@@ -1359,7 +1364,9 @@ function updateVis(wwdata) {
     }else{
         d3.select("title").text("webweb");
     }
-
+    
+    // Rebuild the actual svg here
+    d3.select("#vis").remove();
     vis = d3.select("#svg_div").append("svg")
         .attr("width",w)
         .attr("height",h)
