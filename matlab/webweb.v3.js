@@ -930,8 +930,8 @@ function read_JSON(files, method) {
         console.log("HERE");
         if (evt.target.readyState == FileReader.DONE) { // DONE == 2
             var json_string = evt.target.result;
-            json_string = json_string.replace("var a = ", "");
-            a = JSON.parse(json_string);
+            json_string = json_string.replace("var wwdata = ", "");
+            wwdata = JSON.parse(json_string);
             console.log(wwdata);
             updateVis(wwdata);
         }
