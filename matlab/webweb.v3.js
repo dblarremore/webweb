@@ -912,6 +912,7 @@ function read_JSON_drop(evt) {
 }
 // Theoretically, multiple files could have been dropped above.
 // Those files are passed into read_JSON
+// Only the first file is used. 
 function read_JSON(files, method) {
     var file;
 
@@ -1326,6 +1327,9 @@ function updateVis(wwdata) {
 
     netNames = Object.keys(wwdata.network);
     netLabels = Object.keys(wwdata.display.labels);
+    // reset the label lists
+    nodeSizeLabelsBase = ["none","degree"];
+    nodeColorLabelsBase = ["none","degree"];
     for (i in netLabels) {
         if (wwdata.display.labels[netLabels[i]].type=="categorical") {
             nodeColorLabelsBase.push(" " + netLabels[i]);
