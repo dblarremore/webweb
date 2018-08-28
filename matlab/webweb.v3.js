@@ -13,6 +13,12 @@
  */
 /*
  * Here are default values. If you don't put anything different in the JSON file, this is what you get!
+ * w width
+ * h height
+ * c charge
+ * l length of edges
+ * r radius of nodes
+ * g gravity
  */
 var w = 800,
 h = 800,
@@ -21,10 +27,11 @@ l = 20,
 r = 5,
 g = 0.1;
 
+// ??? 
 var nodeSizeLabelsBase = ["none","degree"];
 var nodeColorLabelsBase = ["none","degree"];
 
-// set up the DOM
+// set up the DOM here by defining variables
 var center, menu, menuL, menuA, menuB, menuC, menuR, chart;
 var netNames, newLabels;
 var N;
@@ -47,6 +54,7 @@ var colorbrewer;
 /*
  * Dynamics and colors
  */
+// tick attributes for links and nodes
 function tick() {
     link.attr("x1", function(d) {return d.source.x; })
     .attr("y1", function(d) { return d.source.y; })
@@ -55,22 +63,35 @@ function tick() {
     node.attr("cx", function(d) { return d.x; })
     .attr("cy", function(d) { return d.y; })
 }
+// Remove all the links in the list of links.
 function removeLinks() {
     links.splice(0,links.length);
     draw();
 }
+// This function is poorly named. 
+// It is called when loading a network or changing networks
+// It rebuilds links, labels, and menus, accordingly
 function computeLinks(net) {
+    // Update the name
     netName = net;
+    // Clear all old links
     removeLinks();
+    // Get labels for size and color
     nodeSizeLabels = nodeSizeLabelsBase.slice(0);
     nodeColorLabels = nodeColorLabelsBase.slice(0);
 
+    // get the adjacencies
     adj = d3.values(a["network"][netName]["adjList"]);
+    // learn how we should scale the link weight and opacity by computing the range (extent) of the adj weights.
     scaleLink.domain(d3.extent(d3.transpose(adj)[2]));
     scaleLinkOpacity.domain(d3.extent(d3.transpose(adj)[2]));
+    // push all the links to the list: links
     for (var i in adj) {links.push({source:adj[i][0],target:adj[i][1],w:adj[i][2]})}
+    // grab all the labels that are attached to the network object
     loadLabels = Object.keys(a.network[netName].labels);
     for (i in loadLabels) {
+        // in particular, anything that is categorical goes into the color labels list
+        // but anything that is scalar goes into color *and* size lists
         if (a.network[netName].labels[loadLabels[i]].type=="categorical") {
             nodeColorLabels.push(loadLabels[i]);
         }
@@ -79,8 +100,11 @@ function computeLinks(net) {
             nodeColorLabels.push(loadLabels[i]);
         }
     }
+
+    // Draw
     draw();
 
+    // Write Menu B (Compute Node Size from...)
     writeMenuB();
     if (nodeSizeLabelsBase.indexOf(sizeKey) == -1){
         changeSizes("none");
@@ -89,6 +113,7 @@ function computeLinks(net) {
     }
     sizeSelect.selectedIndex = nodeSizeLabels.indexOf(sizeKey);
 
+    // Write Menu C (Compute Node Color from...)
     writeMenuC();
     if (nodeColorLabelsBase.indexOf(colorKey) == -1){
         changeColors("none");
@@ -97,11 +122,18 @@ function computeLinks(net) {
     }
     colorSelect.selectedIndex = nodeColorLabels.indexOf(colorKey);
 }
+
+// Compute the actual radius multipliers of the nodes, given the data and chosen parameters
+// Input, x, is the method by which we will compute the radii
+// For example, if x is None, then the multiplier is 1, the identity
+// Otherwise, the multiplier can be something else!
 function computeSizes(x) {
+    // If there's no degree scaling, set all sizes to 1
     if (x=="none"){
         sizeType = "none";
         for (var i in nodes){sizes[i] = 1;}
     }
+    // If we're scaling by degrees, linearly scale the range of SQRT(degrees) between 0.5 and 1.5
     else if (x=="degree"){
         sizeType = "degree";
         for (var i in nodes){
@@ -112,6 +144,11 @@ function computeSizes(x) {
         for (var i in sizes){sizes[i] = scaleSize(rawSizes[i]);}
         rawSizes = degrees.slice(0);
     }
+    // Otherwise, grab the values that are stored in the variable that corresponds to the menu choice.
+    // PROBABLY NOT GOOD CODING FORM:
+    // The way that a "custom" label is indicated is that it starts with a space.
+    // The first thing we do is remove that space.
+    // ???
     else {
         if (x[0]==" "){
             x = x.slice(1);
@@ -127,12 +164,15 @@ function computeSizes(x) {
         for (var i in sizes){sizes[i] = scaleSize(sizes[i]);}
     }
 }
+// Highlight a node by making it bigger and outlining it
 function highlightNode(d) {
     d3.select("#node_" + d.idx)
     .transition().duration(100)
     .attr("r",sizes[d.idx]*r*1.3)
     .style("stroke",d3.rgb(0,0,0));
 }
+// Highlight a node by showing its name next to it.
+// If the node has no name, show its index.  
 function highlightText(d) {
     if (d=="stop") {isHighlightText=false; return}
     else if (d=="start") {isHighlightText=true; return}
@@ -155,6 +195,7 @@ function highlightText(d) {
         }
     }
 }
+// Returns a node's highlighted size and stroke to normal
 function unHighlightNode(d) {
     if (nameToMatch == "" || d.name.indexOf(nameToMatch) < 0) {
         d3.select("#node_" + d.idx)
@@ -163,9 +204,13 @@ function unHighlightNode(d) {
         .style("stroke",d3.rgb(255,255,255));
     }
 }
+// Removes a node's highlighted name 
 function unHighlightText() {
     vis.selectAll("#highlightText").remove();
 }
+// Similar to computeSizes, this function computes the colors for the nodes
+// based on the preferences of the user chosen in the dropdown menus.
+// The argument of this function, x, is a string representing the color choice. 
 function computeColors(x) {
     // no colors
     if (x=="none"){
@@ -187,7 +232,9 @@ function computeColors(x) {
         // get colors by passing scaled value to colorWheel
         for (var i in nodes){colors[i] = colorWheel(nodes[i].weight);}
     }
-    // by other label
+    // by other label. As with size, we know that this is custom because
+    // the label string begins with a space, i.e. x[0]==" "
+    // ???
     else {
         var y;
         if (x[0]==" "){
@@ -195,6 +242,9 @@ function computeColors(x) {
             y = a.display.labels[x];
         }
         else {
+            // ??? when do we hit this?
+            // I think that it might happen only for display-associated labels
+            // but not for network-associated labels. 
             y = a.network[netName].labels[x];
         }
 
@@ -203,10 +253,14 @@ function computeColors(x) {
             rawColors[i] = y.value[i];
         }
         // Load the data type from the data structure
+        // categorical, scalar, 
         colorType = y.type;
         catNames = [];
         cats = [];
+        // get the category names if it's categorical
         if (colorType=="categorical") {catNames = y.categories}
+        // if we didn't set categories above, then catNames will be undefined
+        // and this code will run, setting the categories and their names to scalars
         if (catNames==undefined){
             var q = d3.set(rawColors).values();
             q.sort();
@@ -263,6 +317,9 @@ function computeColors(x) {
         }
     };
 }
+// ColorWheel is a function that takes a node label, like a category or scalar
+// and just gets the damn color. But it has to take into account what the 
+// current colorType is. Basically, this is trying to apply our prefs to colors
 function colorWheel(x) {
     if (isNaN(x)) {
         if (colorType=="categorical" && typeof(x)=="string"){
@@ -289,6 +346,8 @@ function colorWheel(x) {
 }
 /*
  * Menu interaction
+ * These functions are bound to the various menus that we create in the GUI.
+ * On menu change, one of these will be called. 
  */
 function changeSizes(x) {
     sizeKey = x;
@@ -397,6 +456,7 @@ function matchNodes(x) {
 }
 /*
  * Drawing
+ * All the functions here have to do with actually creating objects in the canvas.
  */
 function redrawNodes() {
     nodes.forEach(function(d,i) {
@@ -416,6 +476,13 @@ function redrawLinks() {
                          });
                   })
 }
+// This function is rather complicated.
+// We want to draw a legend for the sizes and colors.
+// If they are bound to the same attribute, we should have a single color/size combined legend
+// If they are bound to different attributes, we should keep them separate.
+// We generally prefer integer boundaries in our legends... but only if the values
+// that are getting passed in are integers... etc. This code steps through what
+// we think of as standard human preferences.
 function computeLegend() {
     colorsLegend = [];
     sizesLegend = [];
@@ -534,6 +601,7 @@ function computeLegend() {
     }
     drawLegend();
 }
+// Having computed the values that we want to make legendary, above, now draw it.
 function drawLegend() {
     vis.selectAll("#legend").remove();
     if (sizeType == "none" && colorType=="none"){return;};
@@ -599,6 +667,9 @@ function drawLegend() {
                                  });
     }
 }
+// This function does the initial draw.
+// It starts from the Links, then does the Nodes. 
+// Finally, it starts the force using force.start()
 function draw() {
     //Links
     link = link.data(force.links());
@@ -636,23 +707,28 @@ function draw() {
 }
 /*
  * Menus
+ * All of these functions actually go into the menuL and menuR and append divs.
+ * In other words, this is building the html part of the setup on the fly. 
  */
 function writeMenuL() {
     writeMenuA();
 
+    // First, append a bunch of divs in the right order
     var menuL4 = menuL.append("div").attr("id","menuL4");
     var menuL5 = menuL.append("div").attr("id","menuL5");
 	var menuL6 = menuL.append("div").attr("id","menuL6");
     var menuL7 = menuL.append("div").attr("id","menuL7");
-    var menuL8 = menuL.append("div").attr("id","menuL8");
-    var menuL9 = d3.select("#chart").append("div").attr("id","menuL9").html("Drop files here");
+    // var menuL8 = menuL.append("div").attr("id","menuL8");
+    var menuL9 = d3.select("#chart").append("div").attr("id","menuL9").html("drop webweb json here");
 
+    // Scale Link Width
     menuL4.text("Scale link width ");
     var linkWidthCheck = menuL4.append("input")
     .attr("id","linkWidthCheck")
     .attr("type","checkbox")
     .attr("onchange","toggleLinkWidth(this)");
 
+    // Scale Link Opacity
     menuL5.text("Scale link opacity ");
     var linkOpacityCheck = menuL5.append("input")
     .attr("id","linkOpacityCheck")
@@ -660,6 +736,7 @@ function writeMenuL() {
     .attr("checked","")
     .attr("onchange","toggleLinkOpacity(this)");
 
+    // Allow Nodes to Move 
     menuL6.text("Allow nodes to move");
     var nodesMoveCheck = menuL6.append("input")
     .attr("id","onoffSelect")
@@ -667,6 +744,7 @@ function writeMenuL() {
     .attr("checked","")
     .attr("onchange","toggleDynamics(this)");
 
+    // Save as SVG
     menuL7.text("Save SVG");
     var saveSVGButton = menuL7.append("input")
     .attr("id", "saveSVGButton")
@@ -674,6 +752,9 @@ function writeMenuL() {
     .attr("value", "Save")
     .on("click", writeDownloadLink);
 
+    // Load JSON — this code is disabled now for cleanliness
+    // Implemented by Mike Iuzzolino, but disabled by DBL.
+    /*
     menuL8.text("Load JSON");
     var loadJSONButton = menuL8.append("input")
     .attr("type", "file")
@@ -684,108 +765,22 @@ function writeMenuL() {
         var evt = d3.event;
         read_JSON();
     });
+    */
 
     // Setup the dnd listeners.
     d3.select("#chart")
-        .style("border", "2px dashed")
+        .style("border", "1.5px dashed")
         .style("border-radius", "5px")
-        .style("padding", "25px")
+        .style("padding", "5px")
         .style("text-align", "center")
         .style("color", "#bbb");
 
 
     // var dropZone = document.getElementById('menuL9');
-var dropZone = document.getElementById('chart');
+    var dropZone = document.getElementById('chart');
     dropZone.addEventListener('dragover', handleDragOver, false);
     dropZone.addEventListener('drop', read_JSON_drop, false);
 }
-
-function handleDragOver(evt) {
-    evt.stopPropagation();
-    evt.preventDefault();
-    evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
-
-    d3.select("#chart")
-        .style("border", "5px dashed")
-        .style("border-radius", "10px")
-        .style("color", "#fbb")
-        .transition().duration(500)
-        .style("border", "2px dashed")
-        .style("border-radius", "5px")
-        .style("color", "#bbb");
-}
-
-function read_JSON_drop(evt) {
-    evt.stopPropagation();
-    evt.preventDefault();
-
-    var files = evt.dataTransfer.files; // FileList object.
-
-    var text = d3.select("#menuL9")
-
-    text.html(function() {
-        return "Loading " + files[0].name + "...";
-    });
-
-    setTimeout(function() {
-        text.html("Drop files here")
-    }, 2000);
-
-    console.log("FILES");
-    console.log(files);
-
-    read_JSON(files);
-}
-
-
-
-function read_JSON(files, method) {
-    var file;
-
-    if (files === undefined) {
-        files = document.getElementById('json_files').files;
-    }
-    file = files[0]
-
-    var start = 0;
-    var stop = file.size - 1;
-
-    var reader = new FileReader();
-
-    // If we use onloadend, we need to check the readyState.
-    reader.onloadend = function(evt) {
-        console.log("HERE");
-        if (evt.target.readyState == FileReader.DONE) { // DONE == 2
-            var json_string = evt.target.result;
-            json_string = json_string.replace("var a = ", "");
-            a = JSON.parse(json_string);
-            console.log(a);
-            updateVis(a);
-        }
-    };
-
-    var blob = file.slice(start, stop + 1);
-    reader.readAsBinaryString(blob);
-}
-
-
-
-function writeDownloadLink(){
-    try {
-        var isFileSaverSupported = !!new Blob();
-    } catch (e) {
-        alert("blob not supported");
-    }
-
-    var html = d3.select("svg")
-        .attr("title", "test2")
-        .attr("version", 1.1)
-        .attr("xmlns", "http://www.w3.org/2000/svg")
-        .node().parentNode.innerHTML;
-
-    var blob = new Blob([html], {type: "image/svg+xml"});
-    saveAs(blob, "myProfile.svg");
-};
 
 function writeMenuA() {
     menuA.text("Display data from ");
@@ -870,6 +865,100 @@ function writeMenuR() {
     .attr("size",3);
 
 }
+function handleDragOver(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+    evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+
+    // Make the border pop when something is dragged over. 
+    d3.select("#chart")
+        .style("border", "2.5px dashed")
+        .style("border-radius", "10px")
+        .style("color", "#888")
+        .transition().duration(400)
+        .style("border", "1.5px dashed")
+        .style("border-radius", "5px")
+        .style("color", "#bbb");
+}
+
+/*
+* File interaction code
+* This code handles the dragging and dropping of files
+* as well as the saving of SVG
+*/ 
+
+// This prepares to read in a json file if you drop it. 
+// It calls read_JSON, which is below.
+function read_JSON_drop(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+
+    var files = evt.dataTransfer.files; // FileList object.
+
+    var text = d3.select("#menuL9")
+
+    text.html(function() {
+        return "Loading " + files[0].name + "...";
+    });
+
+    setTimeout(function() {
+        text.html("drop webweb json here")
+    }, 2000);
+
+    console.log("FILES");
+    console.log(files);
+
+    read_JSON(files);
+}
+// Theoretically, multiple files could have been dropped above.
+// Those files are passed into read_JSON
+function read_JSON(files, method) {
+    var file;
+
+    if (files === undefined) {
+        files = document.getElementById('json_files').files;
+    }
+    file = files[0]
+
+    var start = 0;
+    var stop = file.size - 1;
+
+    var reader = new FileReader();
+
+    // If we use onloadend, we need to check the readyState.
+    reader.onloadend = function(evt) {
+        console.log("HERE");
+        if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+            var json_string = evt.target.result;
+            json_string = json_string.replace("var a = ", "");
+            a = JSON.parse(json_string);
+            console.log(a);
+            updateVis(a);
+        }
+    };
+
+    var blob = file.slice(start, stop + 1);
+    reader.readAsBinaryString(blob);
+}
+// Blob is used to do the SVG save. 
+function writeDownloadLink(){
+    try {
+        var isFileSaverSupported = !!new Blob();
+    } catch (e) {
+        alert("blob not supported");
+    }
+    // Let's grabe the svg, call it netName, and save it.
+    var html = d3.select("svg")
+        .attr("title", netName)
+        .attr("version", 1.1)
+        .attr("xmlns", "http://www.w3.org/2000/svg")
+        .node().parentNode.innerHTML;
+    var blob = new Blob([html], {type: "image/svg+xml"});
+    saveAs(blob, netName);
+};
+
+
+
 // This product includes color specifications and designs developed by Cynthia Brewer (http://colorbrewer.org/).
 function loadColors() {
     colorbrewer = {YlGn: {
@@ -1213,6 +1302,9 @@ function loadColors() {
         12: ["#8dd3c7","#ffffb3","#bebada","#fb8072","#80b1d3","#fdb462","#b3de69","#fccde5","#d9d9d9","#bc80bd","#ccebc5","#ffed6f"]
     }};
 }
+/* 
+* Helper functions
+*/
 function isInt(n) {
     return n % 1 === 0;
 }
@@ -1226,6 +1318,8 @@ function rounddown(x,dec) {
     return (Math.floor(x*dec)/dec);
 }
 
+// updateVis is called whenever we drag a file in
+// It's the update version of initializeVis
 function updateVis(a) {
     console.log(a);
     d3.select("#vis").remove();
@@ -1308,12 +1402,10 @@ function updateVis(a) {
     computeLinks(netNames[0]);
 }
 
+// Update MenuA is called when we load a json file and need to rebuild menu A
+// Note that Menu A is where we choose where data will come from.
 function updateMenuA() {
-    // var netSelect = d3.select("#netSelect")
-    //     .selectAll("option").data(netNames).enter().append("option")
-    //     .attr("value",function(d){return d;})
-    //     .text(function(d){return d;});
-
+    
     var netSelect = d3.select("#netSelect");
 
     netSelect.selectAll("option").remove();
@@ -1323,9 +1415,9 @@ function updateMenuA() {
         .append("option")
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
-
 }
 
+// Initialize the actual viz by putting all the pieces above together.
 function initializeVis() {
     console.log(a);
 
