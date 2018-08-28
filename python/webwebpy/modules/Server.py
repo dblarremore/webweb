@@ -3,17 +3,17 @@ import os
 
 class Server(object):
     def __init__(self, network_name="network"):
-        self.html_main = "index.html"
+        self.html_main = "{}.html".format(self.network_name)
         self.network_name = network_name.replace(".json", "")
 
     def launch(self, network_name=None):
         if network_name:
             self.network_name = network_name
 
-        self.build_index_html()
+        self.build_html()
         webbrowser.open("file://" + os.path.realpath(self.html_main))
 
-    def build_index_html(self):
+    def build_html(self):
         html_str = """
             <html>
                 <head>
