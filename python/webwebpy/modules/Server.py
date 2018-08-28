@@ -11,7 +11,7 @@ class Server(object):
             self.network_name = network_name
 
         self.build_html()
-        webbrowser.open("file://" + os.path.realpath(self.html_main))
+        webbrowser.open_new("file://" + os.path.realpath(self.html_main))
 
     def build_html(self):
         html_str = """
