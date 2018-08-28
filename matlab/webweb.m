@@ -207,7 +207,7 @@ end
 
 %%%%%%%%%%
 fid = fopen([webwebloc name '.json'],'w');
-fprintf(fid,'var a = {');
+fprintf(fid,'var wwdata = {');
 fprintf(fid,'"display":{');
 fprintf(fid,'"N":%i,',N);
 fprintf(fid,'"name":"%s",',name);

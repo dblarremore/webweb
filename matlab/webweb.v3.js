@@ -81,18 +81,18 @@ function computeLinks(net) {
     nodeColorLabels = nodeColorLabelsBase.slice(0);
 
     // get the adjacencies
-    adj = d3.values(a["network"][netName]["adjList"]);
+    adj = d3.values(wwdata["network"][netName]["adjList"]);
     // learn how we should scale the link weight and opacity by computing the range (extent) of the adj weights.
     scaleLink.domain(d3.extent(d3.transpose(adj)[2]));
     scaleLinkOpacity.domain(d3.extent(d3.transpose(adj)[2]));
     // push all the links to the list: links
     for (var i in adj) {links.push({source:adj[i][0],target:adj[i][1],w:adj[i][2]})}
     // grab all the labels that are attached to the network object
-    loadLabels = Object.keys(a.network[netName].labels);
+    loadLabels = Object.keys(wwdata.network[netName].labels);
     for (i in loadLabels) {
         // in particular, anything that is categorical goes into the color labels list
         // but anything that is scalar goes into color *and* size lists
-        if (a.network[netName].labels[loadLabels[i]].type=="categorical") {
+        if (wwdata.network[netName].labels[loadLabels[i]].type=="categorical") {
             nodeColorLabels.push(loadLabels[i]);
         }
         else {
@@ -152,12 +152,12 @@ function computeSizes(x) {
     else {
         if (x[0]==" "){
             x = x.slice(1);
-            for (var i in nodes){sizes[i] = a.display.labels[x].value[i];}
-            sizeType = a.display.labels[x].type;
+            for (var i in nodes){sizes[i] = wwdata.display.labels[x].value[i];}
+            sizeType = wwdata.display.labels[x].type;
         }
         else {
-            for (var i in nodes){sizes[i] = a.network[netName].labels[x].value[i];}
-            sizeType = a.network[netName].labels[x].type;
+            for (var i in nodes){sizes[i] = wwdata.network[netName].labels[x].value[i];}
+            sizeType = wwdata.network[netName].labels[x].type;
         }
         rawSizes = sizes.slice(0);
         scaleSize.domain(d3.extent(sizes),d3.max(sizes)).range([0.5,1.5]);
@@ -239,13 +239,13 @@ function computeColors(x) {
         var y;
         if (x[0]==" "){
             x = x.slice(1);
-            y = a.display.labels[x];
+            y = wwdata.display.labels[x];
         }
         else {
             // ??? when do we hit this?
             // I think that it might happen only for display-associated labels
             // but not for network-associated labels. 
-            y = a.network[netName].labels[x];
+            y = wwdata.network[netName].labels[x];
         }
 
         for (var i in nodes){
@@ -932,8 +932,8 @@ function read_JSON(files, method) {
             var json_string = evt.target.result;
             json_string = json_string.replace("var a = ", "");
             a = JSON.parse(json_string);
-            console.log(a);
-            updateVis(a);
+            console.log(wwdata);
+            updateVis(wwdata);
         }
     };
 
@@ -1320,14 +1320,14 @@ function rounddown(x,dec) {
 
 // updateVis is called whenever we drag a file in
 // It's the update version of initializeVis
-function updateVis(a) {
-    console.log(a);
+function updateVis(wwdata) {
+    console.log(wwdata);
     d3.select("#vis").remove();
 
-    netNames = Object.keys(a.network);
-    netLabels = Object.keys(a.display.labels);
+    netNames = Object.keys(wwdata.network);
+    netLabels = Object.keys(wwdata.display.labels);
     for (i in netLabels) {
-        if (a.display.labels[netLabels[i]].type=="categorical") {
+        if (wwdata.display.labels[netLabels[i]].type=="categorical") {
             nodeColorLabelsBase.push(" " + netLabels[i]);
         }
         else {
@@ -1335,7 +1335,7 @@ function updateVis(a) {
             nodeColorLabelsBase.push(" " + netLabels[i])
         }
     }
-    N = a.display.N;
+    N = wwdata.display.N;
     links = []
     nodes = [];
     // Define nodes
@@ -1345,13 +1345,13 @@ function updateVis(a) {
         }
         nodes.push(newNode);
     }
-    if (a.display.nodeNames !== undefined){
+    if (wwdata.display.nodeNames !== undefined){
         for (var i in nodes) {
-            nodes[i]["name"] = a.display.nodeNames[i];
+            nodes[i]["name"] = wwdata.display.nodeNames[i];
         }
     }
-    if (a.display.name !== undefined){
-        d3.select("title").text("webweb - " + a.display.name);
+    if (wwdata.display.name !== undefined){
+        d3.select("title").text("webweb - " + wwdata.display.name);
     }else{
         d3.select("title").text("webweb");
     }
@@ -1419,17 +1419,17 @@ function updateMenuA() {
 
 // Initialize the actual viz by putting all the pieces above together.
 function initializeVis() {
-    console.log(a);
+    console.log(wwdata);
 
     /*
      * Don't modify below this line.
      */
-    if (a.display.w !== undefined){w = a.display.w;}
-    if (a.display.h !== undefined){h = a.display.h;}
-    if (a.display.c !== undefined){c = a.display.c;}
-    if (a.display.l !== undefined){l = a.display.l;}
-    if (a.display.r !== undefined){r = a.display.r;}
-    if (a.display.g !== undefined){g = a.display.g;}
+    if (wwdata.display.w !== undefined){w = wwdata.display.w;}
+    if (wwdata.display.h !== undefined){h = wwdata.display.h;}
+    if (wwdata.display.c !== undefined){c = wwdata.display.c;}
+    if (wwdata.display.l !== undefined){l = wwdata.display.l;}
+    if (wwdata.display.r !== undefined){r = wwdata.display.r;}
+    if (wwdata.display.g !== undefined){g = wwdata.display.g;}
 
     // set up the DOM
     center = d3.select("body").append("div").attr("id","center");
@@ -1441,10 +1441,10 @@ function initializeVis() {
     menuR = menu.append("div").attr("id","menuR").attr("class","right").attr("style","text-align:right");
     chart = center.append("div").attr("id","chart").attr("style","clear:both");
 
-    netNames = Object.keys(a.network);
-    netLabels = Object.keys(a.display.labels);
+    netNames = Object.keys(wwdata.network);
+    netLabels = Object.keys(wwdata.display.labels);
     for (i in netLabels) {
-        if (a.display.labels[netLabels[i]].type=="categorical") {
+        if (wwdata.display.labels[netLabels[i]].type=="categorical") {
             nodeColorLabelsBase.push(" " + netLabels[i]);
         }
         else {
@@ -1452,7 +1452,7 @@ function initializeVis() {
             nodeColorLabelsBase.push(" " + netLabels[i])
         }
     }
-    N = a.display.N;
+    N = wwdata.display.N;
     links = []
     nodes = [];
     // Define nodes
@@ -1462,13 +1462,13 @@ function initializeVis() {
         }
         nodes.push(newNode);
     }
-    if (a.display.nodeNames !== undefined){
+    if (wwdata.display.nodeNames !== undefined){
         for (var i in nodes) {
-            nodes[i]["name"] = a.display.nodeNames[i];
+            nodes[i]["name"] = wwdata.display.nodeNames[i];
         }
     }
-    if (a.display.name !== undefined){
-        d3.select("title").text("webweb - " + a.display.name);
+    if (wwdata.display.name !== undefined){
+        d3.select("title").text("webweb - " + wwdata.display.name);
     }else{
         d3.select("title").text("webweb");
     }
