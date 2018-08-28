@@ -13,10 +13,10 @@ from modules.Server import Server
 class webweb(dict):
 
     def __init__(self, title="webweb", *args, **kwargs):
+        self._title = title
         self._display = Display(*args, **kwargs)
         self._networks = Nets()
-        self._title = title
-        self._web_server = Server(network_name=title)
+        self._web_server = Server(network_name=self._title)
 
     # A webweb class need to contain networks
     # Here are its getter and setter
@@ -42,6 +42,7 @@ class webweb(dict):
     @title.setter
     def title(self, new_name):
         self._title = new_name
+        self._web_server.network_name = new_name
 
     # This code will return a network with the specified name
     # IF such a network does not exist, return that entry in the dict
@@ -76,4 +77,4 @@ class webweb(dict):
     # Note that in opening the browser, it points the browser to the newly saved file
     def draw(self):
         self.save_json()
-        self._web_server.launch(self._title)
+        self._web_server.launch()

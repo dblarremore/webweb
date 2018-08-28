@@ -3,12 +3,27 @@ import os
 
 class Server(object):
     def __init__(self, network_name="network"):
-        self.html_main = "{}.html".format(self.network_name)
-        self.network_name = network_name.replace(".json", "")
+        self._network_name = network_name.replace(".json", "")
+        self._html_main = "{}.html".format(self._network_name)
 
-    def launch(self, network_name=None):
-        if network_name:
-            self.network_name = network_name
+    @property
+    def html_main(self):
+        return self._html_main
+    @html_main.setter
+    def html_main(self, new_html_main):
+        self._html_main = new_html_main
+
+    @property
+    def network_name(self):
+        return self._network_name
+    @network_name.setter
+    def network_name(self, new_network_name):
+        self._network_name = new_network_name
+        self._html_main = "{}.html".format(self._network_name)
+
+    def launch(self):
+        # if _network_name:
+        #     self._network_name = _network_name
 
         self.build_html()
         webbrowser.open_new("file://" + os.path.realpath(self.html_main))
@@ -29,6 +44,6 @@ class Server(object):
                 </body>
 
             </html>
-        """.format(self.network_name, self.network_name)
-        with open("{}.html".format(self.network_name), "w") as outfile:
+        """.format(self._network_name, self._network_name)
+        with open("{}.html".format(self._network_name), "w") as outfile:
             outfile.write(html_str)
