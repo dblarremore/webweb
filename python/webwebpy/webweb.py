@@ -1,3 +1,14 @@
+# Python version of webweb was originally created by Michael Iuzzolino
+# Cleaned up and harmonized with existing versions by Daniel Larremore
+# version 3.4
+#
+# Daniel Larremore + Contributors
+# August 29, 2018
+# daniel.larremore@colorado.edu
+# http://github.com/dblarremore/webweb
+# Comments and suggestions always welcome.
+
+
 import os
 import json
 

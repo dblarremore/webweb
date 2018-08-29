@@ -1,11 +1,11 @@
 /*
  * webweb makes pretty interactive network diagrams in your browser
- * version 3.3
+ * version 3.4
  *
- * Daniel Larremore
- * May 22, 2015
- * daniel.larremore@gmail.com
- * http://danlarremore.com
+ * Daniel Larremore + Contributors
+ * August 29, 2018
+ * daniel.larremore@colorado.edu
+ * http://github.com/dblarremore/webweb
  * Comments and suggestions always welcome.
  *
  * READ webweb.m for MATLAB usage.
