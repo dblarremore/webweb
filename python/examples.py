@@ -1,4 +1,4 @@
-from webwebpy.webweb import webweb
+from webweb.webweb import webweb
 import random
 
 def simple_example():

@@ -2,7 +2,7 @@ import os
 import json
 
 try:
-    from webwebpy.modules.Labels import Labels
+    from webweb.modules.Labels import Labels
 except:
     try:
         from modules.Labels import Labels
