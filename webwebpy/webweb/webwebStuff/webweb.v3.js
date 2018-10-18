@@ -716,7 +716,7 @@ function writeMenuL() {
     // First, append a bunch of divs in the right order
     var menuL4 = menuL.append("div").attr("id","menuL4");
     var menuL5 = menuL.append("div").attr("id","menuL5");
-	var menuL6 = menuL.append("div").attr("id","menuL6");
+    var menuL6 = menuL.append("div").attr("id","menuL6");
     var menuL7 = menuL.append("div").attr("id","menuL7");
     // var menuL8 = menuL.append("div").attr("id","menuL8");
     var menuL9 = d3.select("#chart").append("div").attr("id","menuL9").html("drop webweb json here");
@@ -1430,8 +1430,6 @@ function updateMenuA() {
 
 // Initialize the actual viz by putting all the pieces above together.
 function initializeVis() {
-    console.log(wwdata);
-
     /*
      * Don't modify below this line.
      */

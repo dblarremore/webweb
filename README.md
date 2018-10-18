@@ -8,6 +8,12 @@ webweb is a front end to a clever library called d3. Learn more about d3 at [d3j
 ## Why though?
 I got tired of having an adjacency matrix for a network in MATLAB with no way to just _see_ it quickly. Now, I can just call webweb(A) in MATLAB and it pops up in my browser. Recently, this has been rebuilt in Python because it's open source and powerful. 
 
+## Features:
+
+webweb has a bunch of useful features.
+
+One of these is `labels`. 
+
 ## How to use it (MATLAB)
 Grab the contents of `matlab` above and put them into your current MATLAB directory. Then either check out the MATLAB help for webweb.m, try opening webwebTest.m for some worked examples, or view the [webweb examples page](http://danlarremore.com/webweb/). 
 
@@ -25,23 +31,17 @@ webweb(A);
 - [Advanced Example - Customized](http://danlarremore.com/webweb/advanced/)
 - [All Examples](http://danlarremore.com/webweb/examples.html)
 
+## Setup (Python):
+**Right now**: either clone the repository and add it to pip via `pip install webwebpy` or just add the `webwebpy` directory to your project.
+**Soon (?)**: `pip install webwebpy`
+
 ## How to use it (Python)
-Grab the `webwebpy` directory above and place it into your current Python script's directory. Although the syntax for webweb Python is eerily similar to MATLAB, it is slightly different. Check out examples.py for some fully worked examples, but here is a general outline:
 
-- Create an adjacency list, `<your_adj_list>`
-- Import webweb into your script via `from webwebpy.webweb import webweb`
-- Instantiate a webweb object, specifying number of nodes, N, in network: `web = webweb(num_nodes=N)`
-- Set any display parameters by calling appropriate methods on the object, `web.display`
-    - E.g., Apply a charge of 5: `web.display.c = 5`
-- Set any networks parameters by calling appropriate methods on the object, `web.networks`
-    - E.g., To create a new network and assign your adjacency list, <br>
-     `web.networks.<name_of_network>.adjList = <your_adj_list>`
-- Save network to JSON: `web.save_json(<save_name>)`
-- View the interactive visualization of your network in browser: `web.draw()`
-
--	[Example 1 - A single network](http://danlarremore.com/webweb/example2/)
-
-
+1. Import webweb into your script: `from webwebpy.webweb import webweb`
+2. make a webweb object with the desired number of nodes: `web = webweb(num_nodes=N)`
+3. set display parameters via `web.display` (eg, to set the height, `web.display.h = 200`)
+4. add your adjacency list: `web.networks.your_network_name.adj = <your_adjacency_list>`
+5. display the network in browser: `web.draw()`
 
 ## Feedback and Bugs
 

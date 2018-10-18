@@ -1,0 +1,22 @@
+# Things that would be nice:
+- migrate from d3 v3 --> v5
+    - because html.canvas > svg
+    - still export with svg though?
+- python:
+    > - does all matlab functionality exist?
+    - documentation
+    - stop changing directory; allow user to write the outpath
+- pass all parameters from python to display:
+    - isAllowNodesToMove
+    - isLinkWidth
+    - isLinkOpacity
+- initial node positions
+- toggle all labels on/off
+- select color brewer
+- matrix vs list
+    - just _know_ which is which
+> - networkx integration
+    - add weights to edges if present
+- maintain parameters over network display changes
+- remove requirement to input node number
+- add output directories
