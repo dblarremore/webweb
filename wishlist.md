@@ -3,8 +3,6 @@
     - because html.canvas > svg
     - still export with svg though?
 - python:
-    > - does all matlab functionality exist?
-    - documentation
     - stop changing directory; allow user to write the outpath
 - pass all parameters from python to display:
     - isAllowNodesToMove
