@@ -1,6 +1,0 @@
-webweb/__init__.py
-webweb/webweb.py
-webweb.egg-info/PKG-INFO
-webweb.egg-info/SOURCES.txt
-webweb.egg-info/dependency_links.txt
-webweb.egg-info/top_level.txt

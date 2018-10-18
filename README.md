@@ -12,30 +12,27 @@ I got tired of having an adjacency matrix for a network in MATLAB with no way to
 
 webweb has a bunch of useful features.
 
-One of these is `labels`. 
+### networks
 
-## How to use it (MATLAB)
-Grab the contents of `matlab` above and put them into your current MATLAB directory. Then either check out the MATLAB help for webweb.m, try opening webwebTest.m for some worked examples, or view the [webweb examples page](http://danlarremore.com/webweb/). 
+You can load up multiple networks at the same time, to explore how different configurations effect the resulting network.
 
-```matlab
-% create a 100 node adjacency matrix A
-A = floor(1.01*rand(100,100)); A=A+A'; A(A>0) = 1;
-% call webweb
-webweb(A);
-```
-- [Example 2 - Node names](http://danlarremore.com/webweb/example2/)
-- [Example 3 - Two networks](http://danlarremore.com/webweb/example3/)
-- [Example 4 - Two networks + Node names](http://danlarremore.com/webweb/example4/)
-- [Example 5 - Name the networks](http://danlarremore.com/webweb/example5/)
-- [Example 6 - Multiple networks, with node and network names](http://danlarremore.com/webweb/example6/)
-- [Advanced Example - Customized](http://danlarremore.com/webweb/advanced/)
-- [All Examples](http://danlarremore.com/webweb/examples.html)
+### labels
 
-## Setup (Python):
-**Right now**: either clone the repository and add it to pip via `pip install webwebpy` or just add the `webwebpy` directory to your project.
-**Soon (?)**: `pip install webwebpy`
+A label is a string, and each node node can have a value for that label. The label can be categorical, scalar, or binary. Labels can be used to control node size or color in the display. A label defined in `display` will be applied to all networks. A label defined for a single network will (surprising, I know) only apply to that network.
 
-## How to use it (Python)
+If you have a categorical label, you should pass those categories to the label.
+
+## Setup:
+
+Right now:
+
+1. clone the repository: `git clone https://github.com/hneutr/webweb`
+2. add it locally via pip: `pip install -e webweb`
+
+Soon (once we upload it to the archive):
+`pip install webweb`
+
+## How to use it:
 
 1. Import webweb into your script: `from webwebpy.webweb import webweb`
 2. make a webweb object with the desired number of nodes: `web = webweb(num_nodes=N)`

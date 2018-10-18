@@ -8,7 +8,7 @@ setuptools.setup(
     description="a small utility to display network graphs",
     long_description="FILL THIS IN LATER",
     long_description_content_type="text/markdown",
-    url="https://github.com/dblarremore/webweb/webweb",
+    url="https://github.com/hneutr/webweb",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -20,3 +20,4 @@
 - maintain parameters over network display changes
 - remove requirement to input node number
 - add output directories
+- add ability to title network
