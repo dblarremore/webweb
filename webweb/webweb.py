@@ -56,14 +56,15 @@ class webweb(dict):
             <html>
                 <head>
                     <title>webweb {self.title}</title>
-                    <script src="webwebStuff/d3.v3.min.js"></script>
-                    <link type="text/css" rel="stylesheet" href="webwebStuff/style.css"/>
+                    <script src="client/js/d3.v3.min.js"></script>
+                    <link type="text/css" rel="stylesheet" href="client/css/style.css"/>
                     <script type="text/javascript" src="{self.data_file}"></script>
                 </head>
                 <body>
-                    <script type="text/javascript" src ="webwebStuff/Blob.js"></script>
-                    <script type="text/javascript" src ="webwebStuff/FileSaver.min.js"></script>
-                    <script type="text/javascript" src ="webwebStuff/webweb.v3.js"></script>
+                    <script type="text/javascript" src="client/js/colors.js"></script>
+                    <script type="text/javascript" src ="client/js/Blob.js"></script>
+                    <script type="text/javascript" src ="client/js/FileSaver.min.js"></script>
+                    <script type="text/javascript" src ="client/js/webweb.v3.js"></script>
                 </body>
             </html>
         """

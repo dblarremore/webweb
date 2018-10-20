@@ -18,4 +18,5 @@
 - maintain parameters over network display changes
 - remove requirement to input node number
 - add output directories
+    - simple script to allow passing arbitrary files to the viewer
 - add ability to title network
