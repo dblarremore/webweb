@@ -8,8 +8,6 @@
  * http://github.com/dblarremore/webweb
  * Comments and suggestions always welcome.
  *
- * READ webweb.m for MATLAB usage.
- *
  */
 /*
  * Here are default values. If you don't put anything different in the JSON file, this is what you get!
@@ -31,7 +29,7 @@ var nodeSizeLabelsBase = ["none", "degree"];
 var nodeColorLabelsBase = ["none", "degree"];
 
 // set up the DOM here by defining variables
-var center, menu, menuL, menuA, menuB, menuC, menuR, chart;
+var center, menu, menuL, menuR, chart;
 var netNames, newLabels;
 var N;
 var links = [];
@@ -42,7 +40,7 @@ var scaleSize, scaleColorScalar, scaleColorCategory;
 var scaleLink, scaleLinkOpacity;
 
 var colorType, sizeType, colorKey, sizeKey;
-var rawColors, rawSizes, sizes, degrees, colors, sizesLegend, colorsLegend, cats, catNames;
+var rawColors, rawSizes, sizes, degrees, colors, cats, catNames;
 var nameToMatch, R, isHighlightText;
 
 var isStartup, isOpacity;
@@ -72,6 +70,7 @@ function removeLinks() {
 function computeLinks(net) {
     // Update the name
     netName = net;
+
     // Clear all old links
     removeLinks();
 
@@ -81,8 +80,8 @@ function computeLinks(net) {
 
     // get the adjacencies
     adj = d3.values(wwdata["network"][netName]["adjList"]);
-    // learn how we should scale the link weight and opacity by computing the range (extent) of the adj weights.
 
+    // learn how we should scale the link weight and opacity by computing the range (extent) of the adj weights.
     scaleLink.domain(d3.extent(d3.transpose(adj)[2]));
     scaleLinkOpacity.domain(d3.extent(d3.transpose(adj)[2]));
 
@@ -91,43 +90,15 @@ function computeLinks(net) {
         links.push({
             source: adj[i][0],
             target: adj[i][1],
-            w: adj[i][2]
+            w: adj[i][2],
         })
     }
-    // grab all the labels that are attached to the network object
-    loadLabels = Object.keys(wwdata.network[netName].labels);
-    for (i in loadLabels) {
-        // in particular, anything that is categorical goes into the color labels list
-        // but anything that is scalar goes into color *and* size lists
-        if (wwdata.network[netName].labels[loadLabels[i]].type=="categorical") {
-            nodeColorLabels.push(loadLabels[i]);
-        }
-        else {
-            nodeSizeLabels.push(loadLabels[i]);
-            nodeColorLabels.push(loadLabels[i]);
-        }
-    }
 
-    // Draw
+    setColorAndSizeLabels(wwdata.network[netName].labels, false);
+
     draw();
-
-    // Write Menu B (Compute Node Size from...)
-    writeMenuB();
-    if (nodeSizeLabelsBase.indexOf(sizeKey) == -1){
-        changeSizes("none");
-    } else {
-        changeSizes(sizeKey);
-    }
-    sizeSelect.selectedIndex = nodeSizeLabels.indexOf(sizeKey);
-
-    // Write Menu C (Compute Node Color from...)
-    writeMenuC();
-    if (nodeColorLabelsBase.indexOf(colorKey) == -1){
-        changeColors("none");
-    } else {
-        changeColors(colorKey);
-    }
-    colorSelect.selectedIndex = nodeColorLabels.indexOf(colorKey);
+    updateSizeMenu();
+    updateColorMenu();
 }
 
 // Compute the actual radius multipliers of the nodes, given the data and chosen parameters
@@ -136,19 +107,23 @@ function computeLinks(net) {
 // Otherwise, the multiplier can be something else!
 function computeSizes(x) {
     // If there's no degree scaling, set all sizes to 1
-    if (x=="none"){
+    if (x == "none") {
         sizeType = "none";
-        for (var i in nodes){sizes[i] = 1;}
+        for (var i in nodes) {
+            sizes[i] = 1;
+        }
     }
     // If we're scaling by degrees, linearly scale the range of SQRT(degrees) between 0.5 and 1.5
-    else if (x=="degree"){
+    else if (x == "degree") {
         sizeType = "degree";
         for (var i in nodes){
             degrees[i] = nodes[i].weight
             rawSizes[i] = Math.sqrt(degrees[i]);
         }
         scaleSize.domain(d3.extent(rawSizes),d3.max(rawSizes)).range([0.5,1.5]);
-        for (var i in sizes){sizes[i] = scaleSize(rawSizes[i]);}
+        for (var i in sizes) {
+            sizes[i] = scaleSize(rawSizes[i]);
+        }
         rawSizes = degrees.slice(0);
     }
     // Otherwise, grab the values that are stored in the variable that corresponds to the menu choice.
@@ -157,18 +132,26 @@ function computeSizes(x) {
     // The first thing we do is remove that space.
     // ???
     else {
-        if (x[0]==" "){
+        var label;
+        if (x[0] == " "){
             x = x.slice(1);
-            for (var i in nodes){sizes[i] = wwdata.display.labels[x].value[i];}
-            sizeType = wwdata.display.labels[x].type;
+            label = wwdata.display.labels[x];
         }
         else {
-            for (var i in nodes){sizes[i] = wwdata.network[netName].labels[x].value[i];}
-            sizeType = wwdata.network[netName].labels[x].type;
+            label = wwdata.network[netName].labels[x];
         }
+
+        sizeType = label.type;
+        for (var i in nodes) {
+            sizes[i] = label.value[i];
+
+        }
+
         rawSizes = sizes.slice(0);
         scaleSize.domain(d3.extent(sizes),d3.max(sizes)).range([0.5,1.5]);
-        for (var i in sizes){sizes[i] = scaleSize(sizes[i]);}
+        for (var i in sizes) {
+            sizes[i] = scaleSize(sizes[i]);
+        }
     }
 }
 // Highlight a node by making it bigger and outlining it
@@ -226,8 +209,8 @@ function unHighlightText() {
 function computeColors(x) {
     // no colors
     if (x == "none"){
-        // no colors
         colorType = "none";
+
         // set all nodes to dark grey 100
         for (var i in nodes) { 
             colors[i] = d3.rgb(100,100,100);
@@ -283,11 +266,11 @@ function computeColors(x) {
         }
         // if we didn't set categories above, then catNames will be undefined
         // and this code will run, setting the categories and their names to scalars
-        if (catNames==undefined){
+        if (catNames == undefined){
             var q = d3.set(rawColors).values();
             q.sort();
             catNames = [];
-            for (i in q){
+            for (i in q) {
                 cats[i] = q[i];
                 catNames[i] = q[i]
             };
@@ -309,8 +292,7 @@ function computeColors(x) {
             // but let's check because we can only have up to 9 categorical colors
             if (Object.keys(catNames).length <= 9) {
                 // scaled values properly mapped using colorBrewer Set1
-                scaleColorCategory.domain(cats)
-                    .range(colorbrewer.Set1[Object.keys(catNames).length]);
+                scaleColorCategory.domain(cats).range(colorbrewer.Set1[Object.keys(catNames).length]);
 
                 for (var i in nodes){
                     // get colors by passing categories to colorWheel
@@ -523,22 +505,15 @@ function redrawLinks() {
 // that are getting passed in are integers... etc. This code steps through what
 // we think of as standard human preferences.
 function computeLegend() {
-    colorsLegend = [];
-    sizesLegend = [];
-    sizesLegendText = [];
+    var colorsLegend = [];
+    var sizesLegend = [];
+    var sizesLegendText = [];
+    var colorsLegendText = [];
     R = 0;
     if (sizeType != "none" && r != 0 && r != "") {
         if (sizeType == "scalar" || sizeType == "degree") {
-            // test for ints
-            var isIntScalar = true;
-            var j = 0;
-            while (j < N && isIntScalar){
-                isIntScalar = isInt(rawSizes[j]);
-                j++;
-            }
-
             // integer scalars
-            if (isIntScalar) {
+            if (allInts(rawSizes)) {
                 var numInts = d3.max(rawSizes) - d3.min(rawSizes) + 1;
 
                 if (numInts <= 9) {
@@ -583,16 +558,8 @@ function computeLegend() {
             colorsLegendText = ["false", "true"];
         }
         else if (colorType == "scalar" || colorType == "degree") {
-            // test for ints
-            var isIntScalar = true;
-            var j = 0;
-            while (j < N && isIntScalar) {
-                isIntScalar = isInt(rawColors[j]);
-                j++;
-            }
-
             // integer scalars
-            if (isIntScalar) {
+            if (allInts(rawColors)) {
                 var numInts = d3.max(rawColors) - d3.min(rawColors) + 1;
 
                 if (numInts <= 9){
@@ -614,7 +581,7 @@ function computeLegend() {
             colorsLegendText = colorsLegend.slice(0);
         }
     }
-    drawLegend();
+    drawLegend(sizesLegend, colorsLegend, sizesLegendText, colorsLegendText);
 }
 
 function binnedLegend(vals, bins) {
@@ -634,8 +601,9 @@ function binnedLegend(vals, bins) {
     return legend;
 }
 // Having computed the values that we want to make legendary, above, now draw it.
-function drawLegend() {
+function drawLegend(sizesLegend, colorsLegend, sizesLegendText, colorsLegendText) {
     vis.selectAll("#legend").remove();
+
     if (sizeType == "none" && colorType == "none") {
         return;
     };
@@ -772,69 +740,56 @@ function draw() {
 
     force.start();
 }
-/*
- * Menus
- * All of these functions actually go into the menuL and menuR and append divs.
- * In other words, this is building the html part of the setup on the fly. 
- */
-function writeMenuL() {
-    writeMenuA();
 
-    // First, append a bunch of divs in the right order
-    var menuL4 = menuL.append("div").attr("id","menuL4");
-    var menuL5 = menuL.append("div").attr("id","menuL5");
-    var menuL6 = menuL.append("div").attr("id","menuL6");
-    var menuL7 = menuL.append("div").attr("id","menuL7");
-    // var menuL8 = menuL.append("div").attr("id","menuL8");
-    var menuL9 = d3.select("#chart").append("div").attr("id","menuL9").html("drop webweb json here");
+function writeScaleLinkWidthToggle() {
+    var scaleLinkWidthToggle = menuL.append("div")
+        .attr("id", "scaleLinkWidthToggle")
+        .text("Scale link width ");
 
-    // Scale Link Width
-    menuL4.text("Scale link width ");
-    var linkWidthCheck = menuL4.append("input")
-        .attr("id","linkWidthCheck")
-        .attr("type","checkbox")
-        .attr("onchange","toggleLinkWidth(this)");
+    scaleLinkWidthToggle.append("input")
+        .attr("id", "linkWidthCheck")
+        .attr("type", "checkbox")
+        .attr("onchange", "toggleLinkWidth(this)");
+}
+function writeScaleLinkOpacityToggle() {
+    var scaleLinkOpacityToggle = menuL.append("div")
+        .attr("id", "scaleLinkOpacityToggle")
+        .text("Scale link opacity ");
 
-    // Scale Link Opacity
-    menuL5.text("Scale link opacity ");
-    var linkOpacityCheck = menuL5.append("input")
-        .attr("id","linkOpacityCheck")
-        .attr("type","checkbox")
-        .attr("checked","")
-        .attr("onchange","toggleLinkOpacity(this)");
+    scaleLinkOpacityToggle.append("input")
+        .attr("id", "linkOpacityCheck")
+        .attr("type", "checkbox")
+        .attr("checked", "")
+        .attr("onchange", "toggleLinkOpacity(this)");
+}
+function writeNodesMoveToggle() {
+    var nodesMoveToggle = menuL.append("div")
+        .attr("id", "nodesMoveToggle")
+        .text("Allow nodes to move");
 
-    // Allow Nodes to Move 
-    menuL6.text("Allow nodes to move");
-    var nodesMoveCheck = menuL6.append("input")
-        .attr("id","onoffSelect")
-        .attr("type","checkbox")
-        .attr("checked","")
-        .attr("onchange","toggleDynamics(this)");
+    nodesMoveToggle.append("input")
+        .attr("id", "onoffSelect")
+        .attr("type", "checkbox")
+        .attr("checked", "")
+        .attr("onchange", "toggleDynamics(this)");
+}
+function writeSaveAsSVGButton() {
+    var saveAsSVGButton = menuL.append("div")
+        .attr("id", "saveAsSVGButton")
+        .text("Save SVG ");
 
-    // Save as SVG
-    menuL7.text("Save SVG");
-    var saveSVGButton = menuL7.append("input")
+    saveAsSVGButton.append("input")
         .attr("id", "saveSVGButton")
         .attr("type", "button")
         .attr("value", "Save")
         .on("click", writeDownloadLink);
+}
+function writeDropJSONArea() {
+    var dropJSONArea = d3.select("#chart")
+        .append("div")
+        .attr("id","dropJSONArea")
+        .html("drop webweb json here");
 
-    // Load JSON — this code is disabled now for cleanliness
-    // Implemented by Mike Iuzzolino, but disabled by DBL.
-    /*
-    menuL8.text("Load JSON");
-    var loadJSONButton = menuL8.append("input")
-    .attr("type", "file")
-    .attr("id", "json_files")
-    .attr("name", "uploadJSON")
-    .attr("accept", ".json")
-    .on("change", function(evt) {
-        var evt = d3.event;
-        read_JSON();
-    });
-    */
-
-    // Setup the dnd listeners.
     d3.select("#chart")
         .style("border", "1.5px dashed")
         .style("border-radius", "5px")
@@ -843,54 +798,143 @@ function writeMenuL() {
         .style("color", "#bbb");
 
 
-    // var dropZone = document.getElementById('menuL9');
+    // Setup the dnd listeners.
     var dropZone = document.getElementById('chart');
     dropZone.addEventListener('dragover', handleDragOver, false);
-    dropZone.addEventListener('drop', read_JSON_drop, false);
+    dropZone.addEventListener('drop', readJSONDrop, false);
+}
+function writeLoadJSONButton() {
+    var loadJSONButton = menuL.append("div")
+        .attr("id","loadJSONButton")
+        .text("Load JSON");
+
+    loadJSONButton.append("input")
+        .attr("type", "file")
+        .attr("id", "json_files")
+        .attr("name", "uploadJSON")
+        .attr("accept", ".json")
+        .on("change", function(evt) {
+            var evt = d3.event;
+            readJSON();
+        });
 }
 
-function writeMenuA() {
-    menuA.text("Display data from ");
-    var netSelect = menuA.append("select")
-        .attr("id","netSelect")
-        .attr("onchange","computeLinks(this.value)")
+/*
+ * Menus
+ * All of these functions actually go into the menuL and menuR and append divs.
+ * In other words, this is building the html part of the setup on the fly. 
+ */
+function writeLeftMenu() {
+    writeNetworkSelectMenu();
+    writeSizeMenu();
+    writeColorMenu();
+    writeScaleLinkWidthToggle();
+    writeScaleLinkOpacityToggle();
+    writeNodesMoveToggle();
+    writeSaveAsSVGButton();
+    writeDropJSONArea();
+
+    // Implemented by Mike Iuzzolino, disabled by DBL for cleanliness
+    // writeLoadJSONButton();
+}
+
+function writeNetworkSelectMenu() {
+    var networkSelectMenu = menuL.append("div")
+        .attr("id", "networkSelectMenu")
+        .text("Display data from ");
+
+    var netSelect = networkSelectMenu.append("select")
+        .attr("id", "netSelect")
+        .attr("onchange", "computeLinks(this.value)")
         .selectAll("option").data(netNames).enter().append("option")
+        .attr("value", function(d) { return d; })
+        .text(function(d) { return d; });
+}
+
+// called when we load a json file and need to rebuild the networkSelectMenu.
+function updateNetworkSelectMenu() {
+    var netSelect = d3.select("#netSelect");
+
+    netSelect.selectAll("option").remove();
+
+    netSelect.selectAll("option")
+        .data(netNames).enter()
+        .append("option")
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
 }
-function writeMenuB() {
-    menuB.text("Compute node size from ");
-    var sizeSelect = menuB.append("select")
-        .attr("id","sizeSelect")
-        .attr("onchange","changeSizes(this.value)")
-        .selectAll("option").data(nodeSizeLabels).enter().append("option")
-        .attr("value",function(d){return d;})
-        .text(function(d){return d;});
+
+function writeSizeMenu() {
+    var sizeMenu = menuL.append("div")
+        .attr("id", "sizeMenu")
+        .text("Compute node size from ");
+
+    sizeMenu.append("select")
+        .attr("id", "sizeSelect")
+        .attr("onchange", "changeSizes(this.value)");
 }
-function writeMenuC() {
-    menuC.text("Compute node color from ");
-    var colorSelect = menuC.append("select")
+function updateSizeMenu() {
+    var sizeSelect = d3.select("#sizeSelect");
+
+    sizeSelect.selectAll("option").remove();
+
+    sizeSelect.selectAll("option").data(nodeSizeLabels).enter().append("option")
+        .attr("value", function(d) { return d; })
+        .text(function(d) { return d; });
+
+    if (nodeSizeLabelsBase.indexOf(sizeKey) == -1){
+        sizeKey = "none";
+    }
+
+    sizeSelect = document.getElementById('sizeSelect');
+    sizeSelect.selectedIndex = nodeSizeLabels.indexOf(sizeKey);
+    sizeSelect.value = sizeKey;
+    changeSizes(sizeKey);
+}
+
+function writeColorMenu() {
+    var colorMenu = menuL.append("div")
+        .attr("id","colorMenu")
+        .text("Compute node color from ");
+
+    colorMenu.append("select")
         .attr("id","colorSelect")
-        .attr("onchange","changeColors(this.value)")
-        .selectAll("option").data(nodeColorLabels).enter().append("option")
+        .attr("onchange","changeColors(this.value)");
+}
+function updateColorMenu() {
+    var colorSelect = d3.select("#colorSelect");
+
+    colorSelect.selectAll("option").remove();
+
+    colorSelect.selectAll("option").data(nodeColorLabels).enter().append("option")
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
+
+    if (nodeColorLabelsBase.indexOf(colorKey) == -1){
+        colorKey = "none";
+    }
+
+    colorSelect = document.getElementById('colorSelect');
+    colorSelect.selectedIndex = nodeColorLabels.indexOf(colorKey);
+    colorSelect.value = colorKey;
+    changeColors(colorKey);
 }
+
 function writeMenuR() {
-    var menuR1 = menuR.append("div").attr("id","menuR1");
-    var menuR2 = menuR.append("div").attr("id","menuR2");
-    var menuR2B = menuR.append("div").attr("id","menuR2B");
-    var menuR3 = menuR.append("div").attr("id","menuR3");
-    var menuR4 = menuR.append("div").attr("id","menuR4");
-    var menuR6 = menuR.append("div").attr("id","menuR6");
+    var menuR1 = menuR.append("div").attr("id", "menuR1");
+    var menuR2 = menuR.append("div").attr("id", "menuR2");
+    var menuR2B = menuR.append("div").attr("id", "menuR2B");
+    var menuR3 = menuR.append("div").attr("id", "menuR3");
+    var menuR4 = menuR.append("div").attr("id", "menuR4");
+    var menuR6 = menuR.append("div").attr("id", "menuR6");
 
     menuR1.text("Node charge: ");
     var chargeText = menuR1.append("input")
-        .attr("id","chargeText")
-        .attr("type","text")
-        .attr("onchange","changeCharge(this.value)")
-        .attr("value",-force.charge())
-        .attr("size",3);
+        .attr("id", "chargeText")
+        .attr("type", "text")
+        .attr("onchange", "changeCharge(this.value)")
+        .attr("value", -force.charge())
+        .attr("size", 3);
 
     menuR2.text("Link length: ");
     var distanceText = menuR2.append("input")
@@ -955,8 +999,8 @@ function handleDragOver(evt) {
 */ 
 
 // This prepares to read in a json file if you drop it. 
-// It calls read_JSON, which is below.
-function read_JSON_drop(evt) {
+// It calls readJSON, which is below.
+function readJSONDrop(evt) {
     evt.stopPropagation();
     evt.preventDefault();
 
@@ -972,18 +1016,18 @@ function read_JSON_drop(evt) {
         text.html("drop webweb json here")
     }, 2000);
 
-    read_JSON(files);
+    readJSON(files);
 }
 // Theoretically, multiple files could have been dropped above.
-// Those files are passed into read_JSON
+// Those files are passed into readJSON
 // Only the first file is used. 
-function read_JSON(files, method) {
+function readJSON(files, method) {
     var file;
 
     if (files === undefined) {
         files = document.getElementById('json_files').files;
     }
-    file = files[0]
+    file = files[0];
 
     var start = 0;
     var stop = file.size - 1;
@@ -1023,22 +1067,58 @@ function writeDownloadLink(){
 
 
 /* Helper functions */
+function identity(d) {
+    return d;
+}
 function isInt(n) {
     return n % 1 === 0;
 }
-function round(x,dec) {
-    return (Math.round(x*dec)/dec);
+function round(x, dec) {
+    return (Math.round(x * dec) / dec);
 }
-function roundup(x,dec) {
-    return (Math.ceil(x*dec)/dec);
+function roundup(x, dec) {
+    return (Math.ceil(x * dec) / dec);
 }
-function rounddown(x,dec) {
-    return (Math.floor(x*dec)/dec);
+function rounddown(x, dec) {
+    return (Math.floor(x * dec) / dec);
+}
+function allInts(vals) {
+    for (i in vals) {
+        if (!isInt(vals[i])) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Hunter is testing here
-////////////////////////////////////////////////////////////////////////////////
+function setColorAndSizeLabels(labels_object, base) {
+    // PROBABLY NOT GOOD CODING FORM:
+    // The way that a "custom" label is indicated is that it starts with a space.
+    // The first thing we do is remove that space.
+    // ???
+    label_names = Object.keys(labels_object);
+    for (i in label_names) {
+        label = label_names[i];
+
+        if (labels_object[label].type !== "categorical") {
+            if (base) {
+                nodeSizeLabelsBase.push(" " + label);
+            }
+            else {
+                nodeSizeLabels.push(label);
+            }
+        }
+
+        if (base) {
+            nodeColorLabelsBase.push(" " + label);
+        }
+        else {
+            nodeColorLabels.push(label);
+        }
+    }
+}
+
 function setDisplay(wwdata) {
     N = wwdata.display.N;
     if (wwdata.display.w !== undefined){w = wwdata.display.w;}
@@ -1049,23 +1129,14 @@ function setDisplay(wwdata) {
     if (wwdata.display.g !== undefined){g = wwdata.display.g;}
 
     netNames = Object.keys(wwdata.network);
-    netLabels = Object.keys(wwdata.display.labels);
 
-    for (i in netLabels) {
-        if (wwdata.display.labels[netLabels[i]].type=="categorical") {
-            nodeColorLabelsBase.push(" " + netLabels[i]);
-        }
-        else {
-            nodeSizeLabelsBase.push(" " + netLabels[i])
-            nodeColorLabelsBase.push(" " + netLabels[i])
-        }
-    }
+    setColorAndSizeLabels(wwdata.display.labels, true);
 
     links = []
     nodes = [];
 
     // Define nodes
-    for (var i=0; i<N; i++) {
+    for (var i = 0; i < N; i++) {
         newNode = {
             "idx" : i,
         }
@@ -1115,16 +1186,14 @@ function displayNetwork() {
     sizes = [];
     degrees = [];
     colors = [];
-    sizesLegend = [];
-    colorsLegend = [];
     cats = [];
     catNames = [];
     nameToMatch = "";
     R = 0;
     isHighlightText=true;
 
-    for (var i=0; i<N; i++) {
-        colors[i] = d3.rgb(100,100,100); 
+    for (var i = 0; i < N; i++) {
+        colors[i] = d3.rgb(100, 100, 100); 
         rawColors[i] = 1;
     }
 
@@ -1132,16 +1201,13 @@ function displayNetwork() {
     isOpacity = 1;
     netName;
 }
-////////////////////////////////////////////////////////////////////////////////
-// Hunter is done testing here
-////////////////////////////////////////////////////////////////////////////////
 
 // updateVis is called whenever we drag a file in
 // It's the update version of initializeVis
 function updateVis(wwdata) {
     // reset the label lists
-    nodeSizeLabelsBase = ["none","degree"];
-    nodeColorLabelsBase = ["none","degree"];
+    nodeSizeLabelsBase = ["none", "degree"];
+    nodeColorLabelsBase = ["none", "degree"];
 
     setDisplay(wwdata);
 
@@ -1154,22 +1220,8 @@ function updateVis(wwdata) {
 
     displayNetwork();
 
-    updateMenuA();
+    updateNetworkSelectMenu();
     computeLinks(netNames[0]);
-}
-
-// Update MenuA is called when we load a json file and need to rebuild menu A
-// Note that Menu A is where we choose where data will come from.
-function updateMenuA() {
-    var netSelect = d3.select("#netSelect");
-
-    netSelect.selectAll("option").remove();
-
-    netSelect.selectAll("option")
-        .data(netNames).enter()
-        .append("option")
-        .attr("value",function(d){return d;})
-        .text(function(d){return d;});
 }
 
 // Initialize the actual viz by putting all the pieces above together.
@@ -1180,9 +1232,6 @@ function initializeVis() {
     center = d3.select("body").append("div").attr("id","center");
     menu = center.append("div").attr("id","menu");
     menuL = menu.append("div").attr("id","menuL").attr("class","left");
-    menuA = menuL.append("div").attr("id","menuA");
-    menuB = menuL.append("div").attr("id","menuB");
-    menuC = menuL.append("div").attr("id","menuC");
     menuR = menu.append("div").attr("id","menuR").attr("class","right").attr("style","text-align:right");
     chart = center.append("div").attr("id","chart").attr("style","clear:both");
 
@@ -1193,7 +1242,7 @@ function initializeVis() {
 
     displayNetwork();
 
-    writeMenuL();
+    writeLeftMenu();
     writeMenuR();
     computeLinks(netNames[0]);
 }

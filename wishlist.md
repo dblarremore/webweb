@@ -15,7 +15,7 @@
     - just _know_ which is which
 > - networkx integration
     - add weights to edges if present
-- maintain parameters over network display changes
+> - maintain parameters over network display changes
 - remove requirement to input node number
 - add output directories
     - simple script to allow passing arbitrary files to the viewer
