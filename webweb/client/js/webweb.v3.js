@@ -25,9 +25,7 @@ var l = 20;
 var r = 5;
 var g = 0.1;
 
-// set up the DOM here by defining variables
-var center, menu, menuL, menuR, chart;
-var netNames, newLabels;
+var netNames, netName;
 var N;
 var links = [];
 var nodes = [];
@@ -38,14 +36,13 @@ var scaleLink, scaleLinkOpacity;
 
 var colorType, sizeType, colorKey, sizeKey;
 var rawColors, rawSizes, sizes, colors, cats, catNames;
+
 var nameToMatch, R, isHighlightText;
 
-var isStartup, isOpacity;
-var netName;
+var isStartup;
 
-var color_data = {};
-var size_data = {}
-
+var color_labels = {};
+var size_labels = {}
 
 /*
  * Dynamics and colors
@@ -80,20 +77,40 @@ function computeLinks(net) {
     scaleLink.domain(d3.extent(d3.transpose(adj)[2]));
     scaleLinkOpacity.domain(d3.extent(d3.transpose(adj)[2]));
 
+    // make a matrix here so that we can intelligently compute node "weights"
+    var matrix = {}
+    for (var i in nodes) {
+        matrix[i] = {};
+    }
+
     // push all the links to the list: links
     for (var i in adj) {
+        var edge = adj[i];
+        var source = edge[0];
+        var target = edge[1];
+        var weight = edge[2];
+
         links.push({
-            source: adj[i][0],
-            target: adj[i][1],
-            w: adj[i][2],
+            source: source,
+            target: target,
+            w: weight,
         })
+
+        if (! matrix[source][target]) {
+            matrix[source][target] = weight;
+            matrix[target][source] = weight;
+
+            nodes[source].weight += weight;
+            nodes[target].weight += weight;
+        }
     }
 
     setLabels();
 
-    draw();
     updateSizeMenu();
     updateColorMenu();
+
+    draw();
 }
 
 // Compute the actual radius multipliers of the nodes, given the data and chosen parameters
@@ -102,6 +119,7 @@ function computeLinks(net) {
 // Otherwise, the multiplier can be something else!
 function computeSizes(x) {
     rawSizes = [];
+    sizes = [];
 
     // If there's no degree scaling, set all sizes to 1
     if (x == "none") {
@@ -121,7 +139,7 @@ function computeSizes(x) {
             }
         }
         else {
-            var label = size_data.labels[x];
+            var label = size_labels[x];
 
             sizeType = label.type;
             for (var i in nodes) {
@@ -218,7 +236,7 @@ function computeColors(x) {
         }
     }
     else {
-        var label = color_data.labels[x];
+        var label = color_labels[x];
         colorType = label.type;
 
         for (var i in nodes){
@@ -260,13 +278,10 @@ function computeColors(x) {
             // but let's check because we can only have up to 9 categorical colors
             if (Object.keys(catNames).length <= 9) {
                 var color_palate = getColorPalate();
-                console.log(color_palate);
-                // scaled values properly mapped using colorBrewer Set1
+                // scaled values mapped using colorBrewer
                 scaleColorCategory.domain(cats).range(colorbrewer[color_palate][Object.keys(catNames).length]);
-                // scaleColorCategory.domain(cats).range(colorbrewer.Set1[Object.keys(catNames).length]);
 
                 for (var i in nodes){
-                    // get colors by passing categories to colorWheel
                     colors[i] = colorWheel(rawColors[i]);
                 }
             }
@@ -278,7 +293,6 @@ function computeColors(x) {
                 scaleColorScalar.domain(d3.extent(rawColors)).range([0,1]);
 
                 for (var i in nodes){
-                    // get colors by passing scalars to colorWheel
                     colors[i] = colorWheel(rawColors[i]);
                 }
             }
@@ -288,7 +302,6 @@ function computeColors(x) {
             scaleColorScalar.domain(d3.extent(rawColors)).range([0,1]);
 
             for (var i in nodes){
-                // get colors by passing scalars to colorWheel
                 colors[i] = colorWheel(rawColors[i]);
             }
         }
@@ -305,6 +318,7 @@ function colorWheel(x) {
         else {
             return d3.rgb(180, 180, 180)};
     }
+
     if (colorType == "categorical") {
         return scaleColorCategory(x);
     }
@@ -395,8 +409,7 @@ function changeGravity(x) {
         alert("Gravity must be nonnegative.");
     }
 }
-function toggleDynamics(x) {
-    isDynamics = x.checked;
+function toggleDynamics(isDynamics) {
     if (!isDynamics)
     {
         force.stop();
@@ -406,7 +419,7 @@ function toggleDynamics(x) {
     }
     else {
         for (var i = 0; i < force.nodes().length; i++) {
-            force.nodes()[i].fixed=false;
+            force.nodes()[i].fixed = false;
         }
         node.call(force.drag)
         force.resume();
@@ -713,47 +726,67 @@ function draw() {
 
         node.call(force.drag);
 
-        toggleDynamics(document.getElementById("onoffSelect"));
-        isStartup = 0;
+        toggleDynamics(document.getElementById("onoffSelect").checked);
     }
 
     force.start();
+    isStartup = 0;
 }
 
-function writeScaleLinkWidthToggle() {
-    var scaleLinkWidthToggle = menuL.append("div")
+function writeScaleLinkWidthToggle(parent) {
+    var scaleLinkWidthToggle = parent.append("div")
         .attr("id", "scaleLinkWidthToggle")
         .text("Scale link width ");
+
+    var isChecked = "unchecked";
+    if (wwdata.display.scaleLinkWidth) {
+        isChecked = "checked";
+    }
+
+    toggleLinkWidthScaling(wwdata.display.scaleLinkWidth);
 
     scaleLinkWidthToggle.append("input")
         .attr("id", "linkWidthCheck")
         .attr("type", "checkbox")
+        .attr(isChecked, "")
         .attr("onchange", "toggleLinkWidthScaling(this.checked)");
 }
-function writeScaleLinkOpacityToggle() {
-    var scaleLinkOpacityToggle = menuL.append("div")
+function writeScaleLinkOpacityToggle(parent) {
+    var scaleLinkOpacityToggle = parent.append("div")
         .attr("id", "scaleLinkOpacityToggle")
         .text("Scale link opacity ");
+
+    var isChecked = "unchecked";
+    if (wwdata.display.scaleLinkOpacity) {
+        isChecked = "checked";
+    }
+
+    toggleLinkOpacity(wwdata.display.scaleLinkOpacity);
 
     scaleLinkOpacityToggle.append("input")
         .attr("id", "linkOpacityCheck")
         .attr("type", "checkbox")
-        .attr("checked", "")
+        .attr(isChecked, "")
         .attr("onchange", "toggleLinkOpacity(this.checked)");
 }
-function writeNodesMoveToggle() {
-    var nodesMoveToggle = menuL.append("div")
+function writeNodesMoveToggle(parent) {
+    var nodesMoveToggle = parent.append("div")
         .attr("id", "nodesMoveToggle")
         .text("Allow nodes to move");
+
+    var isChecked = "checked";
+    if (wwdata.display.disallowNodeMovement) {
+        isChecked = "unchecked";
+    }
 
     nodesMoveToggle.append("input")
         .attr("id", "onoffSelect")
         .attr("type", "checkbox")
-        .attr("checked", "")
-        .attr("onchange", "toggleDynamics(this)");
+        .attr(isChecked, "")
+        .attr("onchange", "toggleDynamics(this.checked)");
 }
-function writeSaveAsSVGButton() {
-    var saveAsSVGButton = menuL.append("div")
+function writeSaveAsSVGButton(parent) {
+    var saveAsSVGButton = parent.append("div")
         .attr("id", "saveAsSVGButton")
         .text("Save SVG ");
 
@@ -782,8 +815,8 @@ function writeDropJSONArea() {
     dropZone.addEventListener('dragover', handleDragOver, false);
     dropZone.addEventListener('drop', readJSONDrop, false);
 }
-function writeLoadJSONButton() {
-    var loadJSONButton = menuL.append("div")
+function writeLoadJSONButton(parent) {
+    var loadJSONButton = parent.append("div")
         .attr("id","loadJSONButton")
         .text("Load JSON");
 
@@ -803,27 +836,12 @@ function writeLoadJSONButton() {
  * All of these functions actually go into the menuL and menuR and append divs.
  * In other words, this is building the html part of the setup on the fly. 
  */
-function writeLeftMenu() {
-    writeNetworkSelectMenu();
-    writeSizeMenu();
-    writeColorMenu();
-    writeColorPalateMenu();
-    writeScaleLinkWidthToggle();
-    writeScaleLinkOpacityToggle();
-    writeNodesMoveToggle();
-    writeSaveAsSVGButton();
-    writeDropJSONArea();
-
-    // Implemented by Mike Iuzzolino, disabled by DBL for cleanliness
-    // writeLoadJSONButton();
-}
-
-function writeNetworkSelectMenu() {
-    var networkSelectMenu = menuL.append("div")
+function writeNetworkSelectMenu(parent) {
+    var networkSelectMenu = parent.append("div")
         .attr("id", "networkSelectMenu")
         .text("Display data from ");
 
-    var netSelect = networkSelectMenu.append("select")
+    networkSelectMenu.append("select")
         .attr("id", "netSelect")
         .attr("onchange", "computeLinks(this.value)")
         .selectAll("option").data(netNames).enter().append("option")
@@ -844,8 +862,8 @@ function updateNetworkSelectMenu() {
         .text(function(d){return d;});
 }
 
-function writeSizeMenu() {
-    var sizeMenu = menuL.append("div")
+function writeSizeMenu(parent) {
+    var sizeMenu = parent.append("div")
         .attr("id", "sizeMenu")
         .text("Compute node size from ");
 
@@ -859,7 +877,7 @@ function updateSizeMenu() {
     sizeSelect.selectAll("option").remove();
 
     var size_label_strings = [];
-    for (var label in size_data.labels) {
+    for (var label in size_labels) {
         size_label_strings.push(label);
     }
 
@@ -870,7 +888,7 @@ function updateSizeMenu() {
         .attr("value", function(d) { return d; })
         .text(function(d) { return d; });
 
-    if (size_data.labels[sizeKey] == undefined) {
+    if (size_labels[sizeKey] == undefined || sizeKey == undefined) {
         sizeKey = "none";
     }
 
@@ -879,8 +897,8 @@ function updateSizeMenu() {
     changeSizes(sizeKey);
 }
 
-function writeColorMenu() {
-    var colorMenu = menuL.append("div")
+function writeColorMenu(parent) {
+    var colorMenu = parent.append("div")
         .attr("id","colorMenu")
         .text("Compute node color from ");
 
@@ -894,7 +912,7 @@ function updateColorMenu() {
     colorSelect.selectAll("option").remove();
 
     var color_label_strings = [];
-    for (var label in color_data.labels) {
+    for (var label in color_labels) {
         color_label_strings.push(label);
     }
 
@@ -905,7 +923,7 @@ function updateColorMenu() {
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
 
-    if (color_data.labels[sizeKey] == undefined) {
+    if (color_labels[colorKey] == undefined || colorKey == undefined) {
         colorKey = "none";
     }
 
@@ -914,8 +932,8 @@ function updateColorMenu() {
     changeColors(colorKey);
 }
 
-function writeColorPalateMenu() {
-    var colorPalateMenu = menuL.append("div")
+function writeColorPalateMenu(parent) {
+    var colorPalateMenu = parent.append("div")
         .attr("id", "colorPalateMenu")
         .text("Color Palate ");
 
@@ -935,7 +953,14 @@ function writeColorPalateMenu() {
         .text(function(d) { return d; });
 
     colorPalateMenuSelect = document.getElementById('colorPalateMenuSelect');
-    colorPalateMenuSelect.value = 'Set1';
+    if (wwdata.display.colorPalate !== undefined) {
+        if (colorbrewer[wwdata.display.colorPalate] !== undefined) {
+            colorPalateMenuSelect.value = wwdata.display.colorPalate;
+        }
+    }
+    else {
+        colorPalateMenuSelect.value = 'Set1';
+    }
 }
 
 function getColorPalate() {
@@ -943,8 +968,8 @@ function getColorPalate() {
     return colorPalateMenuSelect.value;
 }
 
-function writeChargeWidget() {
-    var chargeWidget = menuR.append("div")
+function writeChargeWidget(parent) {
+    var chargeWidget = parent.append("div")
         .attr("id", "chargeWidget")
         .text("Node charge: ");
 
@@ -955,8 +980,8 @@ function writeChargeWidget() {
         .attr("value", -force.charge())
         .attr("size", 3);
 }
-function writeLinkLengthWidget() {
-    var linkLengthWidget = menuR.append("div")
+function writeLinkLengthWidget(parent) {
+    var linkLengthWidget = parent.append("div")
         .attr("id", "linkLengthWidget")
         .text("Link length: ");
 
@@ -967,8 +992,8 @@ function writeLinkLengthWidget() {
         .attr("value", force.distance())
         .attr("size", 3);
 }
-function writeLinkStrengthWidget() {
-    var linkStrengthWidget = menuR.append("div")
+function writeLinkStrengthWidget(parent) {
+    var linkStrengthWidget = parent.append("div")
         .attr("id", "linkStrengthWidget")
         .text("Link strength: ");
 
@@ -979,8 +1004,8 @@ function writeLinkStrengthWidget() {
         .attr("value",force.linkStrength())
         .attr("size",3);
 }
-function writeGravityWidget() {
-    var gravityWidget = menuR.append("div")
+function writeGravityWidget(parent) {
+    var gravityWidget = parent.append("div")
         .attr("id", "gravityWidget")
         .text("Gravity: ");
 
@@ -991,8 +1016,8 @@ function writeGravityWidget() {
         .attr("value",force.gravity())
         .attr("size",3);
 }
-function writeRadiusWidget() {
-    var radiusWidget = menuR.append("div")
+function writeRadiusWidget(parent) {
+    var radiusWidget = parent.append("div")
         .attr("id", "radiusWidget")
         .text("Node r: ");
 
@@ -1003,8 +1028,8 @@ function writeRadiusWidget() {
         .attr("value", r)
         .attr("size", 3);
 }
-function writeMatchWidget() {
-    var matchWidget = menuR.append("div")
+function writeMatchWidget(parent) {
+    var matchWidget = parent.append("div")
         .attr("id", "matchWidget")
         .text("Highlight nodes whose name matches ");
 
@@ -1014,13 +1039,33 @@ function writeMatchWidget() {
         .attr("onchange", "matchNodes(this.value)")
         .attr("size", 3);
 }
-function writeRightMenu() {
-    writeChargeWidget();
-    writeLinkLengthWidget();
-    writeLinkStrengthWidget();
-    writeGravityWidget();
-    writeRadiusWidget();
-    writeMatchWidget();
+function writeMenus(menu) {
+    var leftMenu = menu.append("div")
+        .attr("id", "leftMenu")
+        .attr("class", "left");
+
+    var rightMenu = menu.append("div")
+        .attr("id", "rightMenu")
+        .attr("class", "right");
+
+    writeNetworkSelectMenu(leftMenu);
+    writeSizeMenu(leftMenu);
+    writeColorMenu(leftMenu);
+    writeColorPalateMenu(leftMenu);
+    writeScaleLinkWidthToggle(leftMenu);
+    writeScaleLinkOpacityToggle(leftMenu);
+    writeNodesMoveToggle(leftMenu);
+    writeSaveAsSVGButton(leftMenu);
+    writeDropJSONArea(leftMenu);
+    // Implemented by Mike Iuzzolino, disabled by DBL for cleanliness
+    // writeLoadJSONButton();
+
+    writeChargeWidget(rightMenu);
+    writeLinkLengthWidget(rightMenu);
+    writeLinkStrengthWidget(rightMenu);
+    writeGravityWidget(rightMenu);
+    writeRadiusWidget(rightMenu);
+    writeMatchWidget(rightMenu);
 }
 
 /*
@@ -1163,16 +1208,23 @@ function setLabels() {
         }
     }
 
-    size_data.labels = {};
-    color_data.labels = {};
+    size_labels = {};
+    color_labels = {};
     for (label in all_labels) {
         if (all_labels[label].type !== "categorical") {
-            size_data.labels[label] = all_labels[label];
+            size_labels[label] = all_labels[label];
         }
-        color_data.labels[label] = all_labels[label];
+        color_labels[label] = all_labels[label];
     }
 }
-
+////////////////////////////////////////////////////////////////////////////////
+// Parameters currently passed through:
+// - w, h, c, l, r, g
+// - colorBy --> colorKey
+// - sizeBy --> sizeKey
+// - scaleLinkOpacity
+// - scaleLinkWidth
+////////////////////////////////////////////////////////////////////////////////
 function setDisplay(wwdata) {
     N = wwdata.display.N;
     if (wwdata.display.w !== undefined){w = wwdata.display.w;}
@@ -1182,15 +1234,19 @@ function setDisplay(wwdata) {
     if (wwdata.display.r !== undefined){r = wwdata.display.r;}
     if (wwdata.display.g !== undefined){g = wwdata.display.g;}
 
+    colorKey = wwdata.display.colorBy;
+    sizeKey = wwdata.display.sizeBy;
+
     netNames = Object.keys(wwdata.network);
 
     links = [];
-    nodes = [];
 
     // Define nodes
+    nodes = [];
     for (var i = 0; i < N; i++) {
         nodes.push({
             "idx" : i,
+            "weight" : 0,
         });
     }
 
@@ -1201,7 +1257,6 @@ function setDisplay(wwdata) {
         }
     }
 
-    // set the title
     var title = "webweb";
     if (wwdata.display.name !== undefined) {
         title = title + " - " + wwdata.display.name;
@@ -1211,6 +1266,12 @@ function setDisplay(wwdata) {
 }
 
 function displayNetwork() {
+    vis = d3.select("#svg_div")
+        .append("svg")
+        .attr("width", w)
+        .attr("height", h)
+        .attr("id", "vis");
+
     node = vis.selectAll(".node");
     link = vis.selectAll(".link");
     force = d3.layout.force()
@@ -1230,16 +1291,13 @@ function displayNetwork() {
 
     colorType = "none";
     sizeType = "none";
-    colorKey = "none";
-    sizeKey = "none";
     rawColors = [];
-    sizes = [];
     colors = [];
     cats = [];
     catNames = [];
     nameToMatch = "";
     R = 0;
-    isHighlightText=true;
+    isHighlightText = true;
 
     for (var i = 0; i < N; i++) {
         colors[i] = d3.rgb(100, 100, 100); 
@@ -1247,25 +1305,16 @@ function displayNetwork() {
     }
 
     isStartup = 1;
-    isOpacity = 1;
     netName;
 }
 
 // updateVis is called whenever we drag a file in
 // It's the update version of initializeVis
 function updateVis(wwdata) {
-    // reset the label lists
-    nodeSizeLabelsBase = ["none", "degree"];
-    nodeColorLabelsBase = ["none", "degree"];
-
     setDisplay(wwdata);
 
-    // Rebuild the actual svg here
+    // remove the SVG; it will be recreated below
     d3.select("#vis").remove();
-    vis = d3.select("#svg_div").append("svg")
-        .attr("width",w)
-        .attr("height",h)
-        .attr("id","vis");
 
     displayNetwork();
 
@@ -1278,21 +1327,21 @@ function initializeVis() {
     setDisplay(wwdata);
 
     // set up the DOM
-    center = d3.select("body").append("div").attr("id","center");
-    menu = center.append("div").attr("id","menu");
-    menuL = menu.append("div").attr("id","menuL").attr("class","left");
-    menuR = menu.append("div").attr("id","menuR").attr("class","right").attr("style","text-align:right");
-    chart = center.append("div").attr("id","chart").attr("style","clear:both");
+    var center = d3.select("body")
+        .append("div")
+        .attr("id", "center");
 
-    vis = d3.select("#chart").append("div").attr("id", "svg_div").append("svg")
-        .attr("width",w)
-        .attr("height",h)
-        .attr("id","vis");
+    var menu = center.append("div")
+        .attr("id", "menu");
+
+    center.append("div")
+        .attr("id", "chart")
+        .append("div")
+        .attr("id", "svg_div");
 
     displayNetwork();
 
-    writeLeftMenu();
-    writeRightMenu();
+    writeMenus(menu);
     computeLinks(netNames[0]);
 }
 

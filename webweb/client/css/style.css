@@ -6,6 +6,7 @@ text.shadow {
 
 #chart{
     font-size: 10px;
+    clear: both;
 }
 #vis {
     border-style: solid;
@@ -109,6 +110,7 @@ li.indent {
 }
 .right{
     float: right;
+    text-align: right;
 }
 #footer{
     font-size: 12px;
