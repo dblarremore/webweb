@@ -41,8 +41,7 @@ var nameToMatch, R, isHighlightText;
 
 var isStartup;
 
-var color_labels = {};
-var size_labels = {}
+var colorLabels, sizeLabels;
 
 /*
  * Dynamics and colors
@@ -56,11 +55,7 @@ function tick() {
     node.attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; })
 }
-// Remove all the links in the list of links.
-function removeLinks() {
-    links.splice(0,links.length);
-    draw();
-}
+
 // This function is poorly named. 
 // It is called when loading a network or changing networks
 // It rebuilds links, labels, and menus, accordingly
@@ -68,7 +63,9 @@ function computeLinks(net) {
     // Update the name
     netName = net;
 
-    removeLinks();
+    // Remove all the links in the list of links.
+    links.splice(0, links.length);
+    draw();
 
     // get the adjacencies
     adj = d3.values(wwdata["network"][netName]["adjList"]);
@@ -139,7 +136,7 @@ function computeSizes(x) {
             }
         }
         else {
-            var label = size_labels[x];
+            var label = sizeLabels[x];
 
             sizeType = label.type;
             for (var i in nodes) {
@@ -236,7 +233,7 @@ function computeColors(x) {
         }
     }
     else {
-        var label = color_labels[x];
+        var label = colorLabels[x];
         colorType = label.type;
 
         for (var i in nodes){
@@ -725,14 +722,22 @@ function draw() {
         });
 
         node.call(force.drag);
-
-        toggleDynamics(document.getElementById("onoffSelect").checked);
     }
 
     force.start();
     isStartup = 0;
 }
-
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+//
+// MENUS
+//
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
 function writeScaleLinkWidthToggle(parent) {
     var scaleLinkWidthToggle = parent.append("div")
         .attr("id", "scaleLinkWidthToggle")
@@ -780,10 +785,12 @@ function writeNodesMoveToggle(parent) {
     }
 
     nodesMoveToggle.append("input")
-        .attr("id", "onoffSelect")
+        .attr("id", "nodesMoveToggle")
         .attr("type", "checkbox")
         .attr(isChecked, "")
         .attr("onchange", "toggleDynamics(this.checked)");
+
+    toggleDynamics(document.getElementById("nodesMoveToggle").checked);
 }
 function writeSaveAsSVGButton(parent) {
     var saveAsSVGButton = parent.append("div")
@@ -830,12 +837,6 @@ function writeLoadJSONButton(parent) {
             readJSON();
         });
 }
-
-/*
- * Menus
- * All of these functions actually go into the menuL and menuR and append divs.
- * In other words, this is building the html part of the setup on the fly. 
- */
 function writeNetworkSelectMenu(parent) {
     var networkSelectMenu = parent.append("div")
         .attr("id", "networkSelectMenu")
@@ -877,7 +878,7 @@ function updateSizeMenu() {
     sizeSelect.selectAll("option").remove();
 
     var size_label_strings = [];
-    for (var label in size_labels) {
+    for (var label in sizeLabels) {
         size_label_strings.push(label);
     }
 
@@ -888,7 +889,7 @@ function updateSizeMenu() {
         .attr("value", function(d) { return d; })
         .text(function(d) { return d; });
 
-    if (size_labels[sizeKey] == undefined || sizeKey == undefined) {
+    if (sizeLabels[sizeKey] == undefined || sizeKey == undefined) {
         sizeKey = "none";
     }
 
@@ -912,7 +913,7 @@ function updateColorMenu() {
     colorSelect.selectAll("option").remove();
 
     var color_label_strings = [];
-    for (var label in color_labels) {
+    for (var label in colorLabels) {
         color_label_strings.push(label);
     }
 
@@ -923,7 +924,7 @@ function updateColorMenu() {
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
 
-    if (color_labels[colorKey] == undefined || colorKey == undefined) {
+    if (colorLabels[colorKey] == undefined || colorKey == undefined) {
         colorKey = "none";
     }
 
@@ -962,12 +963,10 @@ function writeColorPalateMenu(parent) {
         colorPalateMenuSelect.value = 'Set1';
     }
 }
-
 function getColorPalate() {
     colorPalateMenuSelect = document.getElementById('colorPalateMenuSelect');
     return colorPalateMenuSelect.value;
 }
-
 function writeChargeWidget(parent) {
     var chargeWidget = parent.append("div")
         .attr("id", "chargeWidget")
@@ -1186,21 +1185,18 @@ function allInts(vals) {
 
 ////////////////////////////////////////////////////////////////////////////////
 // loads the labels up from the places they could come from:
-// - the display parameters
-// - the network itself
-// - the defaults (none, degree)
+// 1. the defaults (none, degree)
+// 2. the display parameters
+// 3. the network itself
+//
+// Priority is given to the network's labels, then display, then defaults
 ////////////////////////////////////////////////////////////////////////////////
 function setLabels() {
     var all_labels = {
         'none' : {},
         'degree' : {},
     };
-    if (wwdata.network[netName] !== undefined && wwdata.network[netName].labels !== undefined) {
-        var network_labels = wwdata.network[netName].labels;
-        for (var label in network_labels) {
-            all_labels[label] = network_labels[label];
-        }
-    }
+
     if (wwdata.display.labels !== undefined) {
         var display_labels = wwdata.display.labels;
         for (var label in display_labels) {
@@ -1208,22 +1204,30 @@ function setLabels() {
         }
     }
 
-    size_labels = {};
-    color_labels = {};
+    if (wwdata.network[netName] !== undefined && wwdata.network[netName].labels !== undefined) {
+        var network_labels = wwdata.network[netName].labels;
+        for (var label in network_labels) {
+            all_labels[label] = network_labels[label];
+        }
+    }
+    sizeLabels = {};
+    colorLabels = {};
     for (label in all_labels) {
         if (all_labels[label].type !== "categorical") {
-            size_labels[label] = all_labels[label];
+            sizeLabels[label] = all_labels[label];
         }
-        color_labels[label] = all_labels[label];
+        colorLabels[label] = all_labels[label];
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Parameters currently passed through:
+// - N
 // - w, h, c, l, r, g
 // - colorBy --> colorKey
 // - sizeBy --> sizeKey
 // - scaleLinkOpacity
 // - scaleLinkWidth
+// - disallowNodeMovement
 ////////////////////////////////////////////////////////////////////////////////
 function setDisplay(wwdata) {
     N = wwdata.display.N;
@@ -1264,7 +1268,13 @@ function setDisplay(wwdata) {
 
     d3.select("title").text(title);
 }
-
+////////////////////////////////////////////////////////////////////////////////
+// This function is poorly named. It:
+// - makes the svg
+// - makes a node and link selector
+// - scales stuff
+// - initializes some colors
+////////////////////////////////////////////////////////////////////////////////
 function displayNetwork() {
     vis = d3.select("#svg_div")
         .append("svg")
