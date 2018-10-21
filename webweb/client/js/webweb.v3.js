@@ -25,9 +25,6 @@ var l = 20;
 var r = 5;
 var g = 0.1;
 
-var nodeSizeLabelsBase = ["none", "degree"];
-var nodeColorLabelsBase = ["none", "degree"];
-
 // set up the DOM here by defining variables
 var center, menu, menuL, menuR, chart;
 var netNames, newLabels;
@@ -40,11 +37,14 @@ var scaleSize, scaleColorScalar, scaleColorCategory;
 var scaleLink, scaleLinkOpacity;
 
 var colorType, sizeType, colorKey, sizeKey;
-var rawColors, rawSizes, sizes, degrees, colors, cats, catNames;
+var rawColors, rawSizes, sizes, colors, cats, catNames;
 var nameToMatch, R, isHighlightText;
 
 var isStartup, isOpacity;
 var netName;
+
+var color_data = {};
+var size_data = {}
 
 
 /*
@@ -71,12 +71,7 @@ function computeLinks(net) {
     // Update the name
     netName = net;
 
-    // Clear all old links
     removeLinks();
-
-    // Get labels for size and color
-    nodeSizeLabels = nodeSizeLabelsBase.slice(0);
-    nodeColorLabels = nodeColorLabelsBase.slice(0);
 
     // get the adjacencies
     adj = d3.values(wwdata["network"][netName]["adjList"]);
@@ -94,7 +89,7 @@ function computeLinks(net) {
         })
     }
 
-    setColorAndSizeLabels(wwdata.network[netName].labels, false);
+    setLabels();
 
     draw();
     updateSizeMenu();
@@ -106,49 +101,37 @@ function computeLinks(net) {
 // For example, if x is None, then the multiplier is 1, the identity
 // Otherwise, the multiplier can be something else!
 function computeSizes(x) {
+    rawSizes = [];
+
     // If there's no degree scaling, set all sizes to 1
     if (x == "none") {
         sizeType = "none";
         for (var i in nodes) {
             sizes[i] = 1;
         }
+        return;
     }
-    // If we're scaling by degrees, linearly scale the range of SQRT(degrees) between 0.5 and 1.5
-    else if (x == "degree") {
-        sizeType = "degree";
-        for (var i in nodes){
-            degrees[i] = nodes[i].weight
-            rawSizes[i] = Math.sqrt(degrees[i]);
-        }
-        scaleSize.domain(d3.extent(rawSizes),d3.max(rawSizes)).range([0.5,1.5]);
-        for (var i in sizes) {
-            sizes[i] = scaleSize(rawSizes[i]);
-        }
-        rawSizes = degrees.slice(0);
-    }
-    // Otherwise, grab the values that are stored in the variable that corresponds to the menu choice.
-    // PROBABLY NOT GOOD CODING FORM:
-    // The way that a "custom" label is indicated is that it starts with a space.
-    // The first thing we do is remove that space.
-    // ???
     else {
-        var label;
-        if (x[0] == " "){
-            x = x.slice(1);
-            label = wwdata.display.labels[x];
+        // If we're scaling by degrees, linearly scale the range of SQRT(degrees) between 0.5 and 1.5
+        if (x == "degree") {
+            sizeType = "degree";
+            for (var i in nodes){
+                rawSizes[i] = nodes[i].weight;
+                sizes[i] = Math.sqrt(rawSizes[i]);
+            }
         }
         else {
-            label = wwdata.network[netName].labels[x];
+            var label = size_data.labels[x];
+
+            sizeType = label.type;
+            for (var i in nodes) {
+                sizes[i] = label.value[i];
+            }
+
+            rawSizes = sizes.slice(0);
         }
 
-        sizeType = label.type;
-        for (var i in nodes) {
-            sizes[i] = label.value[i];
-
-        }
-
-        rawSizes = sizes.slice(0);
-        scaleSize.domain(d3.extent(sizes),d3.max(sizes)).range([0.5,1.5]);
+        scaleSize.domain(d3.extent(sizes), d3.max(sizes)).range([0.5,1.5]);
         for (var i in sizes) {
             sizes[i] = scaleSize(sizes[i]);
         }
@@ -234,35 +217,20 @@ function computeColors(x) {
             colors[i] = colorWheel(nodes[i].weight);
         }
     }
-    // by other label. As with size, we know that this is custom because
-    // the label string begins with a space, i.e. x[0]==" "
-    // ???
     else {
-        var y;
-        if (x[0] == " "){
-            x = x.slice(1);
-            y = wwdata.display.labels[x];
-        }
-        else {
-            // ??? when do we hit this?
-            // I think that it might happen only for display-associated labels
-            // but not for network-associated labels. 
-            y = wwdata.network[netName].labels[x];
-        }
+        var label = color_data.labels[x];
+        colorType = label.type;
 
         for (var i in nodes){
-            // Load raw values from the data structure
-            rawColors[i] = y.value[i];
+            rawColors[i] = label.value[i];
         }
 
-        // Load the data type from the data structure
-        // categorical, scalar, 
-        colorType = y.type;
         catNames = [];
         cats = [];
+
         // get the category names if it's categorical
         if (colorType == "categorical") {
-            catNames = y.categories;
+            catNames = label.categories;
         }
         // if we didn't set categories above, then catNames will be undefined
         // and this code will run, setting the categories and their names to scalars
@@ -272,7 +240,7 @@ function computeColors(x) {
             catNames = [];
             for (i in q) {
                 cats[i] = q[i];
-                catNames[i] = q[i]
+                catNames[i] = q[i];
             };
         }
         else {
@@ -291,8 +259,11 @@ function computeColors(x) {
         if (colorType == "categorical") {
             // but let's check because we can only have up to 9 categorical colors
             if (Object.keys(catNames).length <= 9) {
+                var color_palate = getColorPalate();
+                console.log(color_palate);
                 // scaled values properly mapped using colorBrewer Set1
-                scaleColorCategory.domain(cats).range(colorbrewer.Set1[Object.keys(catNames).length]);
+                scaleColorCategory.domain(cats).range(colorbrewer[color_palate][Object.keys(catNames).length]);
+                // scaleColorCategory.domain(cats).range(colorbrewer.Set1[Object.keys(catNames).length]);
 
                 for (var i in nodes){
                     // get colors by passing categories to colorWheel
@@ -377,6 +348,12 @@ function changeColors(x) {
         matchNodes(nameToMatch)
     };
 }
+function setColorPalate(color_palate) {
+    computeColors(colorKey);
+    redrawNodes();
+    computeLegend();
+}
+
 function changeCharge(x) {
     if (x >= 0) {
         force.charge(-x);
@@ -435,8 +412,8 @@ function toggleDynamics(x) {
         force.resume();
     }
 }
-function toggleLinkWidth(x) {
-    if (x.checked) {
+function toggleLinkWidthScaling(checked) {
+    if (checked) {
         scaleLink.range([0.5, 4]);
     }
     else {
@@ -444,8 +421,8 @@ function toggleLinkWidth(x) {
     }
     redrawLinks();
 }
-function toggleLinkOpacity(x) {
-    if (x.checked) {
+function toggleLinkOpacity(checked) {
+    if (checked) {
         scaleLinkOpacity.range([0.4, 0.9])
     }
     else {
@@ -456,7 +433,9 @@ function toggleLinkOpacity(x) {
 function matchNodes(x) {
     nameToMatch = x;
     if (x.length == 0){
-        nodes.forEach(function(d){ unHighlightNode(d) });
+        nodes.forEach(function(d) {
+            unHighlightNode(d);
+        });
     }
     else {
         nodes.forEach(function(d) {
@@ -464,7 +443,7 @@ function matchNodes(x) {
                 unHighlightNode(d);
             }
             else {
-                highlightNode(d)
+                highlightNode(d);
             }
         })
     }
@@ -618,6 +597,7 @@ function drawLegend(sizesLegend, colorsLegend, sizesLegendText, colorsLegendText
                 .style("fill", colorWheel(colorsLegend[i]))
                 .style("stroke", d3.rgb(255, 255, 255));
         });
+
         sizesLegendText.forEach(function(d, i){
             vis.append("text")
                 .attr("id", "legend")
@@ -677,7 +657,6 @@ function drawLegend(sizesLegend, colorsLegend, sizesLegendText, colorsLegendText
 // It starts from the Links, then does the Nodes. 
 // Finally, it starts the force using force.start()
 function draw() {
-    //Links
     link = link.data(force.links());
 
     link.enter().insert("line", ".node")
@@ -749,7 +728,7 @@ function writeScaleLinkWidthToggle() {
     scaleLinkWidthToggle.append("input")
         .attr("id", "linkWidthCheck")
         .attr("type", "checkbox")
-        .attr("onchange", "toggleLinkWidth(this)");
+        .attr("onchange", "toggleLinkWidthScaling(this.checked)");
 }
 function writeScaleLinkOpacityToggle() {
     var scaleLinkOpacityToggle = menuL.append("div")
@@ -760,7 +739,7 @@ function writeScaleLinkOpacityToggle() {
         .attr("id", "linkOpacityCheck")
         .attr("type", "checkbox")
         .attr("checked", "")
-        .attr("onchange", "toggleLinkOpacity(this)");
+        .attr("onchange", "toggleLinkOpacity(this.checked)");
 }
 function writeNodesMoveToggle() {
     var nodesMoveToggle = menuL.append("div")
@@ -828,6 +807,7 @@ function writeLeftMenu() {
     writeNetworkSelectMenu();
     writeSizeMenu();
     writeColorMenu();
+    writeColorPalateMenu();
     writeScaleLinkWidthToggle();
     writeScaleLinkOpacityToggle();
     writeNodesMoveToggle();
@@ -878,16 +858,23 @@ function updateSizeMenu() {
 
     sizeSelect.selectAll("option").remove();
 
-    sizeSelect.selectAll("option").data(nodeSizeLabels).enter().append("option")
+    var size_label_strings = [];
+    for (var label in size_data.labels) {
+        size_label_strings.push(label);
+    }
+
+    sizeSelect.selectAll("option")
+        .data(size_label_strings)
+        .enter()
+        .append("option")
         .attr("value", function(d) { return d; })
         .text(function(d) { return d; });
 
-    if (nodeSizeLabelsBase.indexOf(sizeKey) == -1){
+    if (size_data.labels[sizeKey] == undefined) {
         sizeKey = "none";
     }
 
     sizeSelect = document.getElementById('sizeSelect');
-    sizeSelect.selectedIndex = nodeSizeLabels.indexOf(sizeKey);
     sizeSelect.value = sizeKey;
     changeSizes(sizeKey);
 }
@@ -906,76 +893,141 @@ function updateColorMenu() {
 
     colorSelect.selectAll("option").remove();
 
-    colorSelect.selectAll("option").data(nodeColorLabels).enter().append("option")
+    var color_label_strings = [];
+    for (var label in color_data.labels) {
+        color_label_strings.push(label);
+    }
+
+    colorSelect.selectAll("option")
+        .data(color_label_strings)
+        .enter()
+        .append("option")
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
 
-    if (nodeColorLabelsBase.indexOf(colorKey) == -1){
+    if (color_data.labels[sizeKey] == undefined) {
         colorKey = "none";
     }
 
     colorSelect = document.getElementById('colorSelect');
-    colorSelect.selectedIndex = nodeColorLabels.indexOf(colorKey);
     colorSelect.value = colorKey;
     changeColors(colorKey);
 }
 
-function writeMenuR() {
-    var menuR1 = menuR.append("div").attr("id", "menuR1");
-    var menuR2 = menuR.append("div").attr("id", "menuR2");
-    var menuR2B = menuR.append("div").attr("id", "menuR2B");
-    var menuR3 = menuR.append("div").attr("id", "menuR3");
-    var menuR4 = menuR.append("div").attr("id", "menuR4");
-    var menuR6 = menuR.append("div").attr("id", "menuR6");
+function writeColorPalateMenu() {
+    var colorPalateMenu = menuL.append("div")
+        .attr("id", "colorPalateMenu")
+        .text("Color Palate ");
 
-    menuR1.text("Node charge: ");
-    var chargeText = menuR1.append("input")
+    var color_names = [];
+    for (color_name in colorbrewer) {
+        color_names.push(color_name);
+    }
+
+    colorPalateMenu.append("select")
+        .attr("id", "colorPalateMenuSelect")
+        .attr("onchange", "setColorPalate(this.value)")
+        .selectAll("option")
+        .data(color_names)
+        .enter()
+        .append("option")
+        .attr("value", function(d) { return d; })
+        .text(function(d) { return d; });
+
+    colorPalateMenuSelect = document.getElementById('colorPalateMenuSelect');
+    colorPalateMenuSelect.value = 'Set1';
+}
+
+function getColorPalate() {
+    colorPalateMenuSelect = document.getElementById('colorPalateMenuSelect');
+    return colorPalateMenuSelect.value;
+}
+
+function writeChargeWidget() {
+    var chargeWidget = menuR.append("div")
+        .attr("id", "chargeWidget")
+        .text("Node charge: ");
+
+    chargeWidget.append("input")
         .attr("id", "chargeText")
         .attr("type", "text")
         .attr("onchange", "changeCharge(this.value)")
         .attr("value", -force.charge())
         .attr("size", 3);
+}
+function writeLinkLengthWidget() {
+    var linkLengthWidget = menuR.append("div")
+        .attr("id", "linkLengthWidget")
+        .text("Link length: ");
 
-    menuR2.text("Link length: ");
-    var distanceText = menuR2.append("input")
-        .attr("id","distanceText")
-        .attr("type","text")
-        .attr("onchange","changeDistance(this.value)")
-        .attr("value",force.distance())
-        .attr("size",3);
+    linkLengthWidget.append("input")
+        .attr("id", "distanceText")
+        .attr("type", "text")
+        .attr("onchange", "changeDistance(this.value)")
+        .attr("value", force.distance())
+        .attr("size", 3);
+}
+function writeLinkStrengthWidget() {
+    var linkStrengthWidget = menuR.append("div")
+        .attr("id", "linkStrengthWidget")
+        .text("Link strength: ");
 
-    menuR2B.text("Link strength: ");
-    var distanceText = menuR2B.append("input")
+    linkStrengthWidget.append("input")
         .attr("id","linkStrengthText")
         .attr("type","text")
         .attr("onchange","changeLinkStrength(this.value)")
         .attr("value",force.linkStrength())
         .attr("size",3);
+}
+function writeGravityWidget() {
+    var gravityWidget = menuR.append("div")
+        .attr("id", "gravityWidget")
+        .text("Gravity: ");
 
-    menuR3.text("Gravity: ");
-    var gravityText = menuR3.append("input")
+    gravityWidget.append("input")
         .attr("id","gravityText")
         .attr("type","text")
         .attr("onchange","changeGravity(this.value)")
         .attr("value",force.gravity())
         .attr("size",3);
-
-    menuR4.text("Node r: ");
-    var rText = menuR4.append("input")
-        .attr("id","rText")
-        .attr("type","text")
-        .attr("onchange","changer(this.value)")
-        .attr("value",r)
-        .attr("size",3);
-
-    menuR6.text("Highlight nodes whose name matches ");
-    var matchText = menuR6.append("input")
-        .attr("id","matchText")
-        .attr("type","text")
-        .attr("onchange","matchNodes(this.value)")
-        .attr("size",3);
-
 }
+function writeRadiusWidget() {
+    var radiusWidget = menuR.append("div")
+        .attr("id", "radiusWidget")
+        .text("Node r: ");
+
+    radiusWidget.append("input")
+        .attr("id","rText")
+        .attr("type", "text")
+        .attr("onchange","changer(this.value)")
+        .attr("value", r)
+        .attr("size", 3);
+}
+function writeMatchWidget() {
+    var matchWidget = menuR.append("div")
+        .attr("id", "matchWidget")
+        .text("Highlight nodes whose name matches ");
+
+    matchWidget.append("input")
+        .attr("id","matchText")
+        .attr("type", "text")
+        .attr("onchange", "matchNodes(this.value)")
+        .attr("size", 3);
+}
+function writeRightMenu() {
+    writeChargeWidget();
+    writeLinkLengthWidget();
+    writeLinkStrengthWidget();
+    writeGravityWidget();
+    writeRadiusWidget();
+    writeMatchWidget();
+}
+
+/*
+* File interaction code
+* This code handles the dragging and dropping of files
+* as well as the saving of SVG
+*/ 
 function handleDragOver(evt) {
     evt.stopPropagation();
     evt.preventDefault();
@@ -991,12 +1043,6 @@ function handleDragOver(evt) {
         .style("border-radius", "5px")
         .style("color", "#bbb");
 }
-
-/*
-* File interaction code
-* This code handles the dragging and dropping of files
-* as well as the saving of SVG
-*/ 
 
 // This prepares to read in a json file if you drop it. 
 // It calls readJSON, which is below.
@@ -1055,7 +1101,8 @@ function writeDownloadLink(){
     } catch (e) {
         alert("blob not supported");
     }
-    // Let's grabe the svg, call it netName, and save it.
+    // grab the svg, call it netName, and save it.
+
     var html = d3.select("svg")
         .attr("title", netName)
         .attr("version", 1.1)
@@ -1092,30 +1139,37 @@ function allInts(vals) {
     return true;
 }
 
-function setColorAndSizeLabels(labels_object, base) {
-    // PROBABLY NOT GOOD CODING FORM:
-    // The way that a "custom" label is indicated is that it starts with a space.
-    // The first thing we do is remove that space.
-    // ???
-    label_names = Object.keys(labels_object);
-    for (i in label_names) {
-        label = label_names[i];
+////////////////////////////////////////////////////////////////////////////////
+// loads the labels up from the places they could come from:
+// - the display parameters
+// - the network itself
+// - the defaults (none, degree)
+////////////////////////////////////////////////////////////////////////////////
+function setLabels() {
+    var all_labels = {
+        'none' : {},
+        'degree' : {},
+    };
+    if (wwdata.network[netName] !== undefined && wwdata.network[netName].labels !== undefined) {
+        var network_labels = wwdata.network[netName].labels;
+        for (var label in network_labels) {
+            all_labels[label] = network_labels[label];
+        }
+    }
+    if (wwdata.display.labels !== undefined) {
+        var display_labels = wwdata.display.labels;
+        for (var label in display_labels) {
+            all_labels[label] = display_labels[label];
+        }
+    }
 
-        if (labels_object[label].type !== "categorical") {
-            if (base) {
-                nodeSizeLabelsBase.push(" " + label);
-            }
-            else {
-                nodeSizeLabels.push(label);
-            }
+    size_data.labels = {};
+    color_data.labels = {};
+    for (label in all_labels) {
+        if (all_labels[label].type !== "categorical") {
+            size_data.labels[label] = all_labels[label];
         }
-
-        if (base) {
-            nodeColorLabelsBase.push(" " + label);
-        }
-        else {
-            nodeColorLabels.push(label);
-        }
+        color_data.labels[label] = all_labels[label];
     }
 }
 
@@ -1130,17 +1184,14 @@ function setDisplay(wwdata) {
 
     netNames = Object.keys(wwdata.network);
 
-    setColorAndSizeLabels(wwdata.display.labels, true);
-
-    links = []
+    links = [];
     nodes = [];
 
     // Define nodes
     for (var i = 0; i < N; i++) {
-        newNode = {
+        nodes.push({
             "idx" : i,
-        }
-        nodes.push(newNode);
+        });
     }
 
     // set the display names
@@ -1168,8 +1219,8 @@ function displayNetwork() {
         .charge(-c)
         .gravity(g)
         .linkDistance(l)
-        .size([w,h])
-        .on("tick",tick);
+        .size([w, h])
+        .on("tick", tick);
 
     scaleSize = d3.scale.linear().range([1,1]);
     scaleColorScalar = d3.scale.linear().range([1,1]);
@@ -1182,9 +1233,7 @@ function displayNetwork() {
     colorKey = "none";
     sizeKey = "none";
     rawColors = [];
-    rawSizes = [];
     sizes = [];
-    degrees = [];
     colors = [];
     cats = [];
     catNames = [];
@@ -1243,7 +1292,7 @@ function initializeVis() {
     displayNetwork();
 
     writeLeftMenu();
-    writeMenuR();
+    writeRightMenu();
     computeLinks(netNames[0]);
 }
 

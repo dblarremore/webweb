@@ -10,7 +10,7 @@
     - isLinkOpacity
 - initial node positions
 - toggle all labels on/off
-- select color brewer
+> - select color brewer
 - matrix vs list
     - just _know_ which is which
 > - networkx integration
