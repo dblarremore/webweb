@@ -24,9 +24,9 @@ if __name__ == '__main__':
     web.display.colorBy = 'slithering'
     web.display.sizeBy = 'degree'
     web.display.scaleLinkWidth = True
-    # web.display.scaleLinkOpacity = True
+    web.display.scaleLinkOpacity = True
     web.display.colorPalate = "Set2"
-    # web.display.disallowNodeMovement = True
+    # web.display.freezeNodeMovement = True
 
 
     # Build a few networks
@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
     web.networks.starfish.labels.texture.type = 'categorical'
     web.networks.starfish.labels.texture.value = [1,3,0,2,0,1]
-    web.networks.starfish.labels.texture.categories = ['chewy','gooey','crunchy','fishy']
+    # web.networks.starfish.labels.texture.categories = ['chewy','gooey','crunchy','fishy']
 
     web.networks.starfish.labels.power.type = 'scalar'
     web.networks.starfish.labels.power.value = [1,3,3.8,0.2,1,3.1415]

@@ -1,20 +1,35 @@
 # Things that would be nice:
-- migrate from d3 v3 --> v5
-    - because html.canvas > svg
-    - still export with svg though?
+- client:
+    - migrate d3 v3 --> v5
+        - use canvas
+        - still export with svg though?
+    - title display
+    - config:
+        - export
+        - toggle all labels on/off
+        - initial node positions
+    - use User colorScheme whenever possible
+        - i.e.
+            - if binary
+            - if scalar && fewer than # colors scalars
+    - add links
+    - add nodes
+    - remove requirement to input node number
+    - transform nodes into list alla: { 'id' : 1, 'string' : 'name', 'other_attr' : 'cheese' }
 - python:
-    - stop changing directory; allow user to write the outpath
-- initial node positions
-- toggle all labels on/off
-- matrix vs list
-    - just _know_ which is which
-> - networkx integration
-    - add weights to edges if present
-- remove requirement to input node number
+    - stop changing directory
+    - allow user to write the outpath
+    - matrix vs list
+        - just _know_ which is which
+    - put up on pip
+    - networkx integration
+        - add weights to edges if present
 - add output directories
     - simple script to allow passing arbitrary files to the viewer
-- add ability to title network
 - BUGS:
     - figure out directed
-    - document behavior with edges regarding weights
+- DOCUMENT:
+    - behavior with edges regarding weights
         - i.e., it will take the first edge's weight
+    - parameter names
+    - how it works
