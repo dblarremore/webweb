@@ -1040,13 +1040,6 @@ function writeDropJSONArea() {
         .attr("id","dropJSONArea")
         .html("drop webweb json here");
 
-    d3.select("#chart")
-        .style("border", "1.5px dashed")
-        .style("border-radius", "5px")
-        .style("padding", "5px")
-        .style("text-align", "center")
-        .style("color", "#bbb");
-
     // Setup the dnd listeners.
     var dropZone = document.getElementById('chart');
     dropZone.addEventListener('dragover', handleDragOver, false);

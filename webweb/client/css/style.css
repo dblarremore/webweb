@@ -5,6 +5,12 @@ text.shadow {
 }
 
 #chart{
+    border: 1.5px dashed;
+    border-radius: 5px;
+    padding: 5px;
+    text-align: center;
+    color: #bbb;
+    padding-top: 10px;
     font-size: 10px;
     clear: both;
 }
