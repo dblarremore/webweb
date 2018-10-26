@@ -30,6 +30,7 @@ var displayDefaults = {
     'l' : 20,
     'r' : 5,
     'g' : 0.1,
+    'colorPalate' : 'Set1',
 };
 
 var display = {};
@@ -47,8 +48,6 @@ var colorType, sizeType, colorKey, sizeKey;
 var sizes, colors, categoryNames;
 
 var nameToMatch, R, isHighlightText;
-
-var isStartup;
 
 var colorLabels, sizeLabels;
 var colorData = {
@@ -86,23 +85,32 @@ function tick() {
         .attr("cy", function(d) { return d.y; })
 }
 
-// This function is poorly named. 
-// It is called when loading a network or changing networks
-// It rebuilds links, labels, and menus, accordingly
-function computeLinks() {
-    // Remove all the links in the list of links.
+function displayNetwork() {
+    // remove old links
     links.splice(0, links.length);
-    draw();
 
+    // make new links
+    computeLinks();
+
+    setLabels();
+
+    updateSizeMenu();
+    updateColorMenu();
+
+    drawLinks();
+    force.start();
+}
+
+function computeLinks() {
     // get the adjacencies
-    adj = d3.values(wwdata["network"][display.networkName]["adjList"]);
+    var adj = d3.values(wwdata["network"][display.networkName]["adjList"]);
 
-    // learn how we should scale the link weight and opacity by computing the
-    // range (extent) of the adj weights.
+    // scale the link weight and opacity by computing the range (extent) of the
+    // adj weights.
     scaleLink.domain(d3.extent(d3.transpose(adj)[2]));
     scaleLinkOpacity.domain(d3.extent(d3.transpose(adj)[2]));
 
-    // make a matrix to intelligently compute node "weights" (or degree)
+    // make a matrix so edges between nodes can only occur once
     var matrix = {}
     for (var i in nodes) {
         matrix[i] = {};
@@ -129,15 +137,6 @@ function computeLinks() {
             nodes[target].weight += weight;
         }
     }
-
-    setLabels();
-
-    updateSizeMenu();
-    updateColorMenu();
-
-    // Hunter: I currently don't understand d3 well enough to get why we have to
-    // draw both above and here.
-    draw();
 }
 
 // Compute the actual radius multipliers of the nodes, given the data and chosen parameters
@@ -184,11 +183,10 @@ function computeSizes() {
 }
 
 function makeSizeLegend() {
-    legend = [];
-    text = [];
+    var legend = [];
+    var text = [];
     sizeData['R'] = 0;
     
-
     // there is no legend if:
     // - the sizeType is "none"
     // - the radius is undefined
@@ -303,7 +301,6 @@ function unHighlightText() {
 }
 // Similar to computeSizes, this function computes the colors for the nodes
 // based on the preferences of the user chosen in the dropdown menus.
-// The argument of this function, x, is a string representing the color choice. 
 function computeColors() {
     colorType = colorKey;
 
@@ -311,10 +308,11 @@ function computeColors() {
     if (colorKey == "none"){
         // set all nodes to dark grey 100
         for (var i in nodes) { 
-            colors[i] = d3.rgb(100,100,100);
+            colors[i] = d3.rgb(100, 100, 100);
         }
         return
     }
+
     // treat degree as a scalar
     if (colorKey == "degree"){
         // raw values are weights
@@ -360,9 +358,8 @@ function computeColors() {
 
             // if there are fewer than 9 categories, use the colorbrewer
             if (categories.length <= 9) {
-                var colorPalateName = getColorPalateName();
                 scaleColorCategory.domain(categories)
-                    .range(colorbrewer[colorPalateName][categories.length]);
+                    .range(colorbrewer[display.colorPalate][categories.length]);
             }
             else {
                 // otherwise, treat like scalars
@@ -451,7 +448,7 @@ function colorWheel(x) {
  */
 function updateNetwork(networkName) {
     display.networkName = networkName;
-    computeLinks();
+    displayNetwork();
 }
 function changeSizes(x) {
     sizeKey = x;
@@ -459,7 +456,7 @@ function changeSizes(x) {
     redrawNodes();
     computeLegend();
     if (nameToMatch != "") {
-        matchNodes(nameToMatch)
+        matchNodes(nameToMatch);
     };
 }
 function changeColors(x) {
@@ -468,10 +465,11 @@ function changeColors(x) {
     redrawNodes();
     computeLegend();
     if (nameToMatch != "") {
-        matchNodes(nameToMatch)
+        matchNodes(nameToMatch);
     };
 }
-function setColorPalate(color_palate) {
+function setColorPalate(colorPalate) {
+    display.colorPalate = colorPalate;
     computeColors();
     redrawNodes();
     computeLegend();
@@ -569,52 +567,25 @@ function matchNodes(x) {
         })
     }
 }
-/*
- * Drawing
- * All the functions here have to do with actually creating objects in the canvas.
- */
-function redrawNodes() {
-    nodes.forEach(function(d, i) {
-        d3.select("#node_" + d.idx)
-            .attr("r", sizes[i] * r)
-            .style("fill", d3.rgb(colors[i]));
-    });
-}
-function redrawLinks() {
-    links.forEach(function(d, i) {
-        d3.select("#link_" + i)
-            .transition()
-            .style("stroke-width", function(d){
-                if (d.w == 0) {
-                    return 0;
-                }
-                else {
-                    return scaleLink(d.w);
-                }
-            })
-        .style("stroke-opacity", function(d) {
-            return scaleLinkOpacity(d.w)
-        });
-    })
-}
-// This function is rather complicated.
-// We want to draw a legend for the sizes and colors.
-// If they are bound to the same attribute, we should have a single color/size combined legend
-// If they are bound to different attributes, we should keep them separate.
-// We generally prefer integer boundaries in our legends... but only if the values
-// that are getting passed in are integers... etc. This code steps through what
-// we think of as standard human preferences.
+// draw a legend for how size and color have been computed.
+// If they are bound to the same attribute, have a single color/size combined legend
+// If they are bound to different attributes, keep them separate.
+//
+// prefer integer boundaries in our legends... but only if the values that are
+// getting passed in are integers... etc. 
+//
+// This code steps through what we think of as standard human preferences.
 function computeLegend() {
     vis.selectAll("#legend").remove();
-
-    makeColorLegend();
-    makeSizeLegend();
-
-    R = sizeData['R'];
 
     if (sizeType == "none" && colorType == "none") {
         return;
     };
+
+    makeColorLegend();
+    makeSizeLegend();
+
+    var R = sizeData['R'];
 
     if (sizeKey == colorKey) {
         sizeData['legend'].forEach(function(d, i){
@@ -683,6 +654,8 @@ function computeLegend() {
     }
 }
 
+// This function handles 'binning' a set of values so that we can display a
+// finite legend.
 function binnedLegend(vals, bins) {
     var legend = [];
     var min_val = d3.min(vals);
@@ -700,21 +673,17 @@ function binnedLegend(vals, bins) {
     return legend;
 }
 
-// This function does the initial draw.
-// It starts from the Links, then does the Nodes. 
-// Finally, it starts the force using force.start()
-function draw() {
-    drawLinks();
-
-    // Nodes
-    if (isStartup) {
-        drawNodes();
-    }
-
-    force.start();
-    isStartup = 0;
-}
-
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+//
+// Drawing
+//
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
 function drawLinks() {
     link = link.data(force.links());
 
@@ -738,9 +707,24 @@ function drawLinks() {
         });
 
     link.exit().remove();
-
 }
-
+function redrawLinks() {
+    links.forEach(function(d, i) {
+        d3.select("#link_" + i)
+            .transition()
+            .style("stroke-width", function(d){
+                if (d.w == 0) {
+                    return 0;
+                }
+                else {
+                    return scaleLink(d.w);
+                }
+            })
+        .style("stroke-opacity", function(d) {
+            return scaleLinkOpacity(d.w)
+        });
+    })
+}
 function drawNodes() {
     node = node.data(force.nodes());
     node.enter()
@@ -774,6 +758,13 @@ function drawNodes() {
     });
 
     node.call(force.drag);
+}
+function redrawNodes() {
+    nodes.forEach(function(d, i) {
+        d3.select("#node_" + d.idx)
+            .attr("r", sizes[i] * r)
+            .style("fill", d3.rgb(colors[i]));
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -864,7 +855,6 @@ function writeDropJSONArea() {
         .style("text-align", "center")
         .style("color", "#bbb");
 
-
     // Setup the dnd listeners.
     var dropZone = document.getElementById('chart');
     dropZone.addEventListener('dragover', handleDragOver, false);
@@ -894,7 +884,6 @@ function writeNetworkSelectMenu(parent) {
         .attr("id", "netSelect")
         .attr("onchange", "updateNetwork(this.value)")
 }
-
 // called when we load a json file and need to rebuild the networkSelectMenu.
 function updateNetworkSelectMenu() {
     var netSelect = d3.select("#netSelect");
@@ -911,7 +900,6 @@ function updateNetworkSelectMenu() {
     netSelect = document.getElementById('netSelect');
     netSelect.value = display.networkName;
 }
-
 function writeSizeMenu(parent) {
     var sizeMenu = parent.append("div")
         .attr("id", "sizeMenu")
@@ -946,7 +934,6 @@ function updateSizeMenu() {
     sizeSelect.value = sizeKey;
     changeSizes(sizeKey);
 }
-
 function writeColorMenu(parent) {
     var colorMenu = parent.append("div")
         .attr("id","colorMenu")
@@ -981,7 +968,6 @@ function updateColorMenu() {
     colorSelect.value = colorKey;
     changeColors(colorKey);
 }
-
 function writeColorPalateMenu(parent) {
     var colorPalateMenu = parent.append("div")
         .attr("id", "colorPalateMenu")
@@ -1011,10 +997,6 @@ function writeColorPalateMenu(parent) {
     else {
         colorPalateMenuSelect.value = 'Set1';
     }
-}
-function getColorPalateName() {
-    colorPalateMenuSelect = document.getElementById('colorPalateMenuSelect');
-    return colorPalateMenuSelect.value;
 }
 function writeChargeWidget(parent) {
     var chargeWidget = parent.append("div")
@@ -1243,32 +1225,32 @@ function allInts(vals) {
 // Priority is given to the network's labels, then display, then defaults
 ////////////////////////////////////////////////////////////////////////////////
 function setLabels() {
-    var all_labels = {
+    var allLabels = {
         'none' : {},
         'degree' : {},
     };
 
     if (display.labels !== undefined) {
-        var display_labels = display.labels;
-        for (var label in display_labels) {
-            all_labels[label] = display_labels[label];
+        var displayLabels = display.labels;
+        for (var label in displayLabels) {
+            allLabels[label] = displayLabels[label];
         }
     }
 
     var networkData = wwdata.network[display.networkName];
     if (networkData !== undefined && networkData.labels !== undefined) {
-        var network_labels = networkData.labels;
-        for (var label in network_labels) {
-            all_labels[label] = network_labels[label];
+        var networkLabels = networkData.labels;
+        for (var label in networkLabels) {
+            allLabels[label] = networkLabels[label];
         }
     }
     sizeLabels = {};
     colorLabels = {};
-    for (label in all_labels) {
-        if (all_labels[label].type !== "categorical") {
-            sizeLabels[label] = all_labels[label];
+    for (label in allLabels) {
+        if (allLabels[label].type !== "categorical") {
+            sizeLabels[label] = allLabels[label];
         }
-        colorLabels[label] = all_labels[label];
+        colorLabels[label] = allLabels[label];
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -1286,6 +1268,7 @@ function setLabels() {
 // - scaleLinkOpacity
 // - scaleLinkWidth
 // - freezeNodeMovement
+// - networkName
 ////////////////////////////////////////////////////////////////////////////////
 function initializeNetwork() {
     N = wwdata.display.N;
@@ -1320,15 +1303,12 @@ function initializeNetwork() {
     nodes = [];
     colors = [];
     nameToMatch = "";
-    R = 0;
     isHighlightText = true;
 
     for (var i = 0; i < N; i++) {
         colors[i] = d3.rgb(100, 100, 100); 
         colorData['rawValues'][i] = 1;
     }
-
-    isStartup = 1;
 
     // Define nodes
     for (var i = 0; i < N; i++) {
@@ -1356,11 +1336,14 @@ function initializeNetwork() {
         .size([display.w, display.h])
         .on("tick", tick);
 
-    scaleSize = d3.scale.linear().range([1,1]);
-    scaleColorScalar = d3.scale.linear().range([1,1]);
-    scaleColorCategory = d3.scale.ordinal().range([1,1]);
-    scaleLink = d3.scale.linear().range([1,1]);
-    scaleLinkOpacity = d3.scale.linear().range([0.4,0.9]);
+    scaleSize = d3.scale.linear().range([1, 1]);
+    scaleColorScalar = d3.scale.linear().range([1, 1]);
+    scaleColorCategory = d3.scale.ordinal().range([1, 1]);
+    scaleLink = d3.scale.linear().range([1, 1]);
+    scaleLinkOpacity = d3.scale.linear().range([0.4, 0.9]);
+
+    drawLinks();
+    drawNodes();
 }
 
 // updateVis is called whenever we drag a file in
@@ -1371,7 +1354,7 @@ function updateVis(wwdata) {
 
     initializeNetwork();
     updateNetworkSelectMenu();
-    computeLinks();
+    displayNetwork();
 }
 
 // Initialize the actual viz by putting all the pieces above together.
@@ -1391,7 +1374,7 @@ function initializeVis() {
 
     initializeNetwork();
     writeMenus(menu);
-    computeLinks();
+    displayNetwork();
 }
 
 window.onload = function() {

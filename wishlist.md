@@ -15,7 +15,6 @@
     - add links
     - add nodes
     - remove requirement to input node number
-    - transform nodes into list alla: { 'id' : 1, 'string' : 'name', 'other_attr' : 'cheese' }
 - python:
     - stop changing directory
     - allow user to write the outpath
