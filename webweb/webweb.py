@@ -70,7 +70,7 @@ class webweb(dict):
         """
 
 class Display(dict):
-    def __init__(self, num_nodes=100, name=None, w=None, h=None, l=None, r=None, c=None, g=None, nodeNames=None):
+    def __init__(self, num_nodes=None, name=None, w=None, h=None, l=None, r=None, c=None, g=None, nodeNames=None):
         self.N = num_nodes
         self.name = name
         self.w = w

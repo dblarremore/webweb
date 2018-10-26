@@ -9,6 +9,7 @@
  * Comments and suggestions always welcome.
  *
  */
+
 /*
  * Here are default values. If you don't put anything different in the JSON file, this is what you get!
  * w width
@@ -18,11 +19,6 @@
  * r radius of nodes
  * g gravity
  */
-var c = 60;
-var l = 20;
-var r = 5;
-var g = 0.1;
-
 var displayDefaults = {
     'w' : 800,
     'h' : 800,
@@ -35,55 +31,38 @@ var displayDefaults = {
 
 var display = {};
 var networkNames;
+var networks;
 
 var N;
 var links = [];
 var nodes = [];
 var node, force;
 
-var scaleSize, scaleColorScalar, scaleColorCategory;
-var scaleLink, scaleLinkOpacity;
+var scaleSize, scaleColorScalar, scaleColorCategory, scaleLink, scaleLinkOpacity;
 
-var colorType, sizeType, colorKey, sizeKey;
-var sizes, colors, categoryNames;
+var nameToMatch, isHighlightText;
 
-var nameToMatch, R, isHighlightText;
-
-var colorLabels, sizeLabels;
 var colorData = {
-    'key' : 'none',
     'type' : 'none',
-    'scaled_values' : [],
+    'scaledValues' : [],
     'rawValues' : [],
     'labels' : {},
     'legend' : [],
     'legendText' : [],
+    'labels' : {},
+    'categoryNames' : [],
 };
 
 var sizeData = {
-    'key' : 'none',
     'type' : 'none',
-    'scaled_values' : [],
+    'scaledValues' : [],
     'rawValues' : [],
     'labels' : {},
     'legend' : [],
     'legendText' : [],
     'R' : 0,
+    'labels' : {},
 };
-
-
-/*
- * Dynamics and colors
- */
-// tick attributes for links and nodes
-function tick() {
-    link.attr("x1", function(d) { return d.source.x; })
-        .attr("y1", function(d) { return d.source.y; })
-        .attr("x2", function(d) { return d.target.x; })
-        .attr("y2", function(d) { return d.target.y; });
-    node.attr("cx", function(d) { return d.x; })
-        .attr("cy", function(d) { return d.y; })
-}
 
 function displayNetwork() {
     // remove old links
@@ -92,10 +71,8 @@ function displayNetwork() {
     // make new links
     computeLinks();
 
-    setLabels();
-
-    updateSizeMenu();
-    updateColorMenu();
+    // figure out what labels are available
+    defineLabels();
 
     drawLinks();
     force.start();
@@ -139,123 +116,69 @@ function computeLinks() {
     }
 }
 
-// Compute the actual radius multipliers of the nodes, given the data and chosen parameters
-// Input, x, is the method by which we will compute the radii
-// For example, if x is None, then the multiplier is 1, the identity
+// Compute the radius multipliers of the nodes, given the data and chosen parameters
+// 
+// the 'sizeBy' display parameter determines how we will scale this.
+// For example, if sizeBy is None, then the multiplier is 1 (the identity)
 // Otherwise, the multiplier can be something else!
 function computeSizes() {
-    sizeData['rawValues'] = [];
-    sizes = [];
+    rawValues = [];
+    scaledValues = [];
 
-    sizeType = sizeKey;
+    sizeData['type'] = display.sizeBy;
 
-    // If there's no degree scaling, set all sizes to 1
-    if (sizeKey == "none") {
+    // set all sizes to 1 if there's no scaling 
+    if (display.sizeBy == "none") {
         for (var i in nodes) {
-            sizes[i] = 1;
+            scaledValues[i] = 1;
         }
     }
     else {
-        // If we're scaling by degrees, linearly scale the range of SQRT(degrees) between 0.5 and 1.5
-        if (sizeKey == "degree") {
+        if (display.sizeBy == "degree") {
             for (var i in nodes){
                 var val = nodes[i].weight;
-                sizeData['rawValues'][i] = val;
-                sizes[i] = Math.sqrt(val);
+                rawValues[i] = val;
+                scaledValues[i] = Math.sqrt(val);
             }
         }
         else {
-            var label = sizeLabels[sizeKey];
+            var label = sizeData.labels[display.sizeBy];
 
-            sizeType = label.type;
+            sizeData['type'] = label.type;
             for (var i in nodes) {
-                sizes[i] = label.value[i];
+                scaledValues[i] = label.value[i];
             }
 
-            sizeData['rawValues'] = sizes.slice(0);
+            rawValues = scaledValues.slice(0);
         }
 
-        scaleSize.domain(d3.extent(sizes), d3.max(sizes)).range([0.5,1.5]);
-        for (var i in sizes) {
-            sizes[i] = scaleSize(sizes[i]);
+        // If we're scaling by degrees, linearly scale the range of SQRT(degrees) between 0.5 and 1.5
+        scaleSize.domain(d3.extent(scaledValues), d3.max(scaledValues)).range([0.5, 1.5]);
+        for (var i in scaledValues) {
+            scaledValues[i] = scaleSize(scaledValues[i]);
         }
     }
+
+    sizeData['scaledValues'] = scaledValues;
+    sizeData['rawValues'] = rawValues;
 }
 
-function makeSizeLegend() {
-    var legend = [];
-    var text = [];
-    sizeData['R'] = 0;
-    
-    // there is no legend if:
-    // - the sizeType is "none"
-    // - the radius is undefined
-    if (sizeType == 'none' || r == 0 || r == "") {
-        return
-    }
-
-    if (sizeType == 'binary') {
-        legend = [0, 1];
-        text = ["false", "true"];
-    }
-    else {
-        // otherwise, the size type is either 'degree' or 'scalar'
-        var legendData = getScalarLegend(sizeData['rawValues']);
-
-        legend = legendData['legend'];
-        text = legendData['text'];
-    }
-
-    if (sizeType == "degree"){
-        for (var i in legend){
-            legend[i] = scaleSize(Math.sqrt(legend[i]));
-        }
-    }
-    else {
-        for (var i in legend){
-            legend[i] = scaleSize(legend[i]);
-        }
-    }
-
-    sizeData['R'] = r * d3.max(legend);
-    sizeData['legend'] = legend;
-    sizeData['legendText'] = text;
-}
-
-function getScalarLegend(rawValues) {
-    var legend = [];
-
-    // if it is integer scalars:
-    if (allInts(rawValues)) {
-        var max = d3.max(rawValues);
-        var min = d3.min(rawValues);
-
-        if (max - min <= 8) {
-            legend = d3.range(min, max + 1);
-        }
-        else {
-            text = binnedLegend(rawValues, 4);
-        }
-    }
-    // noninteger scalars
-    else {
-        legend = binnedLegend(rawValues, 4);
-    }
-
-    var text = legend.slice(0);
-
-    return {
-        'legend' : legend,
-        'text' : text,
-    }
-}
 
 // Highlight a node by making it bigger and outlining it
 function highlightNode(d) {
     d3.select("#node_" + d.idx)
         .transition().duration(100)
-        .attr("r", sizes[d.idx] * r * 1.3)
+        .attr("r", sizeData['scaledValues'][d.idx] * display.r * 1.3)
         .style("stroke", d3.rgb(0,0,0));
+}
+// Returns a node's highlighted size and stroke to normal
+function unHighlightNode(d) {
+    if (nameToMatch == "" || d.name.indexOf(nameToMatch) < 0) {
+        d3.select("#node_" + d.idx)
+            .transition()
+            .attr("r", sizeData['scaledValues'][d.idx] * display.r)
+            .style("stroke",d3.rgb(255,255,255));
+    }
 }
 // Highlight a node by showing its name next to it.
 // If the node has no name, show its index.  
@@ -276,23 +199,14 @@ function highlightText(d) {
             nodeId = "(" + nodeId + ")";
         }
 
-        var highlightTextString = "This is " + nodeName + " " + nodeId;
+        var highlightTextString = nodeName + " " + nodeId;
 
         vis.append("text").text(highlightTextString)
-            .attr("x", d.x + 1.5 * r)
-            .attr("y", d.y - 1.5 * r)
+            .attr("x", d.x + 1.5 * display.r)
+            .attr("y", d.y - 1.5 * display.r)
             .attr("fill", "black")
             .attr("font-size", 12)
             .attr("id", "highlightText");
-    }
-}
-// Returns a node's highlighted size and stroke to normal
-function unHighlightNode(d) {
-    if (nameToMatch == "" || d.name.indexOf(nameToMatch) < 0) {
-        d3.select("#node_" + d.idx)
-            .transition()
-            .attr("r",sizes[d.idx]*r)
-            .style("stroke",d3.rgb(255,255,255));
     }
 }
 // Removes a node's highlighted name 
@@ -302,55 +216,58 @@ function unHighlightText() {
 // Similar to computeSizes, this function computes the colors for the nodes
 // based on the preferences of the user chosen in the dropdown menus.
 function computeColors() {
-    colorType = colorKey;
+    var rawValues = [];
+    var scaledValues = [];
+
+    colorData['type'] = display.colorBy;
 
     // no colors
-    if (colorKey == "none"){
+    if (display.colorBy == "none"){
         // set all nodes to dark grey 100
         for (var i in nodes) { 
-            colors[i] = d3.rgb(100, 100, 100);
+            colorData['scaledValues'][i] = d3.rgb(100, 100, 100);
         }
         return
     }
 
     // treat degree as a scalar
-    if (colorKey == "degree"){
+    if (display.colorBy == "degree"){
         // raw values are weights
         for (var i in nodes) {
-            colorData['rawValues'][i] = nodes[i].weight;
+            rawValues[i] = nodes[i].weight;
         }
     }
     else {
-        var label = colorLabels[colorKey];
-        colorType = label.type;
+        var label = colorData.labels[display.colorBy];
+        colorData['type'] = label.type;
 
         for (var i in nodes){
-            colorData['rawValues'][i] = label.value[i];
+            rawValues[i] = label.value[i];
         }
 
         // get the category names if it's categorical
-        if (colorType == "categorical") {
-            categoryNames = [];
+        if (colorData['type'] == "categorical") {
+            colorData['categoryNames'] = [];
             var categories = [];
 
             // if we don't have categories, retrieve them as scalars from the
             // values for the label
             if (label.categories == undefined) {
-                var q = d3.set(colorData['rawValues']).values().sort();
+                var q = d3.set(rawValues).values().sort();
                 for (i in q) {
                     categories[i] = q[i];
-                    categoryNames[i] = q[i];
+                    colorData['categoryNames'][i] = q[i];
                 };
             }
             else {
-                categoryNames = label.categories;
+                colorData['categoryNames'] = label.categories;
 
                 // Check to see if our categories are numeric or labels
-                if (isNaN(d3.quantile(colorData['rawValues'], 0.25))) {
-                    categories = categoryNames.sort();
+                if (isNaN(d3.quantile(rawValues, 0.25))) {
+                    categories = colorData['categoryNames'].sort();
                 }
                 else {
-                    for (var i in categoryNames) {
+                    for (var i in colorData['categoryNames']) {
                         categories[i] = i;
                     }
                 }
@@ -363,76 +280,40 @@ function computeColors() {
             }
             else {
                 // otherwise, treat like scalars
-                colorType = "scalarCategorical";
+                colorData['type'] = "scalarCategorical";
             }
         }
     }
 
-    if (colorType != 'categorical') {
-        scaleColorScalar.domain(d3.extent(colorData['rawValues'])).range([0,1]);
+    if (colorData['type'] != 'categorical') {
+        scaleColorScalar.domain(d3.extent(rawValues)).range([0,1]);
     }
 
     // get colors by passing scaled value to colorWheel
     for (var i in nodes) {
-        colors[i] = colorWheel(colorData['rawValues'][i]);
-    }
-}
-
-function makeColorLegend() {
-    var legend = [];
-    var text = [];
-
-    if (colorType == "none") {
-        return
+        scaledValues[i] = colorWheel(rawValues[i]);
     }
 
-    if (colorType == "categorical") {
-        legend = scaleColorCategory.domain();
-        text = d3.values(categoryNames);
-    }
-    else if (colorType == "binary") {
-        legend = [0, 1];
-        text = ["false", "true"];
-    }
-    else if (colorType == "scalar" || colorType == "degree") {
-        var legendData = getScalarLegend(colorData['rawValues']);
-
-        legend = legendData['legend'];
-        text = legendData['text'];
-    }
-    else if (colorType == "scalarCategorical") {
-        legend = binnedLegend(colorData['rawValues'], 4);
-        text = legend.slice(0);
-    }
-
-    colorData['legend'] = legend;
-    colorData['legendText'] = text;
+    colorData['rawValues'] = rawValues;
+    colorData['scaledValues'] = scaledValues;
 }
 
 // ColorWheel is a function that takes a node label, like a category or scalar
 // and just gets the damn color. But it has to take into account what the 
-// current colorType is. Basically, this is trying to apply our prefs to colors
+// current colorData['type'] is. Basically, this is trying to apply our prefs to colors
 function colorWheel(x) {
     if (isNaN(x)) {
-        if (colorType == "categorical" && typeof(x) == "string"){
+        if (colorData['type'] == "categorical" && typeof(x) == "string"){
             return scaleColorCategory(x);
         }
         else {
             return d3.rgb(180, 180, 180)};
     }
 
-    if (colorType == "categorical") {
+    if (colorData['type'] == "categorical") {
         return scaleColorCategory(x);
     }
-    else if (colorType == "scalar" || colorType == "scalarCategorical" || colorType == "degree") {
-        // Rainbow HSL
-        return d3.hsl(210 * (1 - scaleColorScalar(x)), 0.7, 0.5);
-        // Greyscale
-        // return [0.8*255*x,0.8*255*x,0.8*255*x];
-        // Copper
-        // return [255*Math.min(x/0.75,1),0.78*255*x,0.5*255*x];
-    }
-    else if (colorType == "binary") {
+    else if (colorData['type'] == "binary") {
         if (!x) {
             return d3.rgb(30, 100, 180)
         }
@@ -440,30 +321,42 @@ function colorWheel(x) {
             return d3.rgb(102, 186, 30)
         };
     }
+    else {
+        // Rainbow HSL
+        return d3.hsl(210 * (1 - scaleColorScalar(x)), 0.7, 0.5);
+        // Greyscale
+        // return [0.8*255*x,0.8*255*x,0.8*255*x];
+        // Copper
+        // return [255*Math.min(x/0.75,1),0.78*255*x,0.5*255*x];
+    }
 }
-/*
- * Menu interaction
- * These functions are bound to the various menus that we create in the GUI.
- * On menu change, one of these will be called. 
- */
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+// Menu Interaction
+//
+//
+// These functions are bound to the various menus that we create in the GUI.
+// On menu change, one of these will be called. 
+////////////////////////////////////////////////////////////////////////////////
 function updateNetwork(networkName) {
     display.networkName = networkName;
     displayNetwork();
 }
-function changeSizes(x) {
-    sizeKey = x;
+function changeSizes(sizeBy) {
+    display.sizeBy = sizeBy;
     computeSizes();
-    redrawNodes();
     computeLegend();
+    redrawNodes();
     if (nameToMatch != "") {
         matchNodes(nameToMatch);
     };
 }
-function changeColors(x) {
-    colorKey = x;
+function changeColors(colorBy) {
+    display.colorBy = colorBy;
     computeColors();
-    redrawNodes();
     computeLegend();
+    redrawNodes();
     if (nameToMatch != "") {
         matchNodes(nameToMatch);
     };
@@ -471,27 +364,26 @@ function changeColors(x) {
 function setColorPalate(colorPalate) {
     display.colorPalate = colorPalate;
     computeColors();
-    redrawNodes();
-    computeLegend();
 }
-
-function changeCharge(x) {
-    if (x >= 0) {
-        force.charge(-x);
+function changeCharge(c) {
+    if (c >= 0) {
+        display.c = c;
+        force.charge(-c);
         force.start();
     }
     else {
         alert("Repulsion must be nonnegative.");
     }
 }
-function changer(x) {
-    r = x;
-    redrawNodes();
+function changer(r) {
+    display.r = r;
     computeLegend();
+    redrawNodes();
 }
-function changeDistance(x) {
-    if (x >= 0) {
-        force.linkDistance(x);
+function changeDistance(l) {
+    if (l >= 0) {
+        display.l = l;
+        force.linkDistance(l);
         force.start();
     }
     else {
@@ -507,9 +399,10 @@ function changeLinkStrength(x) {
         alert("Distance must be nonnegative.");
     }
 }
-function changeGravity(x) {
-    if (x >= 0) {
-        force.gravity(x);
+function changeGravity(g) {
+    if (g >= 0) {
+        display.g = g;
+        force.gravity(g);
         force.start();
     }
     else {
@@ -517,6 +410,7 @@ function changeGravity(x) {
     }
 }
 function toggleFreezeNodes(frozen) {
+    display.freezeNodeMovement = frozen;
     if (frozen) {
         force.stop();
         for (var i = 0; i < force.nodes().length; i++) {
@@ -567,9 +461,23 @@ function matchNodes(x) {
         })
     }
 }
-// draw a legend for how size and color have been computed.
-// If they are bound to the same attribute, have a single color/size combined legend
-// If they are bound to different attributes, keep them separate.
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+//
+// Legends
+//
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// draw a legend for how size and color
+// 
+// If size and color are tied to the same attribute: make one legend
+// Otherwise: keep them separate
 //
 // prefer integer boundaries in our legends... but only if the values that are
 // getting passed in are integers... etc. 
@@ -578,7 +486,7 @@ function matchNodes(x) {
 function computeLegend() {
     vis.selectAll("#legend").remove();
 
-    if (sizeType == "none" && colorType == "none") {
+    if (sizeData['type'] == "none" && colorData['type'] == "none") {
         return;
     };
 
@@ -587,14 +495,27 @@ function computeLegend() {
 
     var R = sizeData['R'];
 
-    if (sizeKey == colorKey) {
+    // if we have a color legend, use it for the size menu (if it's there)
+    var legendFillFunction;
+    if (display.sizeBy == display.colorBy) {
+        legendFillFunction = function(i) {
+            return colorWheel(colorData['legend'][i]);
+        }
+    }
+    else {
+        legendFillFunction = function(i) {
+            return d3.rgb(100, 100, 100);
+        }
+    }
+
+    if (display.sizeBy != "none") {
         sizeData['legend'].forEach(function(d, i){
             vis.append("circle")
                 .attr("id", "legend")
-                .attr("r", r * d)
+                .attr("r", display.r * d)
                 .attr("cx", 5 + R)
                 .attr("cy", 5 + R + 2.3 * R * i)
-                .style("fill", colorWheel(colorData['legend'][i]))
+                .style("fill", legendFillFunction(i))
                 .style("stroke", d3.rgb(255, 255, 255));
         });
 
@@ -605,52 +526,134 @@ function computeLegend() {
                 .attr("x", 10 + 2 * R)
                 .attr("y", 5 + R + 2.3 * R * i + 4)
                 .attr("fill", "black")
-                .attr("font-size", 12)
+                .attr("font-size", 12);
         });
+    }
 
+    // if we've drawn the size legend and the color legend shows the same value,
+    // return
+    if (display.sizeBy == display.colorBy) {
         return;
     }
 
-    if (sizeType != "none") {
-        sizeData['legend'].forEach(function(d, i){
-            vis.append("circle")
-                .attr("id","legend")
-                .attr("r",r*d)
-                .attr("cx", 5+R)
-                .attr("cy", 5+R+2.3*R*i)
-                .style("fill",d3.rgb(0,0,0))
-                .style("stroke",d3.rgb(255,255,255));
-        });
-        sizeData['legendText'].forEach(function(d, i){
-            vis.append("text")
-                .attr("id","legend")
-                .text(d)
-                .attr("x", 10+2*R)
-                .attr("y", 5+R+2.3*R*i+4)
-                .attr("fill","black")
-                .attr("font-size",12)
-        });
-    }
-
-    if (colorType != "none") {
+    if (colorData['type'] != "none") {
         colorData['legend'].forEach(function(d, i){
             vis.append("circle")
-                .attr("id","legend")
-                .attr("r",5)
-                .attr("cx", 5+Math.max(R,5))
-                .attr("cy", 5+5+2*R+2.3*R*(sizeData['legend'].length-1)+5+2.3*5*i)
-                .style("fill",colorWheel(colorData['legend'][i]))
-                .style("stroke",d3.rgb(255,255,255));
+                .attr("id", "legend")
+                .attr("r", 5)
+                .attr("cx", 5 + Math.max(R, 5))
+                .attr("cy", 5 + 5 + 2 * R + 2.3 * R * (sizeData['legend'].length - 1) + 5 + 2.3 * 5 * i)
+                .style("fill", colorWheel(colorData['legend'][i]))
+                .style("stroke", d3.rgb(255, 255, 255));
         });
         colorData['legendText'].forEach(function(d, i) {
             vis.append("text")
                 .attr("id", "legend")
                 .text(d)
-                .attr("x", 10+Math.max(R,5)+5)
-                .attr("y", 5+5+2*R+2.3*R*(sizeData['legend'].length-1)+5+2.3*5*i+4)
-                .attr("fill","black")
-                .attr("font-size",12)
+                .attr("x", 10 + Math.max(R, 5) + 5)
+                .attr("y", 5 + 5 + 2 * R + 2.3 * R * (sizeData['legend'].length - 1) + 5 + 2.3 * 5 * i + 4)
+                .attr("fill", "black")
+                .attr("font-size", 12);
         });
+    }
+}
+function makeColorLegend() {
+    var legend = [];
+    var text = [];
+
+    if (colorData['type'] == "none") {
+        return
+    }
+
+    if (colorData['type'] == "categorical") {
+        legend = scaleColorCategory.domain();
+        text = d3.values(colorData['categoryNames']);
+    }
+    else if (colorData['type'] == "binary") {
+        legend = [0, 1];
+        text = ["false", "true"];
+    }
+    else if (colorData['type'] == "scalar" || colorData['type'] == "degree") {
+        var legendData = getScalarLegend(colorData['rawValues']);
+
+        legend = legendData['legend'];
+        text = legendData['text'];
+    }
+    else if (colorData['type'] == "scalarCategorical") {
+        legend = binnedLegend(colorData['rawValues'], 4);
+        text = legend.slice(0);
+    }
+
+    colorData['legend'] = legend;
+    colorData['legendText'] = text;
+}
+function makeSizeLegend() {
+    var legend = [];
+    var text = [];
+    sizeData['R'] = 0;
+    
+    // there is no legend if:
+    // - the sizeData['type'] is "none"
+    // - the radius is undefined
+    if (sizeData['type'] == 'none' || display.r == 0 || display.r == "") {
+        return
+    }
+
+    if (sizeData['type'] == 'binary') {
+        legend = [0, 1];
+        text = ["false", "true"];
+    }
+    else {
+        // otherwise, the size type is either 'degree' or 'scalar'
+        var legendData = getScalarLegend(sizeData['rawValues']);
+
+        legend = legendData['legend'];
+        text = legendData['text'];
+    }
+
+    if (sizeData['type'] == "degree"){
+        for (var i in legend){
+            legend[i] = scaleSize(Math.sqrt(legend[i]));
+        }
+    }
+    else {
+        for (var i in legend){
+            legend[i] = scaleSize(legend[i]);
+        }
+    }
+
+    sizeData['R'] = display.r * d3.max(legend);
+    sizeData['legend'] = legend;
+    sizeData['legendText'] = text;
+}
+////////////////////////////////////////////////////////////////////////////////
+// returns a legend for integer or non-integer scalars
+////////////////////////////////////////////////////////////////////////////////
+function getScalarLegend(rawValues) {
+    var legend = [];
+
+    // if it is integer scalars:
+    if (allInts(rawValues)) {
+        var max = d3.max(rawValues);
+        var min = d3.min(rawValues);
+
+        if (max - min <= 8) {
+            legend = d3.range(min, max + 1);
+        }
+        else {
+            text = binnedLegend(rawValues, 4);
+        }
+    }
+    // noninteger scalars
+    else {
+        legend = binnedLegend(rawValues, 4);
+    }
+
+    var text = legend.slice(0);
+
+    return {
+        'legend' : legend,
+        'text' : text,
     }
 }
 
@@ -730,7 +733,7 @@ function drawNodes() {
     node.enter()
         .insert("circle")
         .attr("class", "node")
-        .attr("r", r)
+        .attr("r", display.r)
         .attr("id", function(d) {
             return ("node_" + d.idx);
         })
@@ -762,9 +765,19 @@ function drawNodes() {
 function redrawNodes() {
     nodes.forEach(function(d, i) {
         d3.select("#node_" + d.idx)
-            .attr("r", sizes[i] * r)
-            .style("fill", d3.rgb(colors[i]));
+            .attr("r", sizeData['scaledValues'][i] * display.r)
+            .style("fill", d3.rgb(colorData['scaledValues'][i]));
     });
+}
+
+// tick attributes for links and nodes
+function tick() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+    node.attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; })
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -831,16 +844,21 @@ function writeFreezeNodesToggle(parent) {
         .attr("onchange", "toggleFreezeNodes(this.checked)");
 
 }
-function writeSaveAsSVGButton(parent) {
-    var saveAsSVGButton = parent.append("div")
-        .attr("id", "saveAsSVGButton")
-        .text("Save SVG ");
+function writeSaveButtons(parent) {
+    var saveButtons = parent.append("div")
+        .attr("id", "saveButtons");
 
-    saveAsSVGButton.append("input")
+    saveButtons.append("input")
         .attr("id", "saveSVGButton")
         .attr("type", "button")
-        .attr("value", "Save")
-        .on("click", writeDownloadLink);
+        .attr("value", "Save SVG")
+        .on("click", writeSVGDownloadLink);
+
+    saveButtons.append("input")
+        .attr("id", "saveJSONButton")
+        .attr("type", "button")
+        .attr("value", "Save webweb")
+        .on("click", writeWebWebDownloadLink);
 }
 function writeDropJSONArea() {
     var dropJSONArea = d3.select("#chart")
@@ -915,7 +933,7 @@ function updateSizeMenu() {
     sizeSelect.selectAll("option").remove();
 
     var sizeLabelStrings = [];
-    for (var label in sizeLabels) {
+    for (var label in sizeData.labels) {
         sizeLabelStrings.push(label);
     }
 
@@ -926,21 +944,21 @@ function updateSizeMenu() {
         .attr("value", function(d) { return d; })
         .text(function(d) { return d; });
 
-    if (sizeLabels[sizeKey] == undefined || sizeKey == undefined) {
-        sizeKey = "none";
+    if (display.sizeBy == undefined || sizeData.labels[display.sizeBy] == undefined) {
+        display.sizeBy = "none";
     }
 
     sizeSelect = document.getElementById('sizeSelect');
-    sizeSelect.value = sizeKey;
-    changeSizes(sizeKey);
+    sizeSelect.value = display.sizeBy;
+    changeSizes(display.sizeBy);
 }
 function writeColorMenu(parent) {
     var colorMenu = parent.append("div")
-        .attr("id","colorMenu")
+        .attr("id", "colorMenu")
         .text("Compute node color from ");
 
     colorMenu.append("select")
-        .attr("id","colorSelect")
+        .attr("id", "colorSelect")
         .attr("onchange","changeColors(this.value)");
 }
 function updateColorMenu() {
@@ -949,7 +967,7 @@ function updateColorMenu() {
     colorSelect.selectAll("option").remove();
 
     var colorLabelStrings = [];
-    for (var label in colorLabels) {
+    for (var label in colorData.labels) {
         colorLabelStrings.push(label);
     }
 
@@ -960,13 +978,13 @@ function updateColorMenu() {
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
 
-    if (colorLabels[colorKey] == undefined || colorKey == undefined) {
-        colorKey = "none";
+    if (display.colorBy == undefined || colorData.labels[display.colorBy] == undefined) {
+        display.colorBy = "none";
     }
 
     colorSelect = document.getElementById('colorSelect');
-    colorSelect.value = colorKey;
-    changeColors(colorKey);
+    colorSelect.value = display.colorBy;
+    changeColors(display.colorBy);
 }
 function writeColorPalateMenu(parent) {
     var colorPalateMenu = parent.append("div")
@@ -1032,7 +1050,7 @@ function writeLinkStrengthWidget(parent) {
         .attr("type","text")
         .attr("onchange","changeLinkStrength(this.value)")
         .attr("value",force.linkStrength())
-        .attr("size",3);
+        .attr("size", 3);
 }
 function writeGravityWidget(parent) {
     var gravityWidget = parent.append("div")
@@ -1040,11 +1058,11 @@ function writeGravityWidget(parent) {
         .text("Gravity: ");
 
     gravityWidget.append("input")
-        .attr("id","gravityText")
-        .attr("type","text")
-        .attr("onchange","changeGravity(this.value)")
-        .attr("value",force.gravity())
-        .attr("size",3);
+        .attr("id", "gravityText")
+        .attr("type", "text")
+        .attr("onchange", "changeGravity(this.value)")
+        .attr("value", force.gravity())
+        .attr("size", 3);
 }
 function writeRadiusWidget(parent) {
     var radiusWidget = parent.append("div")
@@ -1055,7 +1073,7 @@ function writeRadiusWidget(parent) {
         .attr("id","rText")
         .attr("type", "text")
         .attr("onchange","changer(this.value)")
-        .attr("value", r)
+        .attr("value", display.r)
         .attr("size", 3);
 }
 function writeMatchWidget(parent) {
@@ -1085,7 +1103,7 @@ function writeMenus(menu) {
     writeScaleLinkWidthToggle(leftMenu);
     writeScaleLinkOpacityToggle(leftMenu);
     writeFreezeNodesToggle(leftMenu);
-    writeSaveAsSVGButton(leftMenu);
+    writeSaveButtons(leftMenu);
     writeDropJSONArea(leftMenu);
     // Implemented by Mike Iuzzolino, disabled by DBL for cleanliness
     // writeLoadJSONButton();
@@ -1129,12 +1147,6 @@ function readJSONDrop(evt) {
 
     var files = evt.dataTransfer.files; // FileList object.
 
-    var text = d3.select("#menuL9")
-
-    text.html(function() {
-        return "Loading " + files[0].name + "...";
-    });
-
     setTimeout(function() {
         text.html("drop webweb json here")
     }, 2000);
@@ -1144,7 +1156,7 @@ function readJSONDrop(evt) {
 // Theoretically, multiple files could have been dropped above.
 // Those files are passed into readJSON
 // Only the first file is used. 
-function readJSON(files, method) {
+function readJSON(files) {
     var file;
 
     if (files === undefined) {
@@ -1159,7 +1171,7 @@ function readJSON(files, method) {
 
     // If we use onloadend, we need to check the readyState.
     reader.onloadend = function(evt) {
-        if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+        if (evt.target.readyState == FileReader.DONE) {
             var json_string = evt.target.result;
             json_string = json_string.replace("var wwdata = ", "");
             wwdata = JSON.parse(json_string);
@@ -1171,24 +1183,30 @@ function readJSON(files, method) {
     reader.readAsBinaryString(blob);
 }
 
-// Blob is used to do the SVG save. 
-function writeDownloadLink(){
+function saveIt(fileName, fileType, content) {
     try {
         var isFileSaverSupported = !!new Blob();
     } catch (e) {
-        alert("blob not supported");
+        alert("saving not supported");
     }
-    // grab the svg, call it display.networkName, and save it.
 
+    var blob = new Blob([content], {type: fileType});
+    saveAs(blob, fileName);
+}
+function writeSVGDownloadLink() {
     var html = d3.select("svg")
         .attr("title", display.networkName)
         .attr("version", 1.1)
         .attr("xmlns", "http://www.w3.org/2000/svg")
         .node().parentNode.innerHTML;
-    var blob = new Blob([html], {type: "image/svg+xml"});
-    saveAs(blob, display.networkName);
-};
 
+    saveIt(display.networkName, "image/svg+xml", html);
+};
+function writeWebWebDownloadLink() {
+    var webwebJSON = wwdata;
+    webwebJSON.display = display;
+    saveIt('webweb.json', 'json', JSON.stringify(webwebJSON));
+}
 
 /* Helper functions */
 function identity(d) {
@@ -1224,7 +1242,7 @@ function allInts(vals) {
 //
 // Priority is given to the network's labels, then display, then defaults
 ////////////////////////////////////////////////////////////////////////////////
-function setLabels() {
+function defineLabels() {
     var allLabels = {
         'none' : {},
         'degree' : {},
@@ -1244,13 +1262,50 @@ function setLabels() {
             allLabels[label] = networkLabels[label];
         }
     }
-    sizeLabels = {};
-    colorLabels = {};
+    sizeData.labels = {};
+    colorData.labels = {};
     for (label in allLabels) {
         if (allLabels[label].type !== "categorical") {
-            sizeLabels[label] = allLabels[label];
+            sizeData.labels[label] = allLabels[label];
         }
-        colorLabels[label] = allLabels[label];
+        colorData.labels[label] = allLabels[label];
+    }
+
+    // update the menus with these new labels
+    updateSizeMenu();
+    updateColorMenu();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// initialize the nodes, attempting to be smart about the number of them
+////////////////////////////////////////////////////////////////////////////////
+function computeNodes() {
+    if (display.N == undefined) {
+        var nodeCounts = [];
+        for (i in networkNames) {
+            var networkNodes = [];
+            var networkName = networkNames[i];
+
+            var adj = d3.values(wwdata["network"][networkName]["adjList"]);
+            for (i in adj) {
+                var edge = adj[i];
+                networkNodes.push(edge[0]);
+                networkNodes.push(edge[1]);
+            }
+            nodeCounts.push(d3.set(networkNodes).values().length);
+        }
+
+        display.N = d3.max(nodeCounts);
+    }
+
+    // Define nodes
+    nodes = [];
+    for (var i = 0; i < display.N; i++) {
+        nodes.push({
+            "idx" : i,
+            "weight" : 0,
+            "name" : display.nodeNames !== undefined ? display.nodeNames[i] : undefined,
+        });
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -1263,16 +1318,14 @@ function setLabels() {
 // Parameters currently passed through:
 // - N
 // - w, h, c, l, r, g
-// - colorBy --> colorKey
-// - sizeBy --> sizeKey
+// - colorBy
+// - sizeBy
 // - scaleLinkOpacity
 // - scaleLinkWidth
 // - freezeNodeMovement
 // - networkName
 ////////////////////////////////////////////////////////////////////////////////
 function initializeNetwork() {
-    N = wwdata.display.N;
-    
     networkNames = Object.keys(wwdata.network);
 
     displayDefaults['networkName'] = networkNames[0];
@@ -1284,14 +1337,6 @@ function initializeNetwork() {
         }
     }
 
-    if (wwdata.display.c !== undefined){c = wwdata.display.c;}
-    if (wwdata.display.l !== undefined){l = wwdata.display.l;}
-    if (wwdata.display.r !== undefined){r = wwdata.display.r;}
-    if (wwdata.display.g !== undefined){g = wwdata.display.g;}
-
-    colorKey = display.colorBy;
-    sizeKey = display.sizeBy;
-
     var title = "webweb";
     if (display.name !== undefined) {
         title = title + " - " + display.name;
@@ -1300,24 +1345,10 @@ function initializeNetwork() {
     d3.select("title").text(title);
 
     links = [];
-    nodes = [];
-    colors = [];
     nameToMatch = "";
     isHighlightText = true;
 
-    for (var i = 0; i < N; i++) {
-        colors[i] = d3.rgb(100, 100, 100); 
-        colorData['rawValues'][i] = 1;
-    }
-
-    // Define nodes
-    for (var i = 0; i < N; i++) {
-        nodes.push({
-            "idx" : i,
-            "weight" : 0,
-            "name" : display.nodeNames !== undefined ? display.nodeNames[i] : undefined,
-        });
-    }
+    computeNodes();
 
     vis = d3.select("#svg_div")
         .append("svg")
@@ -1330,9 +1361,9 @@ function initializeNetwork() {
     force = d3.layout.force()
         .links(links)
         .nodes(nodes)
-        .charge(-c)
-        .gravity(g)
-        .linkDistance(l)
+        .charge(-display.c)
+        .gravity(display.g)
+        .linkDistance(display.l)
         .size([display.w, display.h])
         .on("tick", tick);
 
@@ -1346,10 +1377,10 @@ function initializeNetwork() {
     drawNodes();
 }
 
-// updateVis is called whenever we drag a file in
+// updateVis is called a file is dragged&dropped
 // It's the update version of initializeVis
 function updateVis(wwdata) {
-    // remove the SVG; it will be recreated below
+    // remove the old SVG
     d3.select("#vis").remove();
 
     initializeNetwork();

@@ -5,7 +5,7 @@ if __name__ == '__main__':
     N = 6
 
     # Instantiate webweb object
-    web = webweb(num_nodes=N)
+    web = webweb()
 
     # set the display width
     web.display.w = 200
@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     # Give the file a name
     web.display.name = 'Advanced'
-    web.display.colorBy = 'slithering'
+    # web.display.colorBy = 'slithering'
     web.display.sizeBy = 'hunger'
     web.display.scaleLinkWidth = True
     web.display.scaleLinkOpacity = True
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     web.networks.starfish.labels.texture.type = 'categorical'
     web.networks.starfish.labels.texture.value = [1,3,0,2,0,1]
-    # web.networks.starfish.labels.texture.categories = ['chewy','gooey','crunchy','fishy']
+    web.networks.starfish.labels.texture.categories = ['chewy','gooey','crunchy','fishy']
 
     web.networks.starfish.labels.power.type = 'scalar'
     web.networks.starfish.labels.power.value = [1,3,3.8,0.2,1,3.1415]
