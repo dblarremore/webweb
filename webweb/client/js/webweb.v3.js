@@ -29,7 +29,7 @@ var networks;
 var N;
 var links = [];
 var nodes = [];
-var node, force;
+var node, force, link;
 
 var scaleSize, scaleColorScalar, scaleColorCategory, scaleLink, scaleLinkOpacity;
 
@@ -102,6 +102,7 @@ function updateVis(wwdata) {
 // - scaleLinkWidth
 // - freezeNodeMovement
 // - networkName
+// - nodeCoordinates
 ////////////////////////////////////////////////////////////////////////////////
 function initWebweb() {
     networkNames = Object.keys(wwdata.network);
@@ -115,6 +116,11 @@ function initWebweb() {
         }
     }
 
+    // don't allow freezeNodeMovement to be true unless we have node coordinates
+    if (display.nodeCoordinates == undefined) {
+        display.freezeNodeMovement = false;
+    }
+
     var title = "webweb";
     if (display.name !== undefined) {
         title = title + " - " + display.name;
@@ -126,16 +132,14 @@ function initWebweb() {
     nameToMatch = "";
     isHighlightText = true;
 
-    computeNodes();
-
     vis = d3.select("#svg_div")
         .append("svg")
         .attr("width", display.w)
         .attr("height", display.h)
         .attr("id", "vis");
 
-    node = vis.selectAll(".node");
-    link = vis.selectAll(".link");
+    computeNodes();
+
     force = d3.layout.force()
         .links(links)
         .nodes(nodes)
@@ -145,14 +149,13 @@ function initWebweb() {
         .size([display.w, display.h])
         .on("tick", tick);
 
+    drawNodes();
+
     scaleSize = d3.scale.linear().range([1, 1]);
     scaleColorScalar = d3.scale.linear().range([1, 1]);
     scaleColorCategory = d3.scale.ordinal().range([1, 1]);
     scaleLink = d3.scale.linear().range([1, 1]);
     scaleLinkOpacity = d3.scale.linear().range([0.4, 0.9]);
-
-    drawLinks();
-    drawNodes();
 }
 ////////////////////////////////////////////////////////////////////////////////
 // - removes links
@@ -167,12 +170,19 @@ function displayNetwork() {
 
     // make new links
     computeLinks();
+    drawLinks();
 
     // figure out the available labels
     defineLabels();
 
-    drawLinks();
     force.start();
+    toggleFreezeNodes(display.freezeNodeMovement);
+
+    // if we've frozen node movement, manually tick so that the new edges are
+    // evaluated.
+    if (display.freezeNodeMovement) {
+        tick();
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 // loads the labels up from the places they could come from:
@@ -221,17 +231,26 @@ function defineLabels() {
 function computeNodes() {
     if (display.N == undefined) {
         var nodeCounts = [];
+
+
+        // if we don't have a node count, try to find one;
+        // - make sets of each network's adjacency list and take the length
+        // - take the length of nodeNames, if present
         for (i in networkNames) {
             var networkNodes = [];
             var networkName = networkNames[i];
 
-            var adj = d3.values(wwdata["network"][networkName]["adjList"]);
+            var adj = d3.values(wwdata.network[networkName].adjList);
             for (i in adj) {
                 var edge = adj[i];
                 networkNodes.push(edge[0]);
                 networkNodes.push(edge[1]);
             }
             nodeCounts.push(d3.set(networkNodes).values().length);
+        }
+
+        if (display.nodeNames !== undefined) {
+            nodeCounts.push(display.nodeNames.length);
         }
 
         display.N = d3.max(nodeCounts);
@@ -244,6 +263,8 @@ function computeNodes() {
             "idx" : i,
             "weight" : 0,
             "name" : display.nodeNames !== undefined ? display.nodeNames[i] : undefined,
+            "x" : display.nodeCoordinates !== undefined ? display.nodeCoordinates[i].x : undefined,
+            "y" : display.nodeCoordinates !== undefined ? display.nodeCoordinates[i].y : undefined,
         });
     }
 }
@@ -550,6 +571,13 @@ function toggleFreezeNodes(isFrozen) {
         node.call(force.drag)
         force.resume();
     }
+
+    var freezeNodesToggle = document.getElementById('freezeNodesToggle');
+    if (display.freezeNodeMovement) {
+        freezeNodesToggle.checked = true;
+    } else {
+        freezeNodesToggle.checked = false;
+    }
 }
 function toggleLinkWidthScaling(checked) {
     if (checked) {
@@ -814,7 +842,8 @@ function binnedLegend(vals, bins) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 function drawLinks() {
-    link = link.data(force.links());
+    link = vis.selectAll(".link")
+        .data(links);
 
     link.enter()
         .insert("line", ".node")
@@ -855,11 +884,19 @@ function redrawLinks() {
     })
 }
 function drawNodes() {
-    node = node.data(force.nodes());
+    node = vis.selectAll(".node")
+        .data(nodes);
+
     node.enter()
         .insert("circle")
         .attr("class", "node")
         .attr("r", display.r)
+        .attr("cx", function(d) {
+            return d.x;
+        })
+        .attr("cy", function(d) {
+            return d.y;
+        })
         .attr("id", function(d) {
             return ("node_" + d.idx);
         })
@@ -1005,16 +1042,9 @@ function writeFreezeNodesToggle(parent) {
         .attr("id", "nodesMoveToggle")
         .text("Freeze Nodes ");
 
-    var isChecked = "unchecked";
-    if (display.freezeNodeMovement) {
-        isChecked = "checked";
-        toggleFreezeNodes(true);
-    }
-
     freezeNodesToggle.append("input")
         .attr("id", "freezeNodesToggle")
         .attr("type", "checkbox")
-        .attr(isChecked, "")
         .attr("onchange", "toggleFreezeNodes(this.checked)");
 
 }
@@ -1032,7 +1062,7 @@ function writeSaveButtons(parent) {
         .attr("id", "saveJSONButton")
         .attr("type", "button")
         .attr("value", "Save webweb")
-        .on("click", writeWebWebDownloadLink);
+        .on("click", writeWebwebDownloadLink);
 }
 function writeDropJSONArea() {
     var dropJSONArea = d3.select("#chart")
@@ -1215,7 +1245,7 @@ function writeLinkStrengthWidget(parent) {
         .attr("id","linkStrengthText")
         .attr("type","text")
         .attr("onchange","changeLinkStrength(this.value)")
-        .attr("value",force.linkStrength())
+        .attr("value", force.linkStrength())
         .attr("size", 3);
 }
 function writeGravityWidget(parent) {
@@ -1313,11 +1343,8 @@ function readJSONDrop(evt) {
     evt.stopPropagation();
     evt.preventDefault();
 
-    var files = evt.dataTransfer.files; // FileList object.
-
-    setTimeout(function() {
-        text.html("drop webweb json here")
-    }, 2000);
+    // FileList object.
+    var files = evt.dataTransfer.files;
 
     readJSON(files);
 }
@@ -1369,9 +1396,19 @@ function writeSVGDownloadLink() {
 
     saveIt(display.networkName, "image/svg+xml", html);
 };
-function writeWebWebDownloadLink() {
+function writeWebwebDownloadLink() {
     var webwebJSON = wwdata;
     webwebJSON.display = display;
+
+    // save node coordinates
+    var nodeCoordinates = [];
+    node.attr("cx", function(d) {
+        nodeCoordinates.push({'x' : d.x, 'y' : d.y });
+        return d.x;
+    })
+
+    webwebJSON.display.nodeCoordinates = nodeCoordinates;
+
     saveIt('webweb.json', 'json', JSON.stringify(webwebJSON));
 }
 

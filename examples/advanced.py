@@ -26,7 +26,7 @@ if __name__ == '__main__':
     web.display.scaleLinkWidth = True
     web.display.scaleLinkOpacity = True
     web.display.colorPalate = "Set2"
-    # web.display.freezeNodeMovement = True
+    web.display.freezeNodeMovement = True
     # web.display.networkName = 'starfish'
 
 

@@ -41,7 +41,7 @@ class webweb(dict):
 
     @property
     def data_file(self):
-        return f"{self.title}.js"
+        return f"{self.title}.json"
 
     @property
     def json(self, title=None):

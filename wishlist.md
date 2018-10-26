@@ -5,7 +5,6 @@
         - still export with svg though?
     - config:
         - toggle all labels on/off
-        - initial node positions
 - python:
     - stop changing directory
     - allow user to write the outpath
@@ -24,3 +23,4 @@
     - parameter names
     - how it works
     - make more examples
+    - how freezeNodeMovement pass-in only functions when there's nodeCoordinates
