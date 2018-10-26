@@ -10,23 +10,16 @@
  *
  */
 
-/*
- * Here are default values. If you don't put anything different in the JSON file, this is what you get!
- * w width
- * h height
- * c charge
- * l length of edges
- * r radius of nodes
- * g gravity
- */
+// Here are default values. 
+// If you don't put anything different in the JSON file, this is what you get!
 var displayDefaults = {
-    'w' : 800,
-    'h' : 800,
-    'c' : 60,
-    'l' : 20,
-    'r' : 5,
-    'g' : 0.1,
-    'colorPalate' : 'Set1',
+    'w' : 800, // width
+    'h' : 800, // height
+    'c' : 60, // charge
+    'g' : 0.1, // gravity
+    'l' : 20, // edge length
+    'r' : 5, // node radius
+    'colorPalate' : 'Set1', // ... yaknow
 };
 
 var display = {};
@@ -64,6 +57,110 @@ var sizeData = {
     'labels' : {},
 };
 
+// Initialize the actual viz
+function initializeVis() {
+    // set up the DOM
+    var center = d3.select("body")
+        .append("div")
+        .attr("id", "center");
+
+    var menu = center.append("div")
+        .attr("id", "menu");
+
+    center.append("div")
+        .attr("id", "chart")
+        .append("div")
+        .attr("id", "svg_div");
+
+    initWebweb();
+    writeMenus(menu);
+    displayNetwork();
+}
+// updateVis: the update version of initializeVis
+// called when a file is dragged&dropped
+function updateVis(wwdata) {
+    // remove the old SVG
+    d3.select("#vis").remove();
+
+    initWebweb();
+    updateNetworkSelectMenu();
+    displayNetwork();
+}
+////////////////////////////////////////////////////////////////////////////////
+// - makes the svg
+// - loads params from `display` (or defaults them)
+// - sets the page title
+// - sets up the `force` and `node` d3 magic voodoos
+// - scales stuff
+//
+// Parameters currently passed through:
+// - N (if it has to)
+// - w, h, c, l, r, g
+// - colorBy
+// - sizeBy
+// - scaleLinkOpacity
+// - scaleLinkWidth
+// - freezeNodeMovement
+// - networkName
+////////////////////////////////////////////////////////////////////////////////
+function initWebweb() {
+    networkNames = Object.keys(wwdata.network);
+
+    displayDefaults['networkName'] = networkNames[0];
+
+    display = wwdata.display;
+    for (var key in displayDefaults) {
+        if (display[key] == undefined) {
+            display[key] = displayDefaults[key];
+        }
+    }
+
+    var title = "webweb";
+    if (display.name !== undefined) {
+        title = title + " - " + display.name;
+    }
+
+    d3.select("title").text(title);
+
+    links = [];
+    nameToMatch = "";
+    isHighlightText = true;
+
+    computeNodes();
+
+    vis = d3.select("#svg_div")
+        .append("svg")
+        .attr("width", display.w)
+        .attr("height", display.h)
+        .attr("id", "vis");
+
+    node = vis.selectAll(".node");
+    link = vis.selectAll(".link");
+    force = d3.layout.force()
+        .links(links)
+        .nodes(nodes)
+        .charge(-display.c)
+        .gravity(display.g)
+        .linkDistance(display.l)
+        .size([display.w, display.h])
+        .on("tick", tick);
+
+    scaleSize = d3.scale.linear().range([1, 1]);
+    scaleColorScalar = d3.scale.linear().range([1, 1]);
+    scaleColorCategory = d3.scale.ordinal().range([1, 1]);
+    scaleLink = d3.scale.linear().range([1, 1]);
+    scaleLinkOpacity = d3.scale.linear().range([0.4, 0.9]);
+
+    drawLinks();
+    drawNodes();
+}
+////////////////////////////////////////////////////////////////////////////////
+// - removes links
+// - computes new ones
+// - defines labels
+// - draws links
+// - uses the force (luke)
+////////////////////////////////////////////////////////////////////////////////
 function displayNetwork() {
     // remove old links
     links.splice(0, links.length);
@@ -71,13 +168,91 @@ function displayNetwork() {
     // make new links
     computeLinks();
 
-    // figure out what labels are available
+    // figure out the available labels
     defineLabels();
 
     drawLinks();
     force.start();
 }
+////////////////////////////////////////////////////////////////////////////////
+// loads the labels up from the places they could come from:
+// 1. the defaults (none, degree)
+// 2. the display parameters
+// 3. the network itself
+//
+// Priority is given to the network's labels, then display, then defaults
+////////////////////////////////////////////////////////////////////////////////
+function defineLabels() {
+    var allLabels = {
+        'none' : {},
+        'degree' : {},
+    };
 
+    if (display.labels !== undefined) {
+        var displayLabels = display.labels;
+        for (var label in displayLabels) {
+            allLabels[label] = displayLabels[label];
+        }
+    }
+
+    var networkData = wwdata.network[display.networkName];
+    if (networkData !== undefined && networkData.labels !== undefined) {
+        var networkLabels = networkData.labels;
+        for (var label in networkLabels) {
+            allLabels[label] = networkLabels[label];
+        }
+    }
+    sizeData.labels = {};
+    colorData.labels = {};
+    for (label in allLabels) {
+        if (allLabels[label].type !== "categorical") {
+            sizeData.labels[label] = allLabels[label];
+        }
+        colorData.labels[label] = allLabels[label];
+    }
+
+    // update the menus with these new labels
+    updateSizeMenu();
+    updateColorMenu();
+}
+////////////////////////////////////////////////////////////////////////////////
+// initialize the nodes (attempting to be smart about the number of them)
+////////////////////////////////////////////////////////////////////////////////
+function computeNodes() {
+    if (display.N == undefined) {
+        var nodeCounts = [];
+        for (i in networkNames) {
+            var networkNodes = [];
+            var networkName = networkNames[i];
+
+            var adj = d3.values(wwdata["network"][networkName]["adjList"]);
+            for (i in adj) {
+                var edge = adj[i];
+                networkNodes.push(edge[0]);
+                networkNodes.push(edge[1]);
+            }
+            nodeCounts.push(d3.set(networkNodes).values().length);
+        }
+
+        display.N = d3.max(nodeCounts);
+    }
+
+    // Define nodes
+    nodes = [];
+    for (var i = 0; i < display.N; i++) {
+        nodes.push({
+            "idx" : i,
+            "weight" : 0,
+            "name" : display.nodeNames !== undefined ? display.nodeNames[i] : undefined,
+        });
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
+// initialize links/edges
+//
+// - scale link width/opacity
+// - calculate node weights/degrees
+////////////////////////////////////////////////////////////////////////////////
 function computeLinks() {
     // get the adjacencies
     var adj = d3.values(wwdata["network"][display.networkName]["adjList"]);
@@ -115,12 +290,13 @@ function computeLinks() {
         }
     }
 }
-
+////////////////////////////////////////////////////////////////////////////////
 // Compute the radius multipliers of the nodes, given the data and chosen parameters
 // 
 // the 'sizeBy' display parameter determines how we will scale this.
 // For example, if sizeBy is None, then the multiplier is 1 (the identity)
 // Otherwise, the multiplier can be something else!
+////////////////////////////////////////////////////////////////////////////////
 function computeSizes() {
     rawValues = [];
     scaledValues = [];
@@ -162,59 +338,10 @@ function computeSizes() {
     sizeData['scaledValues'] = scaledValues;
     sizeData['rawValues'] = rawValues;
 }
-
-
-// Highlight a node by making it bigger and outlining it
-function highlightNode(d) {
-    d3.select("#node_" + d.idx)
-        .transition().duration(100)
-        .attr("r", sizeData['scaledValues'][d.idx] * display.r * 1.3)
-        .style("stroke", d3.rgb(0,0,0));
-}
-// Returns a node's highlighted size and stroke to normal
-function unHighlightNode(d) {
-    if (nameToMatch == "" || d.name.indexOf(nameToMatch) < 0) {
-        d3.select("#node_" + d.idx)
-            .transition()
-            .attr("r", sizeData['scaledValues'][d.idx] * display.r)
-            .style("stroke",d3.rgb(255,255,255));
-    }
-}
-// Highlight a node by showing its name next to it.
-// If the node has no name, show its index.  
-function highlightText(d) {
-    if (d == "stop") {
-        isHighlightText = false; 
-        return
-    }
-    else if (d == "start") {
-        isHighlightText = true; 
-        return
-    }
-    if (isHighlightText){
-        var nodeName = "node";
-        var nodeId = d.idx;
-        if (d.name !== undefined) {
-            nodeName = d.name;
-            nodeId = "(" + nodeId + ")";
-        }
-
-        var highlightTextString = nodeName + " " + nodeId;
-
-        vis.append("text").text(highlightTextString)
-            .attr("x", d.x + 1.5 * display.r)
-            .attr("y", d.y - 1.5 * display.r)
-            .attr("fill", "black")
-            .attr("font-size", 12)
-            .attr("id", "highlightText");
-    }
-}
-// Removes a node's highlighted name 
-function unHighlightText() {
-    vis.selectAll("#highlightText").remove();
-}
-// Similar to computeSizes, this function computes the colors for the nodes
-// based on the preferences of the user chosen in the dropdown menus.
+////////////////////////////////////////////////////////////////////////////////
+// computes the colors for the nodes based on the preferences of the user chosen
+// in the dropdown menus.
+////////////////////////////////////////////////////////////////////////////////
 function computeColors() {
     var rawValues = [];
     var scaledValues = [];
@@ -297,7 +424,6 @@ function computeColors() {
     colorData['rawValues'] = rawValues;
     colorData['scaledValues'] = scaledValues;
 }
-
 // ColorWheel is a function that takes a node label, like a category or scalar
 // and just gets the damn color. But it has to take into account what the 
 // current colorData['type'] is. Basically, this is trying to apply our prefs to colors
@@ -409,9 +535,9 @@ function changeGravity(g) {
         alert("Gravity must be nonnegative.");
     }
 }
-function toggleFreezeNodes(frozen) {
-    display.freezeNodeMovement = frozen;
-    if (frozen) {
+function toggleFreezeNodes(isFrozen) {
+    display.freezeNodeMovement = isFrozen;
+    if (isFrozen) {
         force.stop();
         for (var i = 0; i < force.nodes().length; i++) {
             force.nodes()[i].fixed = true;
@@ -461,7 +587,6 @@ function matchNodes(x) {
         })
     }
 }
-
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -474,15 +599,17 @@ function matchNodes(x) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// draw a legend for how size and color
+////////////////////////////////////////////////////////////////////////////////
+// draw legend(s) for size and color
 // 
-// If size and color are tied to the same attribute: make one legend
-// Otherwise: keep them separate
+// If size and color are tied to the same attribute, make one legend
+// Otherwise, keep em separate
 //
 // prefer integer boundaries in our legends... but only if the values that are
-// getting passed in are integers... etc. 
+// getting passed in are integers... etc. (etc... etc...)
 //
-// This code steps through what we think of as standard human preferences.
+// steps through what we think of as standard human preference.
+////////////////////////////////////////////////////////////////////////////////
 function computeLegend() {
     vis.selectAll("#legend").remove();
 
@@ -592,7 +719,7 @@ function makeSizeLegend() {
     var text = [];
     sizeData['R'] = 0;
     
-    // there is no legend if:
+    // there's no legend if:
     // - the sizeData['type'] is "none"
     // - the radius is undefined
     if (sizeData['type'] == 'none' || display.r == 0 || display.r == "") {
@@ -627,7 +754,7 @@ function makeSizeLegend() {
     sizeData['legendText'] = text;
 }
 ////////////////////////////////////////////////////////////////////////////////
-// returns a legend for integer or non-integer scalars
+// returns a legend for scalars, integer or non-integer
 ////////////////////////////////////////////////////////////////////////////////
 function getScalarLegend(rawValues) {
     var legend = [];
@@ -657,8 +784,7 @@ function getScalarLegend(rawValues) {
     }
 }
 
-// This function handles 'binning' a set of values so that we can display a
-// finite legend.
+// 'bins' a set of values so that we can display a finite legend.
 function binnedLegend(vals, bins) {
     var legend = [];
     var min_val = d3.min(vals);
@@ -696,7 +822,7 @@ function drawLinks() {
         .attr("id", function(d, i) { 
             return "link_" + i; 
         })
-        .style("stroke", d3.rgb(150,150,150))
+        .style("stroke", d3.rgb(150, 150, 150))
         .style("stroke-width", function(d) {
             if (d.w == 0) {
                 return 0;
@@ -723,9 +849,9 @@ function redrawLinks() {
                     return scaleLink(d.w);
                 }
             })
-        .style("stroke-opacity", function(d) {
-            return scaleLinkOpacity(d.w)
-        });
+            .style("stroke-opacity", function(d) {
+                return scaleLinkOpacity(d.w)
+            });
     })
 }
 function drawNodes() {
@@ -769,7 +895,6 @@ function redrawNodes() {
             .style("fill", d3.rgb(colorData['scaledValues'][i]));
     });
 }
-
 // tick attributes for links and nodes
 function tick() {
     link.attr("x1", function(d) { return d.source.x; })
@@ -779,7 +904,56 @@ function tick() {
     node.attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; })
 }
+// Highlight a node by making it bigger and outlining it
+function highlightNode(d) {
+    d3.select("#node_" + d.idx)
+        .transition().duration(100)
+        .attr("r", sizeData['scaledValues'][d.idx] * display.r * 1.3)
+        .style("stroke", d3.rgb(0,0,0));
+}
+// Returns a node's highlighted size and stroke to normal
+function unHighlightNode(d) {
+    if (nameToMatch == "" || d.name.indexOf(nameToMatch) < 0) {
+        d3.select("#node_" + d.idx)
+            .transition()
+            .attr("r", sizeData['scaledValues'][d.idx] * display.r)
+            .style("stroke",d3.rgb(255,255,255));
+    }
+}
+// Highlight a node by showing its name next to it.
+// If the node has no name, show its index.  
+function highlightText(d) {
+    if (d == "stop") {
+        isHighlightText = false; 
+        return
+    }
+    else if (d == "start") {
+        isHighlightText = true; 
+        return
+    }
+    if (isHighlightText){
+        var nodeName = "node";
+        var nodeId = d.idx;
+        if (d.name !== undefined) {
+            nodeName = d.name;
+            nodeId = "(" + nodeId + ")";
+        }
 
+        var highlightTextString = nodeName + " " + nodeId;
+
+        vis.append("text").text(highlightTextString)
+            .attr("x", d.x + 1.5 * display.r)
+            .attr("y", d.y - 1.5 * display.r)
+            .attr("fill", "black")
+            .attr("font-size", 12)
+            .attr("id", "highlightText");
+    }
+}
+// guess!
+// (Removes a node's highlighted name) 
+function unHighlightText() {
+    vis.selectAll("#highlightText").remove();
+}
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -902,7 +1076,6 @@ function writeNetworkSelectMenu(parent) {
         .attr("id", "netSelect")
         .attr("onchange", "updateNetwork(this.value)")
 }
-// called when we load a json file and need to rebuild the networkSelectMenu.
 function updateNetworkSelectMenu() {
     var netSelect = d3.select("#netSelect");
 
@@ -1117,12 +1290,15 @@ function writeMenus(menu) {
 
     updateNetworkSelectMenu();
 }
-
-/*
-* File interaction code
-* This code handles the dragging and dropping of files
-* as well as the saving of SVG
-*/ 
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+// Files
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
 function handleDragOver(evt) {
     evt.stopPropagation();
     evt.preventDefault();
@@ -1138,7 +1314,6 @@ function handleDragOver(evt) {
         .style("border-radius", "5px")
         .style("color", "#bbb");
 }
-
 // This prepares to read in a json file if you drop it. 
 // It calls readJSON, which is below.
 function readJSONDrop(evt) {
@@ -1182,16 +1357,15 @@ function readJSON(files) {
     var blob = file.slice(start, stop + 1);
     reader.readAsBinaryString(blob);
 }
-
+// it's crazy, this function right here, it saves: it
 function saveIt(fileName, fileType, content) {
     try {
         var isFileSaverSupported = !!new Blob();
+        var blob = new Blob([content], {type: fileType});
+        saveAs(blob, fileName);
     } catch (e) {
-        alert("saving not supported");
+        alert("can't save :(");
     }
-
-    var blob = new Blob([content], {type: fileType});
-    saveAs(blob, fileName);
 }
 function writeSVGDownloadLink() {
     var html = d3.select("svg")
@@ -1208,10 +1382,15 @@ function writeWebWebDownloadLink() {
     saveIt('webweb.json', 'json', JSON.stringify(webwebJSON));
 }
 
-/* Helper functions */
-function identity(d) {
-    return d;
-}
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+// Helpers
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
 function isInt(n) {
     return n % 1 === 0;
 }
@@ -1232,180 +1411,6 @@ function allInts(vals) {
     }
 
     return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// loads the labels up from the places they could come from:
-// 1. the defaults (none, degree)
-// 2. the display parameters
-// 3. the network itself
-//
-// Priority is given to the network's labels, then display, then defaults
-////////////////////////////////////////////////////////////////////////////////
-function defineLabels() {
-    var allLabels = {
-        'none' : {},
-        'degree' : {},
-    };
-
-    if (display.labels !== undefined) {
-        var displayLabels = display.labels;
-        for (var label in displayLabels) {
-            allLabels[label] = displayLabels[label];
-        }
-    }
-
-    var networkData = wwdata.network[display.networkName];
-    if (networkData !== undefined && networkData.labels !== undefined) {
-        var networkLabels = networkData.labels;
-        for (var label in networkLabels) {
-            allLabels[label] = networkLabels[label];
-        }
-    }
-    sizeData.labels = {};
-    colorData.labels = {};
-    for (label in allLabels) {
-        if (allLabels[label].type !== "categorical") {
-            sizeData.labels[label] = allLabels[label];
-        }
-        colorData.labels[label] = allLabels[label];
-    }
-
-    // update the menus with these new labels
-    updateSizeMenu();
-    updateColorMenu();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// initialize the nodes, attempting to be smart about the number of them
-////////////////////////////////////////////////////////////////////////////////
-function computeNodes() {
-    if (display.N == undefined) {
-        var nodeCounts = [];
-        for (i in networkNames) {
-            var networkNodes = [];
-            var networkName = networkNames[i];
-
-            var adj = d3.values(wwdata["network"][networkName]["adjList"]);
-            for (i in adj) {
-                var edge = adj[i];
-                networkNodes.push(edge[0]);
-                networkNodes.push(edge[1]);
-            }
-            nodeCounts.push(d3.set(networkNodes).values().length);
-        }
-
-        display.N = d3.max(nodeCounts);
-    }
-
-    // Define nodes
-    nodes = [];
-    for (var i = 0; i < display.N; i++) {
-        nodes.push({
-            "idx" : i,
-            "weight" : 0,
-            "name" : display.nodeNames !== undefined ? display.nodeNames[i] : undefined,
-        });
-    }
-}
-////////////////////////////////////////////////////////////////////////////////
-// This function is poorly named. It:
-// - makes the svg
-// - makes a node and link selector
-// - scales stuff
-// - initializes some colors
-//
-// Parameters currently passed through:
-// - N
-// - w, h, c, l, r, g
-// - colorBy
-// - sizeBy
-// - scaleLinkOpacity
-// - scaleLinkWidth
-// - freezeNodeMovement
-// - networkName
-////////////////////////////////////////////////////////////////////////////////
-function initializeNetwork() {
-    networkNames = Object.keys(wwdata.network);
-
-    displayDefaults['networkName'] = networkNames[0];
-
-    display = wwdata.display;
-    for (var key in displayDefaults) {
-        if (display[key] == undefined) {
-            display[key] = displayDefaults[key];
-        }
-    }
-
-    var title = "webweb";
-    if (display.name !== undefined) {
-        title = title + " - " + display.name;
-    }
-
-    d3.select("title").text(title);
-
-    links = [];
-    nameToMatch = "";
-    isHighlightText = true;
-
-    computeNodes();
-
-    vis = d3.select("#svg_div")
-        .append("svg")
-        .attr("width", display.w)
-        .attr("height", display.h)
-        .attr("id", "vis");
-
-    node = vis.selectAll(".node");
-    link = vis.selectAll(".link");
-    force = d3.layout.force()
-        .links(links)
-        .nodes(nodes)
-        .charge(-display.c)
-        .gravity(display.g)
-        .linkDistance(display.l)
-        .size([display.w, display.h])
-        .on("tick", tick);
-
-    scaleSize = d3.scale.linear().range([1, 1]);
-    scaleColorScalar = d3.scale.linear().range([1, 1]);
-    scaleColorCategory = d3.scale.ordinal().range([1, 1]);
-    scaleLink = d3.scale.linear().range([1, 1]);
-    scaleLinkOpacity = d3.scale.linear().range([0.4, 0.9]);
-
-    drawLinks();
-    drawNodes();
-}
-
-// updateVis is called a file is dragged&dropped
-// It's the update version of initializeVis
-function updateVis(wwdata) {
-    // remove the old SVG
-    d3.select("#vis").remove();
-
-    initializeNetwork();
-    updateNetworkSelectMenu();
-    displayNetwork();
-}
-
-// Initialize the actual viz by putting all the pieces above together.
-function initializeVis() {
-    // set up the DOM
-    var center = d3.select("body")
-        .append("div")
-        .attr("id", "center");
-
-    var menu = center.append("div")
-        .attr("id", "menu");
-
-    center.append("div")
-        .attr("id", "chart")
-        .append("div")
-        .attr("id", "svg_div");
-
-    initializeNetwork();
-    writeMenus(menu);
-    displayNetwork();
 }
 
 window.onload = function() {

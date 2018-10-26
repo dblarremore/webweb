@@ -9,6 +9,7 @@
 - python:
     - stop changing directory
     - allow user to write the outpath
+        - let them write json OR draw
     - matrix vs list
         - just _know_ which is which
     - put up on pip
@@ -22,3 +23,4 @@
         - i.e., it will take the first edge's weight
     - parameter names
     - how it works
+    - make more examples
