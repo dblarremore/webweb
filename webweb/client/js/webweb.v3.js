@@ -33,8 +33,8 @@ var displayDefaults = {
 };
 
 var display = {};
+var networkNames;
 
-var netNames, netName;
 var N;
 var links = [];
 var nodes = [];
@@ -89,16 +89,13 @@ function tick() {
 // This function is poorly named. 
 // It is called when loading a network or changing networks
 // It rebuilds links, labels, and menus, accordingly
-function computeLinks(net) {
-    // Update the name
-    netName = net;
-
+function computeLinks() {
     // Remove all the links in the list of links.
     links.splice(0, links.length);
     draw();
 
     // get the adjacencies
-    adj = d3.values(wwdata["network"][netName]["adjList"]);
+    adj = d3.values(wwdata["network"][display.networkName]["adjList"]);
 
     // learn how we should scale the link weight and opacity by computing the
     // range (extent) of the adj weights.
@@ -452,6 +449,10 @@ function colorWheel(x) {
  * These functions are bound to the various menus that we create in the GUI.
  * On menu change, one of these will be called. 
  */
+function updateNetwork(networkName) {
+    display.networkName = networkName;
+    computeLinks();
+}
 function changeSizes(x) {
     sizeKey = x;
     computeSizes();
@@ -891,10 +892,7 @@ function writeNetworkSelectMenu(parent) {
 
     networkSelectMenu.append("select")
         .attr("id", "netSelect")
-        .attr("onchange", "computeLinks(this.value)")
-        .selectAll("option").data(netNames).enter().append("option")
-        .attr("value", function(d) { return d; })
-        .text(function(d) { return d; });
+        .attr("onchange", "updateNetwork(this.value)")
 }
 
 // called when we load a json file and need to rebuild the networkSelectMenu.
@@ -904,10 +902,14 @@ function updateNetworkSelectMenu() {
     netSelect.selectAll("option").remove();
 
     netSelect.selectAll("option")
-        .data(netNames).enter()
+        .data(networkNames)
+        .enter()
         .append("option")
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
+
+    netSelect = document.getElementById('netSelect');
+    netSelect.value = display.networkName;
 }
 
 function writeSizeMenu(parent) {
@@ -1112,6 +1114,8 @@ function writeMenus(menu) {
     writeGravityWidget(rightMenu);
     writeRadiusWidget(rightMenu);
     writeMatchWidget(rightMenu);
+
+    updateNetworkSelectMenu();
 }
 
 /*
@@ -1192,15 +1196,15 @@ function writeDownloadLink(){
     } catch (e) {
         alert("blob not supported");
     }
-    // grab the svg, call it netName, and save it.
+    // grab the svg, call it display.networkName, and save it.
 
     var html = d3.select("svg")
-        .attr("title", netName)
+        .attr("title", display.networkName)
         .attr("version", 1.1)
         .attr("xmlns", "http://www.w3.org/2000/svg")
         .node().parentNode.innerHTML;
     var blob = new Blob([html], {type: "image/svg+xml"});
-    saveAs(blob, netName);
+    saveAs(blob, display.networkName);
 };
 
 
@@ -1251,8 +1255,9 @@ function setLabels() {
         }
     }
 
-    if (wwdata.network[netName] !== undefined && wwdata.network[netName].labels !== undefined) {
-        var network_labels = wwdata.network[netName].labels;
+    var networkData = wwdata.network[display.networkName];
+    if (networkData !== undefined && networkData.labels !== undefined) {
+        var network_labels = networkData.labels;
         for (var label in network_labels) {
             all_labels[label] = network_labels[label];
         }
@@ -1285,6 +1290,10 @@ function setLabels() {
 function initializeNetwork() {
     N = wwdata.display.N;
     
+    networkNames = Object.keys(wwdata.network);
+
+    displayDefaults['networkName'] = networkNames[0];
+
     display = wwdata.display;
     for (var key in displayDefaults) {
         if (display[key] == undefined) {
@@ -1299,8 +1308,6 @@ function initializeNetwork() {
 
     colorKey = display.colorBy;
     sizeKey = display.sizeBy;
-
-    netNames = Object.keys(wwdata.network);
 
     var title = "webweb";
     if (display.name !== undefined) {
@@ -1322,7 +1329,6 @@ function initializeNetwork() {
     }
 
     isStartup = 1;
-    netName;
 
     // Define nodes
     for (var i = 0; i < N; i++) {
@@ -1364,9 +1370,8 @@ function updateVis(wwdata) {
     d3.select("#vis").remove();
 
     initializeNetwork();
-
     updateNetworkSelectMenu();
-    computeLinks(netNames[0]);
+    computeLinks();
 }
 
 // Initialize the actual viz by putting all the pieces above together.
@@ -1385,9 +1390,8 @@ function initializeVis() {
         .attr("id", "svg_div");
 
     initializeNetwork();
-
     writeMenus(menu);
-    computeLinks(netNames[0]);
+    computeLinks();
 }
 
 window.onload = function() {
