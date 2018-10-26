@@ -420,7 +420,6 @@ function computeColors() {
                     }
                 }
             }
-
             // if there are fewer than 9 categories, use the colorbrewer
             if (categories.length <= 9) {
                 scaleColorCategory.domain(categories)
@@ -511,6 +510,8 @@ function changeColors(colorBy) {
 function setColorPalate(colorPalate) {
     display.colorPalate = colorPalate;
     computeColors();
+    computeLegend();
+    redrawNodes();
 }
 function changeCharge(c) {
     if (c >= 0) {
@@ -900,8 +901,8 @@ function drawNodes() {
         .attr("id", function(d) {
             return ("node_" + d.idx);
         })
-        .style("fill", d3.rgb(255,255,255))
-        .style("stroke", d3.rgb(255,255,255));
+        .style("fill", d3.rgb(255, 255, 255))
+        .style("stroke", d3.rgb(255, 255, 255));
 
     node.exit().remove();
     node.on("mousedown", function(d) {
@@ -954,7 +955,7 @@ function unHighlightNode(d) {
         d3.select("#node_" + d.idx)
             .transition()
             .attr("r", sizeData['scaledValues'][d.idx] * display.r)
-            .style("stroke",d3.rgb(255,255,255));
+            .style("stroke", d3.rgb(255, 255, 255));
     }
 }
 // Highlight a node by showing its name next to it.
