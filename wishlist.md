@@ -1,8 +1,8 @@
 # Things that would be nice:
 - client:
-    - migrate d3 v3 --> v5
-        - use canvas
+    - use canvas
         - still export with svg though?
+            - maybe not? canvas can export to png
     - config:
         - toggle all labels on/off
 - python:

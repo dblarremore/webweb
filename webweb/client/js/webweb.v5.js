@@ -19,6 +19,7 @@ var displayDefaults = {
     'g' : 0.1, // gravity
     'l' : 20, // edge length
     'r' : 5, // node radius
+    'linkStrength' : 1, // link strength
     'colorPalate' : 'Set1', // ... yaknow
 };
 
@@ -29,7 +30,7 @@ var networks;
 var N;
 var links = [];
 var nodes = [];
-var node, force, link;
+var node, simulation, link;
 
 var scaleSize, scaleColorScalar, scaleColorCategory, scaleLink, scaleLinkOpacity;
 
@@ -90,7 +91,7 @@ function updateVis(wwdata) {
 // - makes the svg
 // - loads params from `display` (or defaults them)
 // - sets the page title
-// - sets up the `force` and `node` d3 magic voodoos
+// - sets up the simulation and `node` d3 magic voodoos
 // - scales stuff
 //
 // Parameters currently passed through:
@@ -128,7 +129,12 @@ function initWebweb() {
 
     d3.select("title").text(title);
 
-    links = [];
+    scaleSize = d3.scaleLinear().range([1, 1]);
+    scaleColorScalar = d3.scaleLinear().range([1, 1]);
+    scaleColorCategory = d3.scaleOrdinal().range([1, 1]);
+    scaleLink = d3.scaleLinear().range([1, 1]);
+    scaleLinkOpacity = d3.scaleLinear().range([0.4, 0.9]);
+
     nameToMatch = "";
     isHighlightText = true;
 
@@ -139,51 +145,40 @@ function initWebweb() {
         .attr("id", "vis");
 
     computeNodes();
-
-    force = d3.layout.force()
-        .links(links)
-        .nodes(nodes)
-        .charge(-display.c)
-        .gravity(display.g)
-        .linkDistance(display.l)
-        .size([display.w, display.h])
-        .on("tick", tick);
-
     drawNodes();
 
-    scaleSize = d3.scale.linear().range([1, 1]);
-    scaleColorScalar = d3.scale.linear().range([1, 1]);
-    scaleColorCategory = d3.scale.ordinal().range([1, 1]);
-    scaleLink = d3.scale.linear().range([1, 1]);
-    scaleLinkOpacity = d3.scale.linear().range([0.4, 0.9]);
+    simulation = d3.forceSimulation(nodes)
+        .force("center", d3.forceCenter(display.w / 2, display.h / 2))
+        .force('collision', d3.forceCollide().radius(function(d) {
+            return d.r
+        }))
+        .on('tick', tick);
+
+    updateChargeForce();
 }
 ////////////////////////////////////////////////////////////////////////////////
-// - removes links
-// - computes new ones
-// - defines labels
+// - computes links ones
 // - draws links
+// - defines labels
 // - uses the force (luke)
 ////////////////////////////////////////////////////////////////////////////////
 function displayNetwork() {
-    // remove old links
-    links.splice(0, links.length);
-
-    // make new links
     computeLinks();
     drawLinks();
+
+    updateLinkForce();
 
     // figure out the available labels
     defineLabels();
 
-    force.start();
     toggleFreezeNodes(display.freezeNodeMovement);
 
-    // if we've frozen node movement, manually tick so that the new edges are
-    // evaluated.
+    // if we've frozen node movement manually tick so new edges are evaluated.
     if (display.freezeNodeMovement) {
         tick();
     }
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 // loads the labels up from the places they could come from:
 // 1. the defaults (none, degree)
@@ -275,6 +270,8 @@ function computeNodes() {
 // - calculate node weights/degrees
 ////////////////////////////////////////////////////////////////////////////////
 function computeLinks() {
+    links = [];
+
     // get the adjacencies
     var adj = d3.values(wwdata["network"][display.networkName]["adjList"]);
 
@@ -516,8 +513,7 @@ function setColorPalate(colorPalate) {
 function changeCharge(c) {
     if (c >= 0) {
         display.c = c;
-        force.charge(-c);
-        force.start();
+        updateChargeForce();
     }
     else {
         alert("Repulsion must be nonnegative.");
@@ -531,17 +527,16 @@ function changer(r) {
 function changeDistance(l) {
     if (l >= 0) {
         display.l = l;
-        force.linkDistance(l);
-        force.start();
+        updateLinkForce();
     }
     else {
         alert("Distance must be nonnegative.");
     }
 }
-function changeLinkStrength(x) {
-    if (x >= 0) {
-        force.linkStrength(x);
-        force.start();
+function changeLinkStrength(linkStrength) {
+    if (linkStrength >= 0) {
+        display.linkStrength = linkStrength;
+        updateLinkForce();
     }
     else {
         alert("Distance must be nonnegative.");
@@ -550,8 +545,7 @@ function changeLinkStrength(x) {
 function changeGravity(g) {
     if (g >= 0) {
         display.g = g;
-        force.gravity(g);
-        force.start();
+        // force.gravity(g);
     }
     else {
         alert("Gravity must be nonnegative.");
@@ -560,25 +554,35 @@ function changeGravity(g) {
 function toggleFreezeNodes(isFrozen) {
     display.freezeNodeMovement = isFrozen;
     if (isFrozen) {
-        force.stop();
-        for (var i = 0; i < force.nodes().length; i++) {
-            force.nodes()[i].fixed = true;
+        simulation.stop();
+        for (var i = 0; i < simulation.nodes().length; i++) {
+            simulation.nodes()[i].fx = simulation.nodes()[i].x;
+            simulation.nodes()[i].fy = simulation.nodes()[i].y;
         }
     }
     else {
-        for (var i = 0; i < force.nodes().length; i++) {
-            force.nodes()[i].fixed = false;
+        for (var i = 0; i < simulation.nodes().length; i++) {
+            simulation.nodes()[i].fx = undefined;
+            simulation.nodes()[i].fy = undefined;
         }
-        node.call(force.drag)
-        force.resume();
+        simulation.alpha(1).restart();
     }
 
     var freezeNodesToggle = document.getElementById('freezeNodesToggle');
-    if (display.freezeNodeMovement) {
-        freezeNodesToggle.checked = true;
-    } else {
-        freezeNodesToggle.checked = false;
-    }
+    freezeNodesToggle.checked = display.freezeNodeMovement ? true : false;
+}
+function updateChargeForce() {
+    simulation.force("charge", d3.forceManyBody().strength(-display.c))
+    simulation.alpha(1).restart();
+}
+function updateLinkForce() {
+    simulation.force('link',
+        d3.forceLink()
+            .links(links)
+            .distance(display.l)
+            .strength(display.linkStrength)
+    )
+    simulation.alpha(1).restart();
 }
 function toggleLinkWidthScaling(checked) {
     if (checked) {
@@ -885,10 +889,9 @@ function redrawLinks() {
     })
 }
 function drawNodes() {
-    node = vis.selectAll(".node")
-        .data(nodes);
-
-    node.enter()
+    vis.selectAll(".node")
+        .data(nodes)
+        .enter()
         .insert("circle")
         .attr("class", "node")
         .attr("r", display.r)
@@ -902,9 +905,11 @@ function drawNodes() {
             return ("node_" + d.idx);
         })
         .style("fill", d3.rgb(255, 255, 255))
-        .style("stroke", d3.rgb(255, 255, 255));
+        .style("stroke", d3.rgb(255, 255, 255))
+        .exit().remove();
 
-    node.exit().remove();
+    node = vis.selectAll(".node");
+
     node.on("mousedown", function(d) {
         unHighlightText();
         highlightText("stop");
@@ -924,7 +929,33 @@ function drawNodes() {
         unHighlightText();
     });
 
-    node.call(force.drag);
+    node.call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended)
+    );
+}
+function dragstarted(d) {
+    d3.event.sourceEvent.stopPropagation();
+    if (!d3.event.active) {
+        simulation.alphaTarget(0.3).restart();
+    }
+    d.fx = d.x;
+    d.fy = d.y;
+}
+function dragged(d) {
+    d.fx = d3.event.x;
+    d.fy = d3.event.y;
+}
+function dragended(d) {
+    if (!d3.event.active) {
+        simulation.alphaTarget(0);
+    }
+
+    if (! display.freezeNodeMovement) {
+        d.fx = null;
+        d.fy = null;
+    }
 }
 function redrawNodes() {
     nodes.forEach(function(d, i) {
@@ -933,12 +964,16 @@ function redrawNodes() {
             .style("fill", d3.rgb(colorData['scaledValues'][i]));
     });
 }
+
 // tick attributes for links and nodes
 function tick() {
+    link = vis.selectAll(".link")
     link.attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
+
+    node = vis.selectAll(".node")
     node.attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; })
 }
@@ -1222,7 +1257,7 @@ function writeChargeWidget(parent) {
         .attr("id", "chargeText")
         .attr("type", "text")
         .attr("onchange", "changeCharge(this.value)")
-        .attr("value", -force.charge())
+        .attr("value", display.c)
         .attr("size", 3);
 }
 function writeLinkLengthWidget(parent) {
@@ -1234,7 +1269,7 @@ function writeLinkLengthWidget(parent) {
         .attr("id", "distanceText")
         .attr("type", "text")
         .attr("onchange", "changeDistance(this.value)")
-        .attr("value", force.distance())
+        .attr("value", display.l)
         .attr("size", 3);
 }
 function writeLinkStrengthWidget(parent) {
@@ -1246,7 +1281,7 @@ function writeLinkStrengthWidget(parent) {
         .attr("id","linkStrengthText")
         .attr("type","text")
         .attr("onchange","changeLinkStrength(this.value)")
-        .attr("value", force.linkStrength())
+        .attr("value", display.linkStrength)
         .attr("size", 3);
 }
 function writeGravityWidget(parent) {
@@ -1258,7 +1293,7 @@ function writeGravityWidget(parent) {
         .attr("id", "gravityText")
         .attr("type", "text")
         .attr("onchange", "changeGravity(this.value)")
-        .attr("value", force.gravity())
+        .attr("value", display.g)
         .attr("size", 3);
 }
 function writeRadiusWidget(parent) {

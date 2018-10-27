@@ -56,7 +56,7 @@ class webweb(dict):
             <html>
                 <head>
                     <title>webweb {self.title}</title>
-                    <script src="client/js/d3.v3.min.js"></script>
+                    <script src="client/js/d3.v5.min.js"></script>
                     <link type="text/css" rel="stylesheet" href="client/css/style.css"/>
                     <script type="text/javascript" src="{self.data_file}"></script>
                 </head>
@@ -64,7 +64,7 @@ class webweb(dict):
                     <script type="text/javascript" src="client/js/colors.js"></script>
                     <script type="text/javascript" src ="client/js/Blob.js"></script>
                     <script type="text/javascript" src ="client/js/FileSaver.min.js"></script>
-                    <script type="text/javascript" src ="client/js/webweb.v3.js"></script>
+                    <script type="text/javascript" src ="client/js/webweb.v5.js"></script>
                 </body>
             </html>
         """
