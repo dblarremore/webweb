@@ -421,6 +421,8 @@ function computeColors() {
             if (categories.length <= 9) {
                 scaleColorCategory.domain(categories)
                     .range(colorbrewer[display.colorPalate][categories.length]);
+
+                changeColorPalateMenuVisibility(true);
             }
             else {
                 // otherwise, treat like scalars
@@ -431,6 +433,7 @@ function computeColors() {
 
     if (colorData['type'] != 'categorical') {
         scaleColorScalar.domain(d3.extent(rawValues)).range([0,1]);
+        changeColorPalateMenuVisibility(false);
     }
 
     // get colors by passing scaled value to colorWheel
@@ -1186,12 +1189,17 @@ function updateSizeMenu() {
 }
 function writeColorMenu(parent) {
     var colorMenu = parent.append("div")
-        .attr("id", "colorMenu")
+        .attr("id", "colorMenu");
+
+    var colorByMenu = colorMenu.append("span")
+        .attr('id', 'colorByMenu')
         .text("Compute node color from ");
 
-    colorMenu.append("select")
+    colorByMenu.append("select")
         .attr("id", "colorSelect")
         .attr("onchange","changeColors(this.value)");
+
+    writeColorPalateMenu(colorMenu);
 }
 function updateColorMenu() {
     var colorSelect = d3.select("#colorSelect");
@@ -1218,10 +1226,15 @@ function updateColorMenu() {
     colorSelect.value = display.colorBy;
     changeColors(display.colorBy);
 }
+function changeColorPalateMenuVisibility(visible) {
+    var visibility = visible ? 'inline' : 'none';
+    var colorPalateMenu = d3.select('#colorPalateMenu')
+        .style('display', visibility);
+}
 function writeColorPalateMenu(parent) {
-    var colorPalateMenu = parent.append("div")
+    var colorPalateMenu = parent.append("span")
         .attr("id", "colorPalateMenu")
-        .text("Color Palate ");
+        .text(" with Color Palate ");
 
     var colorNames = [];
     for (colorName in colorbrewer) {
@@ -1331,7 +1344,6 @@ function writeMenus(menu) {
     writeNetworkSelectMenu(leftMenu);
     writeSizeMenu(leftMenu);
     writeColorMenu(leftMenu);
-    writeColorPalateMenu(leftMenu);
     writeScaleLinkWidthToggle(leftMenu);
     writeScaleLinkOpacityToggle(leftMenu);
     writeFreezeNodesToggle(leftMenu);
