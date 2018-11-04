@@ -18,6 +18,7 @@
     - figure out directed
 - DOCUMENT:
     - gravity????
+    - linkStrength?
     - behavior regarding note count
     - behavior with edges regarding weights
         - i.e., it will take the first edge's weight

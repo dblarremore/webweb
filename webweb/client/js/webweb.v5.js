@@ -372,6 +372,7 @@ function computeColors() {
         for (var i in nodes) { 
             colorData['scaledValues'][i] = d3.rgb(100, 100, 100);
         }
+        changeColorPalateMenuVisibility(false);
         return
     }
 
