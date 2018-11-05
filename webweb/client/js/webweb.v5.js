@@ -27,7 +27,6 @@ var display = {};
 var networkNames;
 var networks;
 
-var N;
 var links = [];
 var nodes = [];
 var node, simulation, link;
@@ -149,12 +148,10 @@ function initWebweb() {
 
     simulation = d3.forceSimulation(nodes)
         .force("center", d3.forceCenter(display.w / 2, display.h / 2))
-        .force('collision', d3.forceCollide().radius(function(d) {
-            return d.r
-        }))
         .on('tick', tick);
 
     updateChargeForce();
+    updateGravityForce();
 }
 ////////////////////////////////////////////////////////////////////////////////
 // - computes links ones
@@ -366,13 +363,15 @@ function computeColors() {
 
     colorData['type'] = display.colorBy;
 
+    // default to hiding the color palate menu
+    changeColorPalateMenuVisibility(false);
+
     // no colors
     if (display.colorBy == "none"){
         // set all nodes to dark grey 100
         for (var i in nodes) { 
             colorData['scaledValues'][i] = d3.rgb(100, 100, 100);
         }
-        changeColorPalateMenuVisibility(false);
         return
     }
 
@@ -391,10 +390,11 @@ function computeColors() {
             rawValues[i] = label.value[i];
         }
 
+        var categories = [];
+
         // get the category names if it's categorical
         if (colorData['type'] == "categorical") {
             colorData['categoryNames'] = [];
-            var categories = [];
 
             // if we don't have categories, retrieve them as scalars from the
             // values for the label
@@ -418,7 +418,16 @@ function computeColors() {
                     }
                 }
             }
+        }
+        else if (colorData['type'] == 'binary') {
+            categories = [0, 1];
+        }
+
+        if (categories.length) {
             // if there are fewer than 9 categories, use the colorbrewer
+            // TODO:
+            // actually check how many categories there are and update the list
+            // for this...
             if (categories.length <= 9) {
                 scaleColorCategory.domain(categories)
                     .range(colorbrewer[display.colorPalate][categories.length]);
@@ -432,9 +441,8 @@ function computeColors() {
         }
     }
 
-    if (colorData['type'] != 'categorical') {
+    if (colorData['type'] != 'categorical' && colorData['type'] != 'binary' ) {
         scaleColorScalar.domain(d3.extent(rawValues)).range([0,1]);
-        changeColorPalateMenuVisibility(false);
     }
 
     // get colors by passing scaled value to colorWheel
@@ -449,24 +457,8 @@ function computeColors() {
 // and just gets the damn color. But it has to take into account what the 
 // current colorData['type'] is. Basically, this is trying to apply our prefs to colors
 function colorWheel(x) {
-    if (isNaN(x)) {
-        if (colorData['type'] == "categorical" && typeof(x) == "string"){
-            return scaleColorCategory(x);
-        }
-        else {
-            return d3.rgb(180, 180, 180)};
-    }
-
-    if (colorData['type'] == "categorical") {
+    if (colorData['type'] == "categorical" || colorData['type'] == "binary") {
         return scaleColorCategory(x);
-    }
-    else if (colorData['type'] == "binary") {
-        if (!x) {
-            return d3.rgb(30, 100, 180)
-        }
-        else {
-            return d3.rgb(102, 186, 30)
-        };
     }
     else {
         // Rainbow HSL
@@ -549,7 +541,7 @@ function changeLinkStrength(linkStrength) {
 function changeGravity(g) {
     if (g >= 0) {
         display.g = g;
-        // force.gravity(g);
+        updateGravityForce();
     }
     else {
         alert("Gravity must be nonnegative.");
@@ -578,6 +570,10 @@ function toggleFreezeNodes(isFrozen) {
 function updateChargeForce() {
     simulation.force("charge", d3.forceManyBody().strength(-display.c))
     simulation.alpha(1).restart();
+}
+function updateGravityForce() {
+    simulation.force("x", d3.forceX(display.w / 2).strength(display.g));
+    simulation.force("y", d3.forceY(display.h / 2).strength(display.g));
 }
 function updateLinkForce() {
     simulation.force('link',

@@ -21,13 +21,15 @@ if __name__ == '__main__':
 
     # Give the file a name
     web.display.name = 'Advanced'
-    web.display.colorBy = 'texture'
+    web.display.colorBy = 'isHead'
     web.display.sizeBy = 'hunger'
+    web.display.l = 20
+    web.display.c = 200
     web.display.scaleLinkWidth = True
     web.display.scaleLinkOpacity = True
     web.display.colorPalate = "Set2"
     web.display.freezeNodeMovement = True
-    web.display.networkName = 'starfish'
+    web.display.networkName = 'snake'
 
 
     # Build a few networks

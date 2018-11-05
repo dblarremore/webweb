@@ -17,7 +17,7 @@
 - BUGS:
     - figure out directed
 - DOCUMENT:
-    - gravity????
+    - 0 indexing is assumed
     - linkStrength?
     - behavior regarding note count
     - behavior with edges regarding weights
@@ -26,3 +26,7 @@
     - how it works
     - make more examples
     - how freezeNodeMovement pass-in only functions when there's nodeCoordinates
+- todo:
+    - be better about node/edge list loading
+        - ZERO INDEX things on "our" side
+        - allow for dict of nodes with "id" function
