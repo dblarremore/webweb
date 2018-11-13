@@ -5,6 +5,7 @@
             - maybe not? canvas can export to png
     - config:
         - toggle all labels on/off
+    - figure out directed
 - python:
     - stop changing directory
     - allow user to write the outpath
@@ -14,19 +15,18 @@
     - put up on pip
     - networkx integration
         - add weights to edges if present
-- BUGS:
-    - figure out directed
 - DOCUMENT:
-    - 0 indexing is assumed
-    - linkStrength?
-    - behavior regarding note count
-    - behavior with edges regarding weights
-        - i.e., it will take the first edge's weight
-    - parameter names
-    - how it works
-    - make more examples
-    - how freezeNodeMovement pass-in only functions when there's nodeCoordinates
+    - BINARY
+        - if you use true/false, will work
+    - CATEGORICAL:
+        - if you use strings, will work, otherwise, specify labeling via labels obj
 - todo:
     - be better about node/edge list loading
         - ZERO INDEX things on "our" side
         - allow for dict of nodes with "id" function
+- examples to make:
+    - categories.py
+    - weights.py
+- changes:
+    - binary cannot be used for sizing
+    - can't do the nice drag thing :(

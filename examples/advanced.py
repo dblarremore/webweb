@@ -13,28 +13,71 @@ if __name__ == '__main__':
     # set the display height
     web.display.h = 200
 
-    # set the charge
-    web.display.c = 50
-
     # set the gravity
     web.display.g = 0.3
 
     # Give the file a name
     web.display.name = 'Advanced'
-    web.display.colorBy = 'isHead'
-    web.display.sizeBy = 'hunger'
+
+    # links will be 20 pixels long
     web.display.l = 20
+
+    # nodes will have a charge of 200
     web.display.c = 200
-    web.display.scaleLinkWidth = True
-    web.display.scaleLinkOpacity = True
-    web.display.colorPalate = "Set2"
-    web.display.freezeNodeMovement = True
+
+    # display the `snake` network first
     web.display.networkName = 'snake'
 
+    # we'll compute node color by the `isHead` attribute
+    web.display.colorBy = 'isHead'
+
+    # we'll compute node size by the `hunger` attribute
+    web.display.sizeBy = 'hunger'
+
+    # link widths will be scaled by their weight
+    web.display.scaleLinkWidth = True
+
+    # link opacity will be scaled by their weight
+    web.display.scaleLinkOpacity = True
+
+    # set the default color palate for non-scalars
+    web.display.colorPalate = "Set2"
 
     # Build a few networks
-    web.networks.snake.adj = [[i, i+1, 1] for i in range(N-1)]
-    web.networks.starfish.adj = [[0, i+1, 1] for i in range(N-1)]
+    web.networks.snake.add_frame(
+        # the adjacency
+        [[i + 1, i+2] for i in range(N-1)],
+        # the labels
+        {
+            'isHead' : {
+                # the length of this array should equal the number of nodes
+                'value' : [ False, False, False, False, False, True ],
+
+            },
+            'slithering' : {
+                # type can be 'scalar', 'binary', or 'categorical'
+                # if you use True/False, webweb will know it's binary
+                # if you use strings for categories, webweb will know it's
+                # categorical
+                'type' : 'categorical',
+                'value' : [1,2,2,3,1,2],
+            }
+        }
+    )
+
+    web.networks.starfish.add_frame(
+        [[0, i+1] for i in range(N-1)],
+        {
+            'texture' : {
+                # we don't have to put a type since the values are strings
+                'value' : ['gooey', 'fishy', 'chewy','crunchy', 'chewy', 'gooey'],
+            },
+            'power' : {
+                # we don't have to put a type since scalar is the default
+                'value' : [1,3,3.8,0.2,1,3.1415],
+            }
+        }
+    )
 
     # Name the nodes
     web.display.nodeNames = ['dane', 'sebastian', 'manny', 'brock', 'ted', 'donnie']
@@ -46,19 +89,10 @@ if __name__ == '__main__':
     web.display.labels.hunger.type = 'scalar'
     web.display.labels.hunger.value = [4,9,2,4,12.1,5]
 
-    # Add some labels, binary, categorical, etc...
-    web.networks.snake.labels.isHead.type = 'binary'
-    web.networks.snake.labels.isHead.value = [0,0,0,0,0,1]
+    web.networks.small_snake.add_frame(
+        [[i, i+1] for i in range(N-3)],
+    )
 
-    web.networks.snake.labels.slithering.type = 'categorical'
-    web.networks.snake.labels.slithering.value = [1,2,2,3,1,2]
+    web.networks.small_snake.nodes = 4
 
-    web.networks.starfish.labels.texture.type = 'categorical'
-    web.networks.starfish.labels.texture.value = [1,3,0,2,0,1]
-    web.networks.starfish.labels.texture.categories = ['chewy','gooey','crunchy','fishy']
-
-    web.networks.starfish.labels.power.type = 'scalar'
-    web.networks.starfish.labels.power.value = [1,3,3.8,0.2,1,3.1415]
-
-    # Launch webbrowser with result
     web.draw()

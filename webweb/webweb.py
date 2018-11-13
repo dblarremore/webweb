@@ -8,6 +8,7 @@
 # http://github.com/dblarremore/webweb Comments and suggestions always welcome.
 
 import os
+import copy
 import json
 import webbrowser
 from collections import defaultdict
@@ -93,6 +94,18 @@ def get_dict_from_labeled_obj(obj):
 
         if key == 'labels':
             _dict[key] = { k : vars(v) for k, v in vars(val).items() }
+        elif key == 'frames':
+            _dict['frames'] = []
+            for frame in val:
+                _frame = {
+                    'adjList' : frame['adjList'],
+                    'labels' : frame['labels'],
+                }
+
+                if frame.get('nodes'):
+                    _frame['nodes'] = frame['nodes']
+
+                _dict['frames'].append(_frame)
         else:
             _dict[key] = val
 
@@ -100,36 +113,46 @@ def get_dict_from_labeled_obj(obj):
 
 class Net(dict):
     def __init__(self):
-        self.adjList = None
-        self.labels = Labels()
+        self.frames = []
 
-    def from_networkx_graph(self, G):
+    def add_frame(self, adj, labels=None, nodes=None):
+        self.frames.append({
+            'adjList' : copy.deepcopy(adj),
+            'labels' : labels,
+            'nodes' : nodes,
+        })
+
+    def add_frame_from_networkx_graph(self, G):
         """loads the edges and attributes from a network x graph
         
         TODO: 
         - add weights
         """
         import networkx as nx
-        self.adj = [e for e in G.edges]
+        adj = [e for e in G.edges]
 
         G_labels = defaultdict(list)
         for node in G.nodes:
             for label, val in G.nodes[node].items():
                 G_labels[label].append(val)
 
+        labels = {}
         for label, vals in G_labels.items():
             new_label = Label()
-            new_label.type = self.identify_label_type(label, vals)
+            new_label.type = self.identify_label_type(vals)
             new_label.value = vals
 
             if new_label.type == 'categorical':
                 new_label.categories = list(set(vals))
 
-            setattr(self.labels, label, new_label)
+            labels[label] = new_label
+
+        self.add_frame(adj, labels)
+
 
 
     @staticmethod
-    def identify_label_type(label, vals):
+    def identify_label_type(vals):
         label_set = set(vals)
 
         # check if it's binary
@@ -147,11 +170,7 @@ class Net(dict):
 
     @adj.setter
     def adj(self, adjList):
-        # Ensure weight is added
-        if len(adjList[0]) == 2:
-            adjList = [list(edge) + [1] for edge in adjList]
-
-        self.adjList = adjList
+        self.adjList = copy.deepcopy(adjList)
 
 class Nets(dict):
     def __getattr__(self, name):
