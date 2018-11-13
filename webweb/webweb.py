@@ -123,7 +123,8 @@ class Net(dict):
         })
 
     def add_frame_from_networkx_graph(self, G):
-        """loads the edges and attributes from a network x graph
+        """
+        loads the edges and attributes from a network x graph
         
         TODO: 
         - add weights

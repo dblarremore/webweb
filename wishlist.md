@@ -5,7 +5,16 @@
             - maybe not? canvas can export to png
     - config:
         - toggle all labels on/off
-    - figure out directed
+    - be better about node/edge list loading
+        - allow for dict of nodes with "id" function
+    - change the way labels are represented:
+        - make it so that it is:
+            - display.labelTypes = { label: type }
+            - network.netname.labelTypes = { label : type }
+        - make nodes!
+            - web.nodes = [{ 'name' : 'xyz' }]
+            - web.network.netname.add_frame(adj, nodes)
+    - fix display when binary and only one value
 - python:
     - stop changing directory
     - allow user to write the outpath
@@ -20,13 +29,10 @@
         - if you use true/false, will work
     - CATEGORICAL:
         - if you use strings, will work, otherwise, specify labeling via labels obj
-- todo:
-    - be better about node/edge list loading
-        - ZERO INDEX things on "our" side
-        - allow for dict of nodes with "id" function
+    - frames
+    - state directed is not supported
 - examples to make:
     - categories.py
     - weights.py
 - changes:
-    - binary cannot be used for sizing
     - can't do the nice drag thing :(

@@ -5,7 +5,7 @@ if __name__ == '__main__':
     web = webweb()
 
     # add the first `frame`
-    web.networks.simple.add_frame(
+    web.networks.oroboros.add_frame(
         [[0, 1], [1, 2], [2, 3]],
         {
             'isHead' : {
@@ -18,7 +18,7 @@ if __name__ == '__main__':
     # add the second `frame` 
     # oroboros!
     # the snake is biting it's tail.
-    web.networks.simple.add_frame(
+    web.networks.oroboros.add_frame(
         [[0, 1], [1, 2], [2, 3], [3, 0]],
         {
             'isHead' : {
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     )
 
     # the snake is eating itself. wooo
-    web.networks.simple.add_frame(
+    web.networks.oroboros.add_frame(
         [[0, 1], [1, 2], [2, 0]],
         {
             'isHead' : {
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         3,
     )
 
-    web.networks.simple.add_frame(
+    web.networks.oroboros.add_frame(
         [[0, 1], [1, 0]],
         {
             'isHead' : {
@@ -49,7 +49,7 @@ if __name__ == '__main__':
         2,
     )
 
-    web.networks.simple.add_frame(
+    web.networks.oroboros.add_frame(
         [],
         {
             'isHead' : {
