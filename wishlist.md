@@ -3,8 +3,6 @@
     - use canvas
         - still export with svg though?
             - maybe not? canvas can export to png
-    - config:
-        - toggle all labels on/off
     - be better about node/edge list loading
         - allow for dict of nodes with "id" function
     - change the way labels are represented:
@@ -15,6 +13,7 @@
             - web.nodes = [{ 'name' : 'xyz' }]
             - web.network.netname.add_frame(adj, nodes)
     - fix display when binary and only one value
+    - auto-gif of frames?
 - python:
     - stop changing directory
     - allow user to write the outpath

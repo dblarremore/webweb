@@ -36,15 +36,13 @@ var nodePersistence = [];
 
 var scaleSize, scaleColorScalar, scaleColorCategory, scaleLink, scaleLinkOpacity;
 
-var nameToMatch, isHighlightText;
+var nameToMatch;
 
 var colorData = {
     'type' : 'none',
     'scaledValues' : [],
     'rawValues' : [],
     'labels' : {},
-    'legend' : [],
-    'legendText' : [],
     'categoryNames' : [],
 };
 
@@ -53,10 +51,7 @@ var sizeData = {
     'scaledValues' : [],
     'rawValues' : [],
     'labels' : {},
-    'legend' : [],
-    'legendText' : [],
     'R' : 0,
-    'labels' : {},
 };
 
 // Initialize the actual viz
@@ -79,7 +74,7 @@ function initializeVis() {
     displayNetwork();
 }
 // updateVis: the update version of initializeVis
-// called when a file is dragged&dropped
+// called when a file is dragged & dropped
 function updateVis(wwdata) {
     // remove the old SVG
     d3.select("#vis").remove();
@@ -96,7 +91,7 @@ function updateVis(wwdata) {
 // - scales stuff
 //
 // Parameters currently passed through:
-// - N (if it has to)
+// - N (if necessary)
 // - w, h, c, l, r, g
 // - colorBy
 // - sizeBy
@@ -151,7 +146,6 @@ function initWebweb() {
     scaleLinkOpacity = d3.scaleLinear().range([0.4, 0.9]);
 
     nameToMatch = "";
-    isHighlightText = true;
 
     vis = d3.select("#svg_div")
         .append("svg")
@@ -170,12 +164,45 @@ function initWebweb() {
     updateGravityForce();
 }
 ////////////////////////////////////////////////////////////////////////////////
-// - computes links ones
+// - changes the number of visible nodes
+// - computes links
 // - draws links
 // - defines labels
 // - uses the force (luke)
 ////////////////////////////////////////////////////////////////////////////////
 function displayNetwork() {
+    setVisibleNodes();
+
+    defineLabels();
+
+    computeLinks();
+    drawLinks();
+
+    updateLinkForce();
+
+    toggleFreezeNodes(display.freezeNodeMovement);
+
+    // if we've frozen node movement manually tick so new edges are evaluated.
+    if (display.freezeNodeMovement) {
+        tick();
+    }
+
+    // change the display of the frames widget
+    setNetworkFrameMenuVisibility();
+
+    computeColors();
+    computeSizes();
+    computeLegend();
+    redrawNodes();
+    redisplayNodeNames();
+}
+////////////////////////////////////////////////////////////////////////////////
+// adds/removes nodes from the visualization
+//
+// it currently only handles removing from the end.
+// however, we would like to be able to do this by name (i.e. id).
+////////////////////////////////////////////////////////////////////////////////
+function setVisibleNodes() {
     // have to handle 2 things:
     // - named nodes
     // - unnamed nodes
@@ -192,75 +219,32 @@ function displayNetwork() {
     //          - draw them
     //      - if those nodes are a list:
     //          - read from the dict
-
-    // this handles how to show/hide nodes
-    // it currently only handles removing from the end.
-    // however, we would like to be able to do this by name (i.e. id).
     if ('nodes' in wwdata.network[display.networkName].frames[display.networkFrame]) {
         var networkNodes = wwdata.network[display.networkName].frames[display.networkFrame].nodes;
         if (networkNodes < nodes.length) {
-            var difference = nodes.length - networkNodes;
-            var nodesToRemove = nodes.splice(-difference);
-
-            for (var i in nodesToRemove) {
-                var thisNode = nodesToRemove[i];
-                var drawnNode = document.getElementById("node_" + thisNode.idx)
-                nodePersistence.push({ 'node' : thisNode, 'toDraw' : drawnNode });
-
-                var parent = drawnNode.parentNode;
-                parent.removeChild(drawnNode);
+            while (networkNodes != nodes.length) {
+                var toRemove = nodes.pop();
+                var drawnNode = document.getElementById("node_" + toRemove.idx)
+                document.getElementById("vis").removeChild(drawnNode);
+                nodePersistence.push({ 'node' : toRemove, 'toDraw' : drawnNode });
             }
         }
         else if (networkNodes > nodes.length) {
             while (networkNodes != nodes.length) {
-                var toAdd = nodePersistence.shift();
+                var toAdd = nodePersistence.pop();
                 document.getElementById("vis").appendChild(toAdd.toDraw);
                 nodes.push(toAdd.node);
             }
         }
     }
     else if (display.N > nodes.length) {
-        // otherwise, reset the nodes to the original state
-        var difference = networkNodes - nodes.length;
-        var nodesToAdd = nodePersistence.splice(difference);
-
-        for (var i in nodesToAdd) {
-            var undrawnNode = nodesToAdd[i].toDraw;
-            nodes.push(nodesToAdd[i].node);
-
-            document.getElementById("vis").appendChild(undrawnNode);
+        while (networkNodes != nodes.length) {
+            var toAdd = nodePersistence.pop();
+            document.getElementById("vis").appendChild(toAdd.toDraw);
+            nodes.push(toAdd.node);
         }
     }
-
-    // figure out the available labels
-    defineLabels();
-
-    computeLinks();
-    drawLinks();
-
-    updateLinkForce();
-
-    toggleFreezeNodes(display.freezeNodeMovement);
-
-    // if we've frozen node movement manually tick so new edges are evaluated.
-    if (display.freezeNodeMovement) {
-        tick();
-    }
-
-    // change the display of the frames widget
-    if (wwdata.network[display.networkName].frames.length == 1) {
-        changeNetworkFrameMenuVisibility(false);
-    }
-    else {
-        changeNetworkFrameMenuVisibility(true);
-    }
-
-    computeColors();
-    computeSizes();
-    computeLegend();
-    redrawNodes();
 }
-
 ////////////////////////////////////////////////////////////////////////////////
 // loads the labels up from the places they could come from:
 // 1. the defaults (none, degree)
@@ -329,6 +313,9 @@ function getLabelType(labelValues) {
 
     // // check if this is a binary relation
     if (q.length == 2 && q[0] == 'false' && q[1] == 'true') {
+        return 'binary';
+    }
+    else if (q.length == 1 && (q[0] == 'false' || q[0] == 'true')) {
         return 'binary';
     }
 }
@@ -691,6 +678,27 @@ function toggleFreezeNodes(isFrozen) {
     var freezeNodesToggle = document.getElementById('freezeNodesToggle');
     freezeNodesToggle.checked = display.freezeNodeMovement ? true : false;
 }
+function toggleShowNodeNames(show) {
+    if (show) {
+        display.showNodeNames = true;
+        redisplayNodeNames();
+    }
+    else {
+        display.showNodeNames = false;
+        unHighlightText();
+    }
+    var showNodeNamesWidget = document.getElementById('showNodeNames');
+    showNodeNamesWidget.checked = display.showNodeNames ? true : false;
+}
+function redisplayNodeNames() {
+    var wasDisplayed = display.showNodeNames;
+    display.showNodeNames = false;
+    unHighlightText();
+    display.showNodeNames = wasDisplayed;
+    for (var i in nodes) {
+        highlightText(nodes[i]);
+    }
+}
 function updateChargeForce() {
     simulation.force("charge", d3.forceManyBody().strength(-display.c))
     simulation.alpha(1).restart();
@@ -774,8 +782,8 @@ function computeLegend() {
         return;
     };
 
-    makeColorLegend();
-    makeSizeLegend();
+    var colorLegend = makeColorLegend();
+    var sizeLegend = makeSizeLegend();
 
     var R = sizeData['R'];
 
@@ -783,7 +791,7 @@ function computeLegend() {
     var legendFillFunction;
     if (display.sizeBy == display.colorBy) {
         legendFillFunction = function(i) {
-            return colorWheel(colorData['legend'][i]);
+            return colorWheel(colorLegend['values'][i]);
         }
     }
     else {
@@ -793,7 +801,7 @@ function computeLegend() {
     }
 
     if (display.sizeBy != "none") {
-        sizeData['legend'].forEach(function(d, i){
+        sizeLegend['values'].forEach(function(d, i){
             vis.append("circle")
                 .attr("id", "legend")
                 .attr("r", display.r * d)
@@ -803,7 +811,7 @@ function computeLegend() {
                 .style("stroke", d3.rgb(255, 255, 255));
         });
 
-        sizeData['legendText'].forEach(function(d, i){
+        sizeLegend['text'].forEach(function(d, i){
             vis.append("text")
                 .attr("id", "legend")
                 .text(d)
@@ -821,99 +829,91 @@ function computeLegend() {
     }
 
     if (colorData['type'] != "none") {
-        colorData['legend'].forEach(function(d, i){
+        colorLegend['values'].forEach(function(d, i){
             vis.append("circle")
                 .attr("id", "legend")
                 .attr("r", 5)
                 .attr("cx", 5 + Math.max(R, 5))
-                .attr("cy", 5 + 5 + 2 * R + 2.3 * R * (sizeData['legend'].length - 1) + 5 + 2.3 * 5 * i)
-                .style("fill", colorWheel(colorData['legend'][i]))
+                .attr("cy", 5 + 5 + 2 * R + 2.3 * R * (colorLegend['values'].length - 1) + 5 + 2.3 * 5 * i)
+                .style("fill", colorWheel(colorLegend['values'][i]))
                 .style("stroke", d3.rgb(255, 255, 255));
         });
-        colorData['legendText'].forEach(function(d, i) {
+        colorLegend['text'].forEach(function(d, i) {
             vis.append("text")
                 .attr("id", "legend")
                 .text(d)
                 .attr("x", 10 + Math.max(R, 5) + 5)
-                .attr("y", 5 + 5 + 2 * R + 2.3 * R * (sizeData['legend'].length - 1) + 5 + 2.3 * 5 * i + 4)
+                .attr("y", 5 + 5 + 2 * R + 2.3 * R * (colorLegend['values'].length - 1) + 5 + 2.3 * 5 * i + 4)
                 .attr("fill", "black")
                 .attr("font-size", 12);
         });
     }
 }
 function makeColorLegend() {
-    var legend = [];
-    var text = [];
+    var legend = {};
 
     if (colorData['type'] == "none") {
         return
     }
 
     if (colorData['type'] == "categorical") {
-        legend = scaleColorCategory.domain();
-        text = d3.values(colorData['categoryNames']);
+        legend['values'] = scaleColorCategory.domain();
+        legend['text'] = d3.values(colorData['categoryNames']);
     }
     else if (colorData['type'] == "binary") {
-        legend = [0, 1];
-        text = ["false", "true"];
+        legend['values'] = [0, 1];
+        legend['text'] = ["false", "true"];
     }
     else if (colorData['type'] == "scalar" || colorData['type'] == "degree") {
-        var legendData = getScalarLegend(colorData['rawValues']);
-
-        legend = legendData['legend'];
-        text = legendData['text'];
+        legend = getScalarLegend(colorData['rawValues']);
     }
     else if (colorData['type'] == "scalarCategorical") {
-        legend = binnedLegend(colorData['rawValues'], 4);
-        text = legend.slice(0);
+        legend['values'] = binnedLegend(colorData['rawValues'], 4);
+        legend['text'] = legend.slice(0);
     }
 
-    colorData['legend'] = legend;
-    colorData['legendText'] = text;
+    return legend;
 }
 function makeSizeLegend() {
-    var legend = [];
-    var text = [];
+    var legend = {};
     sizeData['R'] = 0;
     
     // there's no legend if:
     // - the sizeData['type'] is "none"
-    // - the radius is undefined
-    if (sizeData['type'] == 'none' || display.r == 0 || display.r == "") {
+    if (sizeData['type'] == 'none') {
         return
     }
 
     if (sizeData['type'] == 'binary') {
-        legend = [0, 1];
-        text = ["false", "true"];
+        legend['values'] = [0, 1];
+        legend['text'] = ["false", "true"];
     }
     else {
         // otherwise, the size type is either 'degree' or 'scalar'
-        var legendData = getScalarLegend(sizeData['rawValues']);
-        legend = legendData['legend'];
-        text = legendData['text'];
+        legend = getScalarLegend(sizeData['rawValues']);
     }
 
-    if (display.sizeBy == "degree"){
-        for (var i in legend){
-            legend[i] = scaleSize(Math.sqrt(legend[i]));
-        }
+    var scaleFunction;
+    if (display.sizeBy == "degree") {
+        scaleFunction = function(x) { return Math.sqrt(x); };
     }
     else {
-        for (var i in legend){
-            legend[i] = scaleSize(legend[i]);
-        }
+        scaleFunction = function (x) { return x; };
     }
 
-    sizeData['R'] = display.r * d3.max(legend);
-    sizeData['legend'] = legend;
-    sizeData['legendText'] = text;
+    for (var i in legend['values']) {
+        legend['values'][i] = scaleSize(scaleFunction(legend['values'][i]));
+    }
+
+    sizeData['R'] = display.r * d3.max(legend['values']);
+
+    return legend;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // returns a legend for scalars, integer or non-integer
 ////////////////////////////////////////////////////////////////////////////////
 function getScalarLegend(rawValues) {
-    var legend = [];
+    var values = [];
 
     // if it is integer scalars:
     if (allInts(rawValues)) {
@@ -921,21 +921,21 @@ function getScalarLegend(rawValues) {
         var min = d3.min(rawValues);
 
         if (max - min <= 8) {
-            legend = d3.range(min, max + 1);
+            values = d3.range(min, max + 1);
         }
         else {
-            text = binnedLegend(rawValues, 4);
+            values = binnedLegend(rawValues, 4);
         }
     }
     // noninteger scalars
     else {
-        legend = binnedLegend(rawValues, 4);
+        values = binnedLegend(rawValues, 4);
     }
 
-    var text = legend.slice(0);
+    var text = values.slice(0);
 
     return {
-        'legend' : legend,
+        'values' : values,
         'text' : text,
     }
 }
@@ -1035,11 +1035,6 @@ function drawNodes() {
 
     node.on("mousedown", function(d) {
         unHighlightText();
-        highlightText("stop");
-    });
-
-    d3.select(window).on("mouseup", function() {
-        highlightText("start");
     });
 
     node.on("mouseover", function (d) {
@@ -1059,6 +1054,11 @@ function drawNodes() {
     );
 }
 function dragstarted(d) {
+    display.storedShowNodeNames = display.showNodeNames;
+
+    display.showNodeNames = false;
+    // toggleShowNodeNames(false);
+
     d3.event.sourceEvent.stopPropagation();
     if (!d3.event.active) {
         simulation.alphaTarget(0.3).restart();
@@ -1078,6 +1078,13 @@ function dragended(d) {
     if (! display.freezeNodeMovement) {
         d.fx = null;
         d.fy = null;
+    }
+    if (display.storedShowNodeNames) {
+        window.setTimeout(function() {
+            display.showNodeNames = true;
+            redisplayNodeNames();
+            delete display.storedShowNodeNames;
+        }, 1000);
     }
 }
 function redrawNodes() {
@@ -1119,36 +1126,29 @@ function unHighlightNode(d) {
 // Highlight a node by showing its name next to it.
 // If the node has no name, show its index.  
 function highlightText(d) {
-    if (d == "stop") {
-        isHighlightText = false; 
-        return
+    var nodeName = "node";
+    var nodeId = d.idx;
+    if (d.name !== undefined) {
+        nodeName = d.name;
+        nodeId = "(" + nodeId + ")";
     }
-    else if (d == "start") {
-        isHighlightText = true; 
-        return
-    }
-    if (isHighlightText){
-        var nodeName = "node";
-        var nodeId = d.idx;
-        if (d.name !== undefined) {
-            nodeName = d.name;
-            nodeId = "(" + nodeId + ")";
-        }
 
-        var highlightTextString = nodeName + " " + nodeId;
+    var highlightTextString = nodeName + " " + nodeId;
 
-        vis.append("text").text(highlightTextString)
-            .attr("x", d.x + 1.5 * display.r)
-            .attr("y", d.y - 1.5 * display.r)
-            .attr("fill", "black")
-            .attr("font-size", 12)
-            .attr("id", "highlightText");
-    }
+    vis.append("text").text(highlightTextString)
+        .attr("x", d.x + 1.5 * display.r)
+        .attr("y", d.y - 1.5 * display.r)
+        .attr("fill", "black")
+        .attr("font-size", 12)
+        .attr("id", "highlightText");
 }
 // guess!
-// (Removes a node's highlighted name) 
+// (Removes a node's highlighted name, unless we have showNodeNames set) 
 function unHighlightText() {
-    vis.selectAll("#highlightText").remove();
+    if (! display.showNodeNames) {
+
+        vis.selectAll("#highlightText").remove();
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1288,7 +1288,15 @@ function writeSizeMenu(parent) {
         .attr("id", "sizeSelect")
         .attr("onchange", "changeSizes(this.value)");
 }
-function changeNetworkFrameMenuVisibility(visible) {
+function setNetworkFrameMenuVisibility() {
+    var visible;
+    if (wwdata.network[display.networkName].frames.length == 1) {
+        visible = false;
+    }
+    else {
+        visible = true;
+    }
+
     var visibility = visible ? 'inline' : 'none';
     var networkFrameMenu = d3.select('#networkFrameMenu')
         .style('display', visibility);
@@ -1493,6 +1501,24 @@ function writeMatchWidget(parent) {
         .attr("onchange", "matchNodes(this.value)")
         .attr("size", 3);
 }
+function writeShowNodeNamesWidget(parent) {
+    var showNodeNamesWidget = parent.append("div")
+        .attr("id", "showNodeNamesWidget")
+        .text("show node names ");
+
+    var checked = 'unchecked';
+    if (display.showNodeNames) {
+        checked = 'checked';
+        toggleShowNodeNames(true);
+    }
+
+    showNodeNamesWidget.append("input")
+        .attr("id","showNodeNames")
+        .attr("type", "checkbox")
+        .attr(checked, "")
+        .attr("onchange", "toggleShowNodeNames(this.checked)")
+        .attr("size", 3);
+}
 function writeMenus(menu) {
     var leftMenu = menu.append("div")
         .attr("id", "leftMenu")
@@ -1519,6 +1545,7 @@ function writeMenus(menu) {
     writeGravityWidget(rightMenu);
     writeRadiusWidget(rightMenu);
     writeMatchWidget(rightMenu);
+    writeShowNodeNamesWidget(rightMenu);
 
     updateNetworkSelectMenu();
 }
@@ -1651,6 +1678,35 @@ function allInts(vals) {
 
     return true;
 }
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+// Event Listeners
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
+function changeNetworkFrameListener(event) {
+    var currentFrame = display.networkFrame;
+    var changeToFrame;
+
+    if (event.keyCode == 39) {
+        // right arrow
+        changeToFrame = currentFrame + 1;
+    }
+    else if (event.keyCode == 37) {
+        // left arrow
+        changeToFrame = currentFrame - 1;
+    }
+
+    if (changeToFrame !== undefined) {
+        if (0 <= changeToFrame && changeToFrame < wwdata.network[display.networkName].frames.length) {
+            displayNetworkFrame(changeToFrame);
+            updateNetworkFrameSelect();
+        }
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1664,3 +1720,13 @@ function allInts(vals) {
 window.onload = function() {
     initializeVis();
 };
+window.addEventListener("keydown", function (event) {
+    listeners = {
+        37 : changeNetworkFrameListener,
+        39 : changeNetworkFrameListener,
+    };
+
+    if (event.keyCode in listeners) {
+        listeners[event.keyCode](event);
+    }
+});
