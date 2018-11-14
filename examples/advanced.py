@@ -34,12 +34,6 @@ if __name__ == '__main__':
     # we'll compute node size by the `hunger` attribute
     web.display.sizeBy = 'hunger'
 
-    # link widths will be scaled by their weight
-    web.display.scaleLinkWidth = True
-
-    # link opacity will be scaled by their weight
-    web.display.scaleLinkOpacity = True
-
     # set the default color palate for non-scalars
     web.display.colorPalate = "Set2"
 
@@ -91,8 +85,8 @@ if __name__ == '__main__':
 
     web.networks.small_snake.add_frame(
         [[i, i+1] for i in range(N-3)],
+        # this snake has only 4 nodes
+        nodes=4,
     )
-
-    web.networks.small_snake.nodes = 4
 
     web.draw()

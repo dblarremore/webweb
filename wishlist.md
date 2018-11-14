@@ -12,8 +12,9 @@
         - make nodes!
             - web.nodes = [{ 'name' : 'xyz' }]
             - web.network.netname.add_frame(adj, nodes)
-    - fix display when binary and only one value
-    - auto-gif of frames?
+    - gif of frames?
+        - this is actually really difficult
+        - (would basically require abandoning the global namespace)
 - python:
     - stop changing directory
     - allow user to write the outpath
@@ -21,17 +22,7 @@
     - matrix vs list
         - just _know_ which is which
     - put up on pip
-    - networkx integration
-        - add weights to edges if present
 - DOCUMENT:
-    - BINARY
-        - if you use true/false, will work
-    - CATEGORICAL:
-        - if you use strings, will work, otherwise, specify labeling via labels obj
-    - frames
     - state directed is not supported
-- examples to make:
-    - categories.py
-    - weights.py
 - changes:
     - can't do the nice drag thing :(

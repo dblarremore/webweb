@@ -130,7 +130,13 @@ class Net(dict):
         - add weights
         """
         import networkx as nx
-        adj = [e for e in G.edges]
+        adj = []
+
+        for u, v, d in G.edges(data=True):
+            edge = [u, v]
+            if d.get('weight'):
+                edge.append(d['weight'])
+            adj.append(edge)
 
         G_labels = defaultdict(list)
         for node in G.nodes:
@@ -139,17 +145,12 @@ class Net(dict):
 
         labels = {}
         for label, vals in G_labels.items():
-            new_label = Label()
-            new_label.type = self.identify_label_type(vals)
-            new_label.value = vals
+            labels[label] = {
+                'value' : vals,
+                'type' : self.identify_label_type(vals),
+            }
 
-            if new_label.type == 'categorical':
-                new_label.categories = list(set(vals))
-
-            labels[label] = new_label
-
-        self.add_frame(adj, labels)
-
+        self.add_frame(adj, labels=labels)
 
 
     @staticmethod

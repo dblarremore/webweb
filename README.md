@@ -12,6 +12,14 @@ I got tired of having an adjacency matrix for a network in MATLAB with no way to
 
 webweb does stuff.
 
+A webweb object can have multiple networks, and each of those networks can have multiple frames (think timesteps).
+
+The idea of a webweb "object" is for it to contain networks related to some set of nodes; if you're displaying networks which have no nodes in common, it might make sense to instead more webweb objects. 
+
+See labels below, but to define things that are shared by all nodes, set them in `display.labels`.
+
+The idea of a webweb "network" is that the frames in it have a consistent definition of an edge.
+
 ### display parameters
 
 These are the parameters you can set:
@@ -28,6 +36,7 @@ These are the parameters you can set:
 - colorPalate: string; which color palate to use
 - freezeNodeMovement: boolean; stop forces from being applied
 - nodeCoordinates: `[{ 'x': 1, 'y' : 1}, ...]`; the initial positions of the nodes. Note: this is ignored unless freezeNodeMovement is true (otherwise you'll just get a bunch of stacked circles in the corner...)
+- showNodeNames: boolean; should we show node names (it's kinda ugly with more than like, 2 nodes)
 
 ### nodes
 
@@ -56,7 +65,9 @@ Labels can be of three types:
 - scalar
 - categorical
 
-Generally you don't have to say what's what, but there is one exception: if no nodes have a particular value for a category, but you would like that category to appear in the legend, you should define the list of categories (see `examples/categories.py`).
+How webweb will display data if it isn't told:
+- If your data is all true/false, webweb will show it as binary
+- If your data is all strings, webweb will show it as categorical
 
 ### Adjacency Lists
 
@@ -84,11 +95,7 @@ Soon (once we upload it to the archive):
 
 ## How to use it:
 
-1. Import webweb into your script: `from webwebpy.webweb import webweb`
-2. make a webweb object with the desired number of nodes: `web = webweb(num_nodes=N)`
-3. set display parameters via `web.display` (eg, to set the height, `web.display.h = 200`)
-4. add your adjacency list: `web.networks.your_network_name.adj = <your_adjacency_list>`
-5. display the network in browser: `web.draw()`
+See the examples!
 
 ## Feedback and Bugs
 
