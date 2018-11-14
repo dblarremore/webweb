@@ -695,8 +695,11 @@ function redisplayNodeNames() {
     display.showNodeNames = false;
     unHighlightText();
     display.showNodeNames = wasDisplayed;
-    for (var i in nodes) {
-        highlightText(nodes[i]);
+
+    if (display.showNodeNames) {
+        for (var i in nodes) {
+            highlightText(nodes[i]);
+        }
     }
 }
 function updateChargeForce() {
@@ -829,12 +832,14 @@ function computeLegend() {
     }
 
     if (colorData['type'] != "none") {
+        pushDown = sizeLegend == undefined ? 0 : sizeLegend['values'].length;
+
         colorLegend['values'].forEach(function(d, i){
             vis.append("circle")
                 .attr("id", "legend")
                 .attr("r", 5)
                 .attr("cx", 5 + Math.max(R, 5))
-                .attr("cy", 5 + 5 + 2 * R + 2.3 * R * (colorLegend['values'].length - 1) + 5 + 2.3 * 5 * i)
+                .attr("cy", 5 + 5 + 2 * R + 2.3 * R * (pushDown - 1) + 5 + 2.3 * 5 * i)
                 .style("fill", colorWheel(colorLegend['values'][i]))
                 .style("stroke", d3.rgb(255, 255, 255));
         });
@@ -843,7 +848,7 @@ function computeLegend() {
                 .attr("id", "legend")
                 .text(d)
                 .attr("x", 10 + Math.max(R, 5) + 5)
-                .attr("y", 5 + 5 + 2 * R + 2.3 * R * (colorLegend['values'].length - 1) + 5 + 2.3 * 5 * i + 4)
+                .attr("y", 5 + 5 + 2 * R + 2.3 * R * (pushDown - 1) + 5 + 2.3 * 5 * i + 4)
                 .attr("fill", "black")
                 .attr("font-size", 12);
         });
