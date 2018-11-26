@@ -1411,7 +1411,7 @@ function changeColorPaletteMenuVisibility(visible) {
 function writeColorPaletteMenu(parent) {
     var colorPaletteMenu = parent.append("span")
         .attr("id", "colorPaletteMenu")
-        .text(" with Color Palette ");
+        .text(" with color palette ");
 
     var colorNames = [];
     for (colorName in colorbrewer) {
