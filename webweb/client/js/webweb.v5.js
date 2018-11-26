@@ -412,7 +412,7 @@ function computeLinks() {
         var target = nodeIdsMap[parseInt(edge[1])];
 
         // if there's no edge weight, default it to 1
-        var weight = edge.length == 3 ? parseInt(edge[2]) : 1;
+        var weight = edge.length == 3 ? parseFloat(edge[2]) : 1;
 
         weights.push(weight);
             
@@ -430,7 +430,7 @@ function computeLinks() {
             nodes[target].degree += weight;
         }
     }
-
+    
     // scale the link weight and opacity by computing the range (extent) of the
     // adj weights.
     scaleLink.domain(d3.extent(weights));
