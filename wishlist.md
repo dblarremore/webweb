@@ -16,7 +16,6 @@
         - this is actually really difficult
         - (would basically require abandoning the global namespace)
 - python:
-    - stop changing directory
     - allow user to write the outpath
         - let them write json OR draw
     - matrix vs list

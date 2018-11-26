@@ -13,14 +13,15 @@ import json
 import webbrowser
 from collections import defaultdict
 
-webweb_dir_path = os.path.dirname(os.path.realpath(__file__))
-os.chdir(webweb_dir_path)
-
 class webweb(dict):
     def __init__(self, title="webweb", *args, **kwargs):
         self.title = title
         self.display = Display(*args, **kwargs)
         self.networks = Nets()
+
+    @property
+    def base_path(self):
+        return os.path.dirname(os.path.realpath(__file__))
 
     def draw(self):
         """ driver for the whole thing:
@@ -34,15 +35,15 @@ class webweb(dict):
         with open(self.data_file, 'w') as f:
             f.write(f"var wwdata = {self.json};")
 
-        webbrowser.open_new("file://" + os.path.realpath(self.html_file))
+        webbrowser.open_new("file://" + self.html_file)
 
     @property
     def html_file(self):
-        return f"{self.title}.html"
+        return os.path.join(self.base_path, f"{self.title}.html")
 
     @property
     def data_file(self):
-        return f"{self.title}.json"
+        return os.path.join(self.base_path, f"{self.title}.json")
 
     @property
     def json(self, title=None):
