@@ -5,12 +5,18 @@ import random
 if __name__ == '__main__':
     # make a small graph
     G = nx.Graph()
-    G.add_edge(0, 1, weight=1)
-    G.add_edge(1, 2, weight=150)
-    G.add_edge(2, 3, weight=10)
-    G.add_edge(3, 4, weight=100)
-    G.add_edge(4, 5, weight=70)
-    G.add_edge(0, 3, weight=25)
+    # G.add_edge(0, 1, weight=1)
+    # G.add_edge(1, 2, weight=150)
+    # G.add_edge(2, 3, weight=10)
+    # G.add_edge(3, 4, weight=100)
+    # G.add_edge(4, 5, weight=70)
+    # G.add_edge(0, 3, weight=25)
+    G.add_edge(0, 1, weight=.1)
+    G.add_edge(1, 2, weight=.150)
+    G.add_edge(2, 3, weight=.10)
+    G.add_edge(3, 4, weight=.100)
+    G.add_edge(4, 5, weight=.70)
+    G.add_edge(0, 3, weight=.25)
 
     # Instantiate webweb object
     web = webweb()

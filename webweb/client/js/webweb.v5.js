@@ -20,7 +20,7 @@ var displayDefaults = {
     'l' : 20, // edge length
     'r' : 5, // node radius
     'linkStrength' : 1, // link strength
-    'colorPalate' : 'Set1', // ... yaknow
+    'colorPalette' : 'Set1', // ... yaknow
 };
 
 var display = {};
@@ -31,7 +31,6 @@ var links = [];
 var nodes = [];
 var node, simulation, link;
 
-// TESTING
 var nodePersistence = [];
 
 var scaleSize, scaleColorScalar, scaleColorCategory, scaleLink, scaleLinkOpacity;
@@ -493,8 +492,8 @@ function computeColors() {
 
     colorData['type'] = display.colorBy;
 
-    // default to hiding the color palate menu
-    changeColorPalateMenuVisibility(false);
+    // default to hiding the color palette menu
+    changeColorPaletteMenuVisibility(false);
 
     // no colors
     if (display.colorBy == "none"){
@@ -549,9 +548,9 @@ function computeColors() {
         // update the list for this...
         if (categoryValues.length <= 9) {
             scaleColorCategory.domain(categoryValues)
-                .range(colorbrewer[display.colorPalate][categoryValues.length]);
+                .range(colorbrewer[display.colorPalette][categoryValues.length]);
 
-            changeColorPalateMenuVisibility(true);
+            changeColorPaletteMenuVisibility(true);
         }
         else {
             // otherwise, treat like scalars
@@ -621,8 +620,8 @@ function changeColors(colorBy) {
         matchNodes(nameToMatch);
     };
 }
-function setColorPalate(colorPalate) {
-    display.colorPalate = colorPalate;
+function setColorPalette(colorPalette) {
+    display.colorPalette = colorPalette;
     computeColors();
     computeLegend();
     redrawNodes();
@@ -1377,7 +1376,7 @@ function writeColorMenu(parent) {
         .attr("id", "colorSelect")
         .attr("onchange","changeColors(this.value)");
 
-    writeColorPalateMenu(colorMenu);
+    writeColorPaletteMenu(colorMenu);
 }
 function updateColorMenu() {
     var colorSelect = d3.select("#colorSelect");
@@ -1404,24 +1403,24 @@ function updateColorMenu() {
     colorSelect.value = display.colorBy;
     changeColors(display.colorBy);
 }
-function changeColorPalateMenuVisibility(visible) {
+function changeColorPaletteMenuVisibility(visible) {
     var visibility = visible ? 'inline' : 'none';
-    var colorPalateMenu = d3.select('#colorPalateMenu')
+    var colorPaletteMenu = d3.select('#colorPaletteMenu')
         .style('display', visibility);
 }
-function writeColorPalateMenu(parent) {
-    var colorPalateMenu = parent.append("span")
-        .attr("id", "colorPalateMenu")
-        .text(" with Color Palate ");
+function writeColorPaletteMenu(parent) {
+    var colorPaletteMenu = parent.append("span")
+        .attr("id", "colorPaletteMenu")
+        .text(" with Color Palette ");
 
     var colorNames = [];
     for (colorName in colorbrewer) {
         colorNames.push(colorName);
     }
 
-    colorPalateMenu.append("select")
-        .attr("id", "colorPalateMenuSelect")
-        .attr("onchange", "setColorPalate(this.value)")
+    colorPaletteMenu.append("select")
+        .attr("id", "colorPaletteMenuSelect")
+        .attr("onchange", "setColorPalette(this.value)")
         .selectAll("option")
         .data(colorNames)
         .enter()
@@ -1429,14 +1428,14 @@ function writeColorPalateMenu(parent) {
         .attr("value", function(d) { return d; })
         .text(function(d) { return d; });
 
-    colorPalateMenuSelect = document.getElementById('colorPalateMenuSelect');
-    if (display.colorPalate !== undefined) {
-        if (colorbrewer[display.colorPalate] !== undefined) {
-            colorPalateMenuSelect.value = display.colorPalate;
+    colorPaletteMenuSelect = document.getElementById('colorPaletteMenuSelect');
+    if (display.colorPalette !== undefined) {
+        if (colorbrewer[display.colorPalette] !== undefined) {
+            colorPaletteMenuSelect.value = display.colorPalette;
         }
     }
     else {
-        colorPalateMenuSelect.value = 'Set1';
+        colorPaletteMenuSelect.value = 'Set1';
     }
 }
 function writeChargeWidget(parent) {

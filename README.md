@@ -33,7 +33,7 @@ These are the parameters you can set:
 - linkStrength: positive number; how much force it takes to shrink or grow the length of a link
 - scaleLinkWidth: boolean; scale the width of the link by its weight
 - scaleLinkOpacity: boolean; scale the opacity of the link by its weight
-- colorPalate: string; which color palate to use
+- colorPalette: string; which color palette to use
 - freezeNodeMovement: boolean; stop forces from being applied
 - nodeCoordinates: `[{ 'x': 1, 'y' : 1}, ...]`; the initial positions of the nodes. Note: this is ignored unless freezeNodeMovement is true (otherwise you'll just get a bunch of stacked circles in the corner...)
 - showNodeNames: boolean; should we show node names (it's kinda ugly with more than like, 2 nodes)

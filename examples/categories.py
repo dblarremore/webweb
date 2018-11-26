@@ -7,8 +7,8 @@ if __name__ == '__main__':
     # we'll compute node color by the `alphabeticallity` attribute
     web.display.colorBy = 'alphabeticallity'
 
-    # set the default color palate for non-scalars
-    web.display.colorPalate = "Dark2"
+    # set the default color Palette for non-scalars
+    web.display.colorPalette = "Dark2"
 
     # Build a few networks
     web.networks.square.add_frame(

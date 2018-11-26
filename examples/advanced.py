@@ -34,8 +34,8 @@ if __name__ == '__main__':
     # we'll compute node size by the `hunger` attribute
     web.display.sizeBy = 'hunger'
 
-    # set the default color palate for non-scalars
-    web.display.colorPalate = "Set2"
+    # set the default color palette for non-scalars
+    web.display.colorPalette = "Set2"
 
     # Build a few networks
     web.networks.snake.add_frame(
