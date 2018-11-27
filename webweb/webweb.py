@@ -143,24 +143,9 @@ class Net(dict):
         for label, vals in G_labels.items():
             labels[label] = {
                 'value' : vals,
-                'type' : self.identify_label_type(vals),
             }
 
         self.add_frame(adj, labels=labels)
-
-
-    @staticmethod
-    def identify_label_type(vals):
-        label_set = set(vals)
-
-        # check if it's binary
-        if label_set == set([0, 1]):
-            return 'binary'
-        elif type(list(label_set)[0]) == str:
-            return 'categorical'
-        else:
-            return 'scalar'
-
 
     @property
     def adj(self):

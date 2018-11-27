@@ -37,6 +37,8 @@ These are the parameters you can set:
 - freezeNodeMovement: boolean; stop forces from being applied
 - nodeCoordinates: `[{ 'x': 1, 'y' : 1}, ...]`; the initial positions of the nodes. Note: this is ignored unless freezeNodeMovement is true (otherwise you'll just get a bunch of stacked circles in the corner...)
 - showNodeNames: boolean; should we show node names (it's kinda ugly with more than like, 2 nodes)
+- colorInvertBinary: boolean; if true, the colors used for `true` and `false` will be swapped. Ignored if the label in colorBy isn't binary
+- sizeInvertBinary: boolean; if true, `true` will be small and `false` will be big. Ignored if the label in sizeBy isn't binary label
 
 ### nodes
 

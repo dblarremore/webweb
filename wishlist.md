@@ -23,5 +23,3 @@
     - put up on pip
 - DOCUMENT:
     - state directed is not supported
-- changes:
-    - can't do the nice drag thing :(

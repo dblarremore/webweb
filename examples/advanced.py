@@ -28,14 +28,18 @@ if __name__ == '__main__':
     # display the `snake` network first
     web.display.networkName = 'snake'
 
-    # we'll compute node color by the `isHead` attribute
-    web.display.colorBy = 'isHead'
+    # we'll compute node color by the `hunger` attribute
+    web.display.colorBy = 'hunger'
 
-    # we'll compute node size by the `hunger` attribute
-    web.display.sizeBy = 'hunger'
+    # we'll compute node size by the `isHead` attribute
+    web.display.sizeBy = 'isHead'
 
     # set the default color palette for non-scalars
     web.display.colorPalette = "Set2"
+
+    # we'll invert the sizing of isHead (false will be big, true will be small)
+    # if colorBy was a binary label, we could also set web.display.colorInverBinary to True.
+    web.display.sizeInvertBinary = True
 
     # Build a few networks
     web.networks.snake.add_frame(
@@ -46,7 +50,6 @@ if __name__ == '__main__':
             'isHead' : {
                 # the length of this array should equal the number of nodes
                 'value' : [ False, False, False, False, False, True ],
-
             },
             'slithering' : {
                 # type can be 'scalar', 'binary', or 'categorical'

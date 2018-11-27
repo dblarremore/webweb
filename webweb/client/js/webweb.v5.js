@@ -180,6 +180,8 @@ function displayNetwork() {
     updateLinkForce();
 
     toggleFreezeNodes(display.freezeNodeMovement);
+    toggleInvertBinary(display.colorInvertBinary, 'color');
+    toggleInvertBinary(display.sizeInvertBinary, 'size');
 
     // if we've frozen node movement manually tick so new edges are evaluated.
     if (display.freezeNodeMovement) {
@@ -301,6 +303,18 @@ function defineLabels() {
         colorData.labels[label] = allLabels[label];
     }
 
+    // these below if statements are only here because of poor design (says
+    // hunter, the designer of this bit)
+    // really, computeSizes and computeColors should already have this
+    // information.
+    if (display.colorBy !== undefined && display.colorBy !== 'none') {
+        colorData.type = allLabels[display.colorBy].type;
+    }
+
+    if (display.sizeBy !== undefined && display.sizeBy !== 'none') {
+        sizeData.type = allLabels[display.sizeBy].type;
+    }
+
     // update the menus with these new labels
     updateSizeMenu();
     updateColorMenu();
@@ -315,7 +329,7 @@ function getLabelType(label) {
 
     var q = d3.set(label.value).values().sort();
 
-    // // check if this is a binary relation
+    // check if this is a binary relation
     if (q.length == 2 && q[0] == 'false' && q[1] == 'true') {
         return 'binary';
     }
@@ -450,6 +464,9 @@ function computeSizes() {
 
     sizeData['type'] = display.sizeBy;
 
+    // default to hiding the size binary inversion widget
+    changeBinaryInversionWidgetVisibility(false, 'size');
+
     // set all sizes to 1 if there's no scaling 
     if (display.sizeBy == "none") {
         for (var i in nodes) {
@@ -460,16 +477,17 @@ function computeSizes() {
         var label = sizeData.labels[display.sizeBy];
         sizeData['type'] = label.type;
 
-        for (var i in nodes) {
-            var val = nodes[i][display.sizeBy]
-            rawValues[i] = val;
+        if (sizeData['type'] == 'binary') {
+            changeBinaryInversionWidgetVisibility(true, 'size');
+        }
 
+        rawValues = getRawNodeValues(display.sizeBy, label.type, 'size');
+
+        for (var i in nodes) {
+            scaledValues[i] = rawValues[i];
             // if we're sizing by degree, square root the value
             if (display.sizeBy == "degree") {
-                scaledValues[i] = Math.sqrt(val);
-            }
-            else {
-                scaledValues[i] = val;
+                scaledValues[i] = Math.sqrt(scaledValues[i]);
             }
         }
 
@@ -487,13 +505,13 @@ function computeSizes() {
 // in the dropdown menus.
 ////////////////////////////////////////////////////////////////////////////////
 function computeColors() {
-    var rawValues = [];
-    var scaledValues = [];
-
     colorData['type'] = display.colorBy;
 
     // default to hiding the color palette menu
     changeColorPaletteMenuVisibility(false);
+
+    // default to hiding the color binary inversion widget
+    changeBinaryInversionWidgetVisibility(false, 'color');
 
     // no colors
     if (display.colorBy == "none"){
@@ -506,14 +524,14 @@ function computeColors() {
 
     var label = colorData.labels[display.colorBy];
     colorData['type'] = label.type;
-    for (var i in nodes){
-        rawValues[i] = nodes[i][display.colorBy];
-    }
+
+    var rawValues = getRawNodeValues(display.colorBy, label.type, 'color');
 
     categoryValues = [];
 
     if (colorData['type'] == 'binary') {
-        categoryValues = [false, true];
+        categoryValues = getBinaryValues('color');
+        changeBinaryInversionWidgetVisibility(true, 'color');
     }
     else if (colorData['type'] == "categorical") {
         // get the category names if it's categorical
@@ -562,6 +580,8 @@ function computeColors() {
         scaleColorScalar.domain(d3.extent(rawValues)).range([0,1]);
     }
 
+    var scaledValues = [];
+
     // get colors by passing scaled value to colorWheel
     for (var i in nodes) {
         scaledValues[i] = colorWheel(rawValues[i]);
@@ -570,12 +590,35 @@ function computeColors() {
     colorData['rawValues'] = rawValues;
     colorData['scaledValues'] = scaledValues;
 }
+////////////////////////////////////////////////////////////////////////////////
+// returns raw values for:
+// - a labelName
+// - a labelType
+// - a displayType (color/size)
+////////////////////////////////////////////////////////////////////////////////
+function getRawNodeValues(labelName, labelType, displayType) {
+    var rawValues = [];
+    for (var i in nodes){
+        var val = nodes[i][labelName];
+
+        if (labelType == 'binary') {
+            val = getBinaryValue(val, displayType);
+        }
+
+        rawValues[i] = val;
+    }
+
+    return rawValues;
+}
 // ColorWheel is a function that takes a node label, like a category or scalar
 // and just gets the damn color. But it has to take into account what the 
 // current colorData['type'] is. Basically, this is trying to apply our prefs to colors
 function colorWheel(x) {
-    if (colorData['type'] == "categorical" || colorData['type'] == "binary") {
+    if (colorData['type'] == "categorical") {
         return scaleColorCategory(x);
+    }
+    else if (colorData['type'] == 'binary') {
+        return scaleColorCategory(getBinaryValue(x, 'color'));
     }
     else {
         // Rainbow HSL
@@ -694,16 +737,55 @@ function toggleShowNodeNames(show) {
     var showNodeNamesWidget = document.getElementById('showNodeNames');
     showNodeNamesWidget.checked = display.showNodeNames;
 }
+function toggleInvertBinary(invert, type) {
+    var widgetInputId = type + "InvertBinary";
+
+    console.log(widgetInputId);
+
+    var widget = document.getElementById(widgetInputId);
+    widget.checked = invert;
+    display[widgetInputId] = invert;
+
+    if (type == 'color') {
+        computeColors();
+    }
+    else {
+        computeSizes();
+    }
+    computeLegend();
+    redrawNodes();
+}
+function getBinaryValue(value, type) {
+    var attribute = type + "InvertBinary";
+
+    if (display[attribute]) {
+        return value ? false : true;
+    }
+    else {
+        return value;
+    }
+}
+function getBinaryValues(type) {
+    return [getBinaryValue(false, type), getBinaryValue(true, type)];
+}
 function redisplayNodeNames() {
     hideNodeText();
 
     if (display.showNodeNames) {
-        window.setTimeout(function() {
+        showNodeNamesWhenStable();
+    }
+}
+function showNodeNamesWhenStable() {
+    window.setTimeout(function() {
+        if (simulation.alpha() < .01) {
             for (var i in nodes) {
                 showNodeText(nodes[i]);
             }
-        }, 500);
-    }
+        }
+        else {
+            showNodeNamesWhenStable();
+        }
+    }, 100);
 }
 function updateChargeForce() {
     simulation.force("charge", d3.forceManyBody().strength(-display.c))
@@ -863,6 +945,7 @@ function makeColorLegend() {
     var legend = {};
 
     if (colorData['type'] == "none") {
+        console.log('hey11');
         return
     }
 
@@ -871,8 +954,8 @@ function makeColorLegend() {
         legend['text'] = d3.values(colorData['categoryNames']);
     }
     else if (colorData['type'] == "binary") {
-        legend['values'] = [0, 1];
-        legend['text'] = ["false", "true"];
+        legend['values'] = getBinaryValues('color');
+        legend['text'] = [false, true];
     }
     else if (colorData['type'] == "scalar" || colorData['type'] == "degree") {
         legend = getScalarLegend(colorData['rawValues']);
@@ -893,7 +976,7 @@ function makeSizeLegend() {
     }
 
     if (sizeData['type'] == 'binary') {
-        legend['values'] = [0, 1];
+        legend['values'] = getBinaryValues('size');
         legend['text'] = ["false", "true"];
     }
     else {
@@ -1295,6 +1378,8 @@ function writeSizeMenu(parent) {
     sizeMenu.append("select")
         .attr("id", "sizeSelect")
         .attr("onchange", "changeSizes(this.value)");
+
+    writeBinaryInversionWidget(sizeMenu, 'size');
 }
 function setNetworkFrameMenuVisibility() {
     var visible;
@@ -1377,6 +1462,34 @@ function writeColorMenu(parent) {
         .attr("onchange","changeColors(this.value)");
 
     writeColorPaletteMenu(colorMenu);
+    writeBinaryInversionWidget(colorMenu, 'color');
+}
+function writeBinaryInversionWidget(parent, menuType) {
+    var widgetId = menuType + "BinaryInversionWidget";
+    var widgetInputId = menuType + "InvertBinary";
+
+    var binaryInversionWidget = parent.append("span")
+        .attr("id", widgetId)
+        .text(" invert ");
+
+    var checked = 'unchecked';
+    if (display[widgetInputId]) {
+        console.log('hey');
+        checked = 'checked';
+    }
+
+    binaryInversionWidget.append("input")
+        .attr("id", widgetInputId)
+        .attr("type", "checkbox")
+        .attr(checked, "")
+        .attr("onchange", "toggleInvertBinary(this.checked, '" + menuType + "')")
+        .attr("size", 3);
+}
+function changeBinaryInversionWidgetVisibility(visible, menuType) {
+    var visibility = visible ? 'inline' : 'none';
+    var widgetId = menuType + "BinaryInversionWidget";
+    var colorBinaryInversionMenu = d3.select('#' + widgetId)
+        .style('display', visibility);
 }
 function updateColorMenu() {
     var colorSelect = d3.select("#colorSelect");
