@@ -81,7 +81,7 @@ class Display(dict):
         self.r = r
         self.c = c
         self.g = g
-        self.nodeNames = g
+        self.nodeNames = nodeNames
         self.labels = Labels()
 
 def get_dict_from_labeled_obj(obj):
@@ -145,7 +145,7 @@ class Net(dict):
                 'value' : vals,
             }
 
-        self.add_frame(adj, labels=labels)
+        self.add_frame(adj, labels=labels, nodes=len(list(G.nodes())))
 
     @property
     def adj(self):

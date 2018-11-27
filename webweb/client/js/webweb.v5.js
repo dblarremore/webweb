@@ -350,7 +350,7 @@ function computeNodes() {
         // if we don't have a node count, try to find one;
         // - make sets of each network's adjacency list and take the length
         // - take the length of nodeNames, if present
-        for (i in networkNames) {
+        for (var i in networkNames) {
             var networkNodes = [];
             var networkName = networkNames[i];
 
@@ -361,6 +361,13 @@ function computeNodes() {
                 networkNodes.push(edge[1]);
             }
             nodeCounts.push(d3.set(networkNodes).values().length);
+
+            var networkFrames = wwdata.network[networkName].frames;
+            for (var j in networkFrames) {
+                if (networkFrames[j].nodes !== undefined) {
+                    nodeCounts.push(networkFrames[j].nodes);
+                }
+            }
         }
 
         if (display.nodeNames !== undefined) {
