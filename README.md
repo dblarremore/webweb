@@ -1,24 +1,20 @@
 # webweb
-This is basically MATLAB/Python + d3js. Webweb is a tool for creating interactive visualizations of networks on the web. 
+A tool for creating interactive networkk visualizations for the web. It's primarily written in javascript and makes heavy use of [d3js](d3js.org). There are interfaces for (MATLAB)[http://danlarremore.com/webweb/] and (python)[https://github.com/hneutr/webweb].
 
-Webpage here: [http://danlarremore.com/webweb/](http://danlarremore.com/webweb/)
-
-webweb is a front end to a clever library called d3. Learn more about d3 at [d3js.org](d3js.org). While d3 was made for web developers, webweb is made for networks researchers who use MATLAB or Python. The idea is that you can use webweb to make easily shareable and interactive network visualizations. View your webs on the web! Webweb!
+d3 was made for web developers, webweb was made for networks researchers who use MATLAB or Python. The idea is to make it easy to create and share interactive network visualizations. View your webs on the web! Webweb!
 
 ## Why though?
 I got tired of having an adjacency matrix for a network in MATLAB with no way to just _see_ it quickly. Now, I can just call webweb(A) in MATLAB or python and it'll pop right up in my browser.
 
-# Documentation & Etc
+# Documentation, etc
 
-webweb does stuff.
+A webweb object can have multiple _networks_, and each of those networks can have multiple _frames_.
 
-A webweb object can have multiple networks, and each of those networks can have multiple frames (think timesteps).
+The idea of a webweb object is for it to contain networks related to some set of nodes; if you're using a single webweb object to display several networks with no nodes in common, it would probably make sense to make multiple webweb objects instead.
 
-The idea of a webweb "object" is for it to contain networks related to some set of nodes; if you're displaying networks which have no nodes in common, it might make sense to instead more webweb objects. 
+To define things that are shared by all nodes, set them in `display.labels` (see labels below)
 
-See labels below, but to define things that are shared by all nodes, set them in `display.labels`.
-
-The idea of a webweb "network" is that the frames in it have a consistent definition of an edge.
+The idea of a webweb network is that the frames in it have a consistent definition of an edge.
 
 ### display parameters
 
@@ -44,9 +40,9 @@ These are the parameters you can set:
 
 Webweb tries to be "smart" about how many nodes there are, but you can also tell it: `display.N = x`
 
-It will find the number of nodes by taking the maximum of: the set of node names and each set of nodes referenced in network adjacency lists.
+It tries to find the number of nodes by taking whichever is biggest, the number of node names or the number of nodes referenced in each network's adjacency list.
 
-Generally, you don't have to tell it how many nodes there are, but there is one exception: if you have a collection of unnamed nodes, and one or more nodes that appear in zero edges, then you should specify the number of nodes.
+Generally, you don't have to tell it how many nodes there are, but if your nodes have no names and there's at least one node with degree zero (no edges) then you should specify how many nodes there are.
 
 ### networks
 
@@ -56,11 +52,11 @@ You can load up multiple "views" of a set of nodes to explore how different sett
 
 A label is a string (like "strength"); each node node should have a value for that label (like "enormous"). 
 
-You can use labels to determine node color or size (unless the label is categorical).
+You can use labels to determine node size (unless the label is categorical) or node color.
 
 You can make a label that will apply to all of your networks if you add it to the `display` element.
 
-A label defined for a single network will only apply to that network (surprising, I know).
+A label defined for a single network will only apply to that network (surprising, right?).
 
 Labels can be of three types:
 - binary (true/false)
@@ -68,8 +64,10 @@ Labels can be of three types:
 - categorical
 
 How webweb will display data if it isn't told:
-- If your data is all true/false, webweb will show it as binary
-- If your data is all strings, webweb will show it as categorical
+- If all of your label's values are true or false webweb will display it as binary
+- If one of your label's is a string webweb will show it as categorical
+
+You can also explicitly tell webweb how to display things (see the examples).
 
 ### Adjacency Lists
 
@@ -83,7 +81,10 @@ Right now, webweb tries to be "smart" about edges and figuring out the nodes the
 
 This _does_ make things a little weird with labels though, as labels are (right now) just an array. If you've 1-indexed your edge list, then node "1" will get the first value in a label array.
 
-Note: if there are multiple edges between two nodes, the weight of the first edge will be used.
+Notes:
+
+- if there are multiple edges between two nodes, the weight of the first edge will be used.
+- webweb doesn't understand directed networks; it'll display them as if they were undirected
 
 ## Setup:
 
@@ -98,6 +99,8 @@ Soon (once we upload it to the archive):
 ## How to use it:
 
 See the examples!
+
+Note that you can pass webweb (networkx)[http://networkx.github.io/] objects! For more on how, see the (simple_networkx)[https://github.com/hneutr/webweb/blob/master/examples/simple_networkx.py] example or the (weighted_networkx)[https://github.com/hneutr/webweb/blob/master/examples/weighted_networkx.py] example. (Networkx attributes are automatically translated into webweb labels too).
 
 ## Feedback and Bugs
 
