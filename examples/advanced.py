@@ -38,8 +38,8 @@ if __name__ == '__main__':
     web.display.colorPalette = "Set2"
 
     # we'll invert the sizing of isHead (false will be big, true will be small)
-    # if colorBy was a binary label, we could also set web.display.colorInverBinary to True.
-    web.display.sizeInvertBinary = True
+    # if colorBy was a binary label, we could also set web.display.inverBinaryColors to True.
+    web.display.invertBinarySizes = True
 
     # Build a few networks
     web.networks.snake.add_frame(

@@ -180,8 +180,8 @@ function displayNetwork() {
     updateLinkForce();
 
     toggleFreezeNodes(display.freezeNodeMovement);
-    toggleInvertBinary(display.colorInvertBinary, 'color');
-    toggleInvertBinary(display.sizeInvertBinary, 'size');
+    toggleInvertBinary(display[getBinaryInversionAttributeForType('color')], 'color')
+    toggleInvertBinary(display[getBinaryInversionAttributeForType('size')], 'size')
 
     // if we've frozen node movement manually tick so new edges are evaluated.
     if (display.freezeNodeMovement) {
@@ -465,7 +465,7 @@ function computeSizes() {
     sizeData.type = display.sizeBy;
 
     // default to hiding the size binary inversion widget
-    changeBinaryInversionWidgetVisibility(false, 'size');
+    changeInvertBinaryWidgetVisibility(false, 'size');
 
     // set all sizes to 1 if there's no scaling 
     if (display.sizeBy == "none") {
@@ -478,7 +478,7 @@ function computeSizes() {
         sizeData.type = label.type;
 
         if (sizeData.type == 'binary') {
-            changeBinaryInversionWidgetVisibility(true, 'size');
+            changeInvertBinaryWidgetVisibility(true, 'size');
         }
 
         rawValues = getRawNodeValues(display.sizeBy, label.type, 'size');
@@ -511,7 +511,7 @@ function computeColors() {
     changeColorPaletteMenuVisibility(false);
 
     // default to hiding the color binary inversion widget
-    changeBinaryInversionWidgetVisibility(false, 'color');
+    changeInvertBinaryWidgetVisibility(false, 'color');
 
     // no colors
     if (display.colorBy == "none"){
@@ -531,7 +531,7 @@ function computeColors() {
 
     if (colorData.type == 'binary') {
         categoryValues = getBinaryValues('color');
-        changeBinaryInversionWidgetVisibility(true, 'color');
+        changeInvertBinaryWidgetVisibility(true, 'color');
     }
     else if (colorData.type == "categorical") {
         // get the category names if it's categorical
@@ -737,12 +737,12 @@ function toggleShowNodeNames(show) {
     var showNodeNamesWidget = document.getElementById('showNodeNames');
     showNodeNamesWidget.checked = display.showNodeNames;
 }
-function toggleInvertBinary(invert, type) {
-    var widgetInputId = type + "InvertBinary";
+function toggleInvertBinary(setting, type) {
+    var widgetId = getBinaryInversionAttributeForType(type);
 
-    var widget = document.getElementById(widgetInputId);
-    widget.checked = invert;
-    display[widgetInputId] = invert;
+    var widget = document.getElementById(widgetId);
+    widget.checked = setting;
+    display[widgetId] = setting;
 
     if (type == 'color') {
         computeColors();
@@ -754,7 +754,7 @@ function toggleInvertBinary(invert, type) {
     redrawNodes();
 }
 function getBinaryValue(value, type) {
-    var attribute = type + "InvertBinary";
+    var attribute = getBinaryInversionAttributeForType(type);
 
     if (display[attribute]) {
         return value ? false : true;
@@ -1461,31 +1461,39 @@ function writeColorMenu(parent) {
     writeColorPaletteMenu(colorMenu);
     writeBinaryInversionWidget(colorMenu, 'color');
 }
-function writeBinaryInversionWidget(parent, menuType) {
-    var widgetId = menuType + "BinaryInversionWidget";
-    var widgetInputId = menuType + "InvertBinary";
+function writeBinaryInversionWidget(parent, type) {
+    var widgetId = getBinaryInversionAttributeForType(type);
+    var widgetContainerId = widgetId + "Widget";
 
     var binaryInversionWidget = parent.append("span")
-        .attr("id", widgetId)
+        .attr("id", widgetContainerId)
         .text(" invert ");
 
     var checked = 'unchecked';
-    if (display[widgetInputId]) {
+    if (display[widgetId]) {
         checked = 'checked';
     }
 
     binaryInversionWidget.append("input")
-        .attr("id", widgetInputId)
+        .attr("id", widgetId)
         .attr("type", "checkbox")
         .attr(checked, "")
-        .attr("onchange", "toggleInvertBinary(this.checked, '" + menuType + "')")
+        .attr("onchange", "toggleInvertBinary(this.checked, '" + type + "')")
         .attr("size", 3);
 }
-function changeBinaryInversionWidgetVisibility(visible, menuType) {
+function changeInvertBinaryWidgetVisibility(visible, type) {
     var visibility = visible ? 'inline' : 'none';
-    var widgetId = menuType + "BinaryInversionWidget";
+    var widgetId = getBinaryInversionAttributeForType(type) + "Widget";
     var colorBinaryInversionMenu = d3.select('#' + widgetId)
         .style('display', visibility);
+}
+function getBinaryInversionAttributeForType(type) {
+    if (type == 'color') {
+        return 'invertBinaryColors';
+    }
+    else if (type == 'size') {
+        return 'invertBinarySizes';
+    }
 }
 function updateColorMenu() {
     var colorSelect = d3.select("#colorSelect");
