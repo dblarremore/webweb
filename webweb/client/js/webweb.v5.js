@@ -105,11 +105,11 @@ function initWebweb() {
 
     // move things into "frames" if they're not
     for (var i in networkNames) {
-        if (networkNames[i].frames == undefined) {
-            networkNames[i].frames = [
+        if (wwdata.network[networkNames[i]].frames == undefined) {
+            wwdata.network[networkNames[i]].frames = [
                 {
-                    'adjList' : networkNames[i].adjList,
-                    'labels' : networkNames[i].labels,
+                    'adjList' : wwdata.network[networkNames[i]].adjList,
+                    'labels' : wwdata.network[networkNames[i]].labels,
                 }
             ]
         }
