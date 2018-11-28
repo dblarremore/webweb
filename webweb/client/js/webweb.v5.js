@@ -399,19 +399,34 @@ function computeLinks() {
     links = [];
 
     // get the adjacencies
-    var adj = d3.values(wwdata["network"][display.networkName].frames[display.networkFrame].adjList);
-
-    // adjust the links so that they're 0 indexed (if they aren't already)
-    var nodeIds = [];
-    for (var i in adj) {
-        nodeIds.push(adj[i][0]);
-        nodeIds.push(adj[i][1]);
-    }
+    var adj = d3.values(wwdata.network[display.networkName].frames[display.networkFrame].adjList);
 
     var nodeIdsMap = {};
-    nodeIds = d3.set(nodeIds).values().sort();
-    for (var i in nodeIds) {
-        nodeIdsMap[nodeIds[i]] = i;
+
+    // if we aren't given a number of nodes, make sure they're 0 indexed
+    if (wwdata.network[display.networkName].frames[display.networkFrame].nodes == undefined) {
+        console.log('sup');
+        var nodeIds = [];
+
+        for (var i in adj) {
+            nodeIds.push(adj[i][0]);
+            nodeIds.push(adj[i][1]);
+        }
+
+        nodeIds = d3.set(nodeIds).values().sort();
+
+        for (var i in nodeIds) {
+            nodeIdsMap[nodeIds[i]] = i;
+        }
+    }
+    else {
+        var numberOfNodes = wwdata.network[display.networkName].frames[display.networkFrame].nodes;
+        console.log(numberOfNodes);
+
+        // otherwise just trust the edges
+        for (var i = 0; i < numberOfNodes; i++) {
+            nodeIdsMap[i] = i;
+        }
     }
 
     // make a matrix so edges between nodes can only occur once
@@ -431,6 +446,7 @@ function computeLinks() {
         var edge = adj[i];
         var source = nodeIdsMap[parseInt(edge[0])];
         var target = nodeIdsMap[parseInt(edge[1])];
+        // var target = parseInt(edge[1]);
 
         // if there's no edge weight, default it to 1
         var weight = edge.length == 3 ? parseFloat(edge[2]) : 1;
