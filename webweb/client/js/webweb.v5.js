@@ -446,7 +446,6 @@ function computeLinks() {
         var edge = adj[i];
         var source = nodeIdsMap[parseInt(edge[0])];
         var target = nodeIdsMap[parseInt(edge[1])];
-        // var target = parseInt(edge[1]);
 
         // if there's no edge weight, default it to 1
         var weight = edge.length == 3 ? parseFloat(edge[2]) : 1;
