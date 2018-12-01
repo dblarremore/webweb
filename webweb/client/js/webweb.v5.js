@@ -292,6 +292,10 @@ function defineLabels() {
     sizeData.labels = {};
     colorData.labels = {};
     for (label in allLabels) {
+        if (label == "name") {
+            continue;
+        }
+
         if (allLabels[label].type == undefined) {
             allLabels[label].type = getLabelType(allLabels[label])
         }
@@ -405,7 +409,6 @@ function computeLinks() {
 
     // if we aren't given a number of nodes, make sure they're 0 indexed
     if (wwdata.network[display.networkName].frames[display.networkFrame].nodes == undefined) {
-        console.log('sup');
         var nodeIds = [];
 
         for (var i in adj) {
@@ -421,7 +424,6 @@ function computeLinks() {
     }
     else {
         var numberOfNodes = wwdata.network[display.networkName].frames[display.networkFrame].nodes;
-        console.log(numberOfNodes);
 
         // otherwise just trust the edges
         for (var i = 0; i < numberOfNodes; i++) {
