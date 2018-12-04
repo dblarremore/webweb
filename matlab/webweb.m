@@ -86,19 +86,21 @@ if isstruct(varargin{1}) % nodeNames exists as second element of varargin
 end
 % ------------------------------------------------
 
-M = size(varargin{1}, 3);
+nrows   = size(varargin{1}, 1);
+ncols   = size(varargin{1}, 2);
+nlayers = size(varargin{1}, 3);
+% if you've got an edgelist, convert it to a sparse matrix.
+if ((nrows <= 3) || (ncols <= 3)) && (nlayers==1)
+    varargin{1} = edgelist_to_adj(varargin{1});
+end
 
-if M==1
-    if ~sum(sum(varargin{1}~=varargin{1}'))
-        varargin{1} = triu(varargin{1});
-    end
+if nlayers==1
+    varargin{1} = remove_undirected_redundancy(varargin{1});
 else
-    for m=1:M
+    for m=1:nlayers
         % check to see if each matrix is symmetric.
         % if true, pass upper triangular matrix to avoid doublecounting links
-        if ~sum(sum(varargin{1}(:,:,m)~=varargin{1}(:,:,m)'))
-            varargin{1}(:,:,m) = triu(varargin{1}(:,:,m));
-        end
+        varargin{1}(:,:,m) = remove_undirected_redundancy(varargin{1}(:,:,m));
     end
 end
 
@@ -109,7 +111,7 @@ if nargin==1
     else
         dis = struct;
         nets = struct;
-        for m=1:M
+        for m=1:nlayers
             nets.(['network' num2str(m)]).adj = varargin{1}(:,:,m);
         end
     end
@@ -122,7 +124,7 @@ if nargin==2
     dis = struct;
     % check to disambiguate netNames or nodeNames
     % if M == N, this is confusing...
-    if M == size(varargin{1}(:,:,1))
+    if nlayers == size(varargin{1}(:,:,1))
         isNetNames = input('Are the labels that you passed network names? (y/n) ');
         if strcmp(isNetNames,'y')
             isNetNames = 1;
@@ -132,18 +134,18 @@ if nargin==2
     else
         % decide if we have netNames or nodeNames
         a = length(varargin{2});
-        if a==M
+        if a==nlayers
             isNetNames = 1;
         else
             isNetNames = 0;
         end
     end
     if isNetNames
-        for m=1:M
+        for m=1:nlayers
             nets.(varargin{2}{m}).adj = varargin{1}(:,:,m);
         end
     else
-        for m=1:M
+        for m=1:nlayers
             nets.(['network' num2str(m)]).adj = varargin{1}(:,:,m);
         end
         dis.nodeNames = varargin{2};
@@ -158,7 +160,7 @@ if nargin==3
     dis = struct;
     % check to disambiguate netNames or nodeNames
     % if M == N, this is confusing...
-    if M == size(varargin{1}(:,:,1))
+    if nlayers == size(varargin{1}(:,:,1))
         isNetNames = input('Are the first labels that you passed network names? (y/n) ');
         if strcmp(isNetNames,'y')
             netNames = varargin{2};
@@ -170,7 +172,7 @@ if nargin==3
     else
         % decide if we have netNames or nodeNames
         a = length(varargin{2});
-        if a==M
+        if a==nlayers
             netNames = varargin{2};
             nodeNames = varargin{3};
         else
@@ -179,7 +181,7 @@ if nargin==3
         end
     end
     
-    for m=1:M
+    for m=1:nlayers
         nets.(netNames{m}).adj = varargin{1}(:,:,m);
     end
     dis.nodeNames = nodeNames;
@@ -351,3 +353,29 @@ else
     unix(['open ' webwebloc name '.html']);
 end
 end
+
+function A = edgelist_to_adj(RCV)
+% If it's a sideways edgelist, flip it.
+if size(RCV,1) < size(RCV,2)
+    RCV = RCV';
+end
+% If there are no edge weights, make a bunch of ones
+if size(RCV,2)==2
+    v = ones(size(RCV,1),1);
+else
+    v = RCV(:,3);
+end
+N = max(max(RCV(:,1:2)));
+A = sparse(RCV(:,1),RCV(:,2),v,N,N);
+return
+end
+
+function B = remove_undirected_redundancy(A)
+if ~sum(sum(A~=A'))
+    B = triu(A);
+else
+    B = A;
+end
+return
+end
+
