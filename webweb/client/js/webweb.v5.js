@@ -194,6 +194,7 @@ function displayNetwork() {
     computeColors();
     computeSizes();
     computeLegend();
+    redrawLinks();
     redrawNodes();
     redisplayNodeNames();
 }

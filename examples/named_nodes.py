@@ -1,19 +1,18 @@
 from webweb.webweb import webweb
 import random
 
-if __name__ == '__main__':
-    N = 100
-    adjaceny_list = [[random.randint(0, N), random.randint(0, N), 1] for _ in range(N)]
-    node_names = ["example class {}".format(node_i) for node_i in range(N)]
+N = 100
 
-    # Instantiate webweb object
-    web = webweb()
+adjaceny_list = [[random.randint(0, N), random.randint(0, N), 1] for _ in range(N)]
 
-    # Assign adjaceny lists in network
-    web.networks.simple.add_frame(adjaceny_list)
+# Instantiate webweb object
+web = webweb()
 
-    # Assign node names
-    web.display.nodeNames = node_names
+# Assign adjaceny lists in network
+web.networks.simple.add_frame(adjaceny_list)
 
-    # Launch webbrowser with result
-    web.draw()
+# Assign node names
+web.display.nodeNames = ["example class {}".format(node_i) for node_i in range(N)]
+
+# Launch webbrowser
+web.draw()

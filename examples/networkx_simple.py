@@ -1,15 +1,15 @@
 from webweb.webweb import webweb
+import networkx as nx
 import random
-
-# Build a simple network
-N = 100
-adjaceny_list = [[random.randint(0, N-1), random.randint(0, N-1), 1] for _ in range(N)]
 
 # Instantiate webweb object
 web = webweb()
 
+# make a simple gnp random graph
+G = nx.fast_gnp_random_graph(100, .15)
+
 # Assign adjaceny lists in network
-web.networks.simple.add_frame(adjaceny_list)
+web.networks.networkx.add_frame_from_networkx_graph(G)
 
 # Launch webbrowser with result
 web.draw()

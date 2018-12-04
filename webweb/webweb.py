@@ -116,12 +116,41 @@ class Net(dict):
     def __init__(self):
         self.frames = []
 
-    def add_frame(self, adj, labels=None, nodes=None):
+    def add_frame(self, adj, labels=None, nodes=None, adjacency_type=None):
+        if not adjacency_type:
+            if len(adj):
+                # we use a dumb heuristic here:
+                # if the length of the list is the same as the length of the first
+                # element in the list, it's a matrix
+                if len(adj) == len(adj[0]):
+                    adjacency_type = "matrix"
+
+        if adjacency_type == 'matrix':
+            adj = self.convert_adjacency_matrix_to_list(adj)
+
         self.frames.append({
             'adjList' : copy.deepcopy(adj),
             'labels' : labels,
             'nodes' : nodes,
         })
+
+    def convert_adjacency_matrix_to_list(self, matrix):
+        adjacency_list = []
+
+        matrix_len = len(matrix)
+
+        for n1 in range(matrix_len):
+            for n2 in range(matrix_len):
+                if n1 == n2:
+                    continue
+
+                weight = matrix[n1][n2]
+
+                if weight:
+                    adjacency_list.append([n1, n2, weight])
+        
+        return adjacency_list
+
 
     def add_frame_from_networkx_graph(self, G):
         """ loads the edges and attributes from a network x graph """

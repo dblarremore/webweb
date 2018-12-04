@@ -1,9 +1,33 @@
-all in descending order of priority (highest priority first)
+# before 'go live':
+- documentation:
+    - Table of Contents
+        - 
+    - images of graphs
+    - installation:
+        - python:
+            - pip
+            - git
+        - matlab
+    - basic use case:
+        - "I have an adjacency, how do I display it?"
+        - python
+        - matlab
+    - example code gallery
+    - document adjacency list behavior
+        - eg, 3 edge adjacency lists will be treated like matrixes
+            - can explicitly specify they are lists by passing "adjacency_type='list'"
+- examples:
+    - add code to generate at top
+
+
+# Features in descending order of priority (highest priority first)
 
 # client:
 - resizability
     - add toggle for `autoresize` window
     - see dan/faculty
+- edge scaling:
+    - scale strength/length with weight of edge
 - edge loading:
     - add different formats?
         - gml?
@@ -45,5 +69,3 @@ all in descending order of priority (highest priority first)
 - put up on pip
 - allow user to write the outpath
     - let them write json OR draw
-- matrix vs list
-    - just _know_ which is which
