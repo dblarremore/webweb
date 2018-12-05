@@ -118,7 +118,7 @@ class Net(dict):
 
     def add_frame(self, adj, labels=None, nodes=None, adjacency_type=None):
         if not adjacency_type:
-            if len(adj):
+            if len(adj) and len(adj) > 3:
                 # we use a dumb heuristic here:
                 # if the length of the list is the same as the length of the first
                 # element in the list, it's a matrix
