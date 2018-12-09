@@ -157,16 +157,41 @@ class Net(dict):
         import networkx as nx
         adj = []
 
+        unused_id = 0
+        node_id_map = {}
+
         for u, v, d in G.edges(data=True):
-            edge = [u, v]
+            if node_id_map.get(u, -1) < 0:
+                node_id_map[u] = unused_id
+                unused_id += 1
+
+            u_id = node_id_map[u]
+
+            if node_id_map.get(v, -1) < 0:
+                node_id_map[v] = unused_id
+                unused_id += 1
+
+            v_id = node_id_map[v]
+
+            edge = [u_id, v_id]
             if d.get('weight'):
                 edge.append(d['weight'])
             adj.append(edge)
 
-        G_labels = defaultdict(list)
+        G_labels = {}
         for node in G.nodes:
             for label, val in G.nodes[node].items():
-                G_labels[label].append(val)
+                if not G_labels.get(label):
+                    G_labels[label] = [None for i in G.nodes()]
+
+                G_labels[label][node_id_map[node]] = val
+                
+        for node_name, node_id in node_id_map.items():
+            if node_name != node_id:
+                if not G_labels.get('name'):
+                    G_labels['name'] = [None for i in G.nodes()]
+
+                G_labels['name'][node_id] = node_name
 
         labels = {}
         for label, vals in G_labels.items():
