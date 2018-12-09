@@ -159,18 +159,13 @@ class Net(dict):
 
         unused_id = 0
         node_id_map = {}
+        for node in G.nodes():
+            if node_id_map.get(node, -1) < 0:
+                node_id_map[node] = unused_id
+                unused_id += 1
 
         for u, v, d in G.edges(data=True):
-            if node_id_map.get(u, -1) < 0:
-                node_id_map[u] = unused_id
-                unused_id += 1
-
             u_id = node_id_map[u]
-
-            if node_id_map.get(v, -1) < 0:
-                node_id_map[v] = unused_id
-                unused_id += 1
-
             v_id = node_id_map[v]
 
             edge = [u_id, v_id]
