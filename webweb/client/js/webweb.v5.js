@@ -598,6 +598,17 @@ function computeColors() {
         else {
             // otherwise, treat like scalars
             colorData.type = "scalarCategorical";
+
+            var unusedNumber = 1;
+            var categoriesMap = {};
+            for (var i in categoryValues) {
+                categoriesMap[categoryValues[i]] = i;
+                unusedNumber += 1;
+            }
+
+            for (var i in rawValues) {
+                rawValues[i] = categoriesMap[rawValues[i]];
+            }
         }
     }
 
@@ -984,7 +995,7 @@ function makeColorLegend() {
     }
     else if (colorData.type == "scalarCategorical") {
         legend['values'] = binnedLegend(colorData['rawValues'], 4);
-        legend['text'] = legend.slice(0);
+        legend['text'] = legend['values'].slice(0);
     }
 
     return legend;

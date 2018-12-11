@@ -18,6 +18,10 @@
             - can explicitly specify they are lists by passing "adjacency_type='list'"
 - examples:
     - add code to generate at top
+- frames --> layers
+- document named nodes behavior
+- BUG:
+    - stuff doesn't work when we update gravity and then change frames?
 
 
 # Features in descending order of priority (highest priority first)

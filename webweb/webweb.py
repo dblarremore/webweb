@@ -181,12 +181,11 @@ class Net(dict):
 
                 G_labels[label][node_id_map[node]] = val
                 
-        for node_name, node_id in node_id_map.items():
-            if node_name != node_id:
-                if not G_labels.get('name'):
-                    G_labels['name'] = [None for i in G.nodes()]
-
-                G_labels['name'][node_id] = node_name
+        if not G_labels.get('name'):
+            G_labels['name'] = [None for i in G.nodes()]
+            for node_name, node_id in node_id_map.items():
+                if node_name != node_id:
+                    G_labels['name'][node_id] = node_name
 
         labels = {}
         for label, vals in G_labels.items():
