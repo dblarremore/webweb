@@ -9,7 +9,7 @@ adjaceny_list = [[random.randint(0, N-1), random.randint(0, N-1), 1] for _ in ra
 web = webweb()
 
 # Assign adjaceny lists in network
-web.networks.simple.add_frame(adjaceny_list)
+web.networks.simple.add_layer(adjaceny_list)
 
 # Launch webbrowser with result
 web.draw()

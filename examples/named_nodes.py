@@ -9,7 +9,7 @@ adjaceny_list = [[random.randint(0, N), random.randint(0, N), 1] for _ in range(
 web = webweb()
 
 # Assign adjaceny lists in network
-web.networks.simple.add_frame(adjaceny_list)
+web.networks.simple.add_layer(adjaceny_list)
 
 # Assign node names
 web.display.nodeNames = ["example class {}".format(node_i) for node_i in range(N)]

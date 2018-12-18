@@ -103,10 +103,10 @@ function updateVis(wwdata) {
 function initWebweb() {
     networkNames = Object.keys(wwdata.network);
 
-    // move things into "frames" if they're not
+    // move things into "layers" if they're not
     for (var i in networkNames) {
-        if (wwdata.network[networkNames[i]].frames == undefined) {
-            wwdata.network[networkNames[i]].frames = [
+        if (wwdata.network[networkNames[i]].layers == undefined) {
+            wwdata.network[networkNames[i]].layers = [
                 {
                     'adjList' : wwdata.network[networkNames[i]].adjList,
                     'labels' : wwdata.network[networkNames[i]].labels,
@@ -117,7 +117,7 @@ function initWebweb() {
 
     // the default network will be the first one in the list of networks
     displayDefaults['networkName'] = networkNames[0];
-    displayDefaults['networkFrame'] = 0;
+    displayDefaults['networkLayer'] = 0;
 
     display = wwdata.display;
     for (var key in displayDefaults) {
@@ -178,6 +178,7 @@ function displayNetwork() {
     drawLinks();
 
     updateLinkForce();
+    updateGravityForce();
 
     toggleFreezeNodes(display.freezeNodeMovement);
     toggleInvertBinary(display[getBinaryInversionAttributeForType('color')], 'color')
@@ -188,8 +189,8 @@ function displayNetwork() {
         tick();
     }
 
-    // change the display of the frames widget
-    setNetworkFrameMenuVisibility();
+    // change the display of the layers widget
+    setNetworkLayerMenuVisibility();
 
     computeColors();
     computeSizes();
@@ -221,8 +222,8 @@ function setVisibleNodes() {
     //          - draw them
     //      - if those nodes are a list:
     //          - read from the dict
-    if ('nodes' in wwdata.network[display.networkName].frames[display.networkFrame]) {
-        var networkNodes = wwdata.network[display.networkName].frames[display.networkFrame].nodes;
+    if ('nodes' in wwdata.network[display.networkName].layers[display.networkLayer]) {
+        var networkNodes = wwdata.network[display.networkName].layers[display.networkLayer].nodes;
         if (networkNodes < nodes.length) {
             while (networkNodes != nodes.length) {
                 var toRemove = nodes.pop();
@@ -277,7 +278,7 @@ function defineLabels() {
         }
     }
 
-    var networkData = wwdata.network[display.networkName].frames[display.networkFrame];
+    var networkData = wwdata.network[display.networkName].layers[display.networkLayer];
     if (networkData !== undefined && networkData.labels !== undefined) {
         var networkLabels = networkData.labels;
         for (var label in networkLabels) {
@@ -313,10 +314,18 @@ function defineLabels() {
     // really, computeSizes and computeColors should already have this
     // information.
     if (display.colorBy !== undefined && display.colorBy !== 'none') {
+        if (allLabels !== undefined && allLabels[display.colorBy] == undefined) {
+            display.colorBy == 'none';
+        }
+
         colorData.type = allLabels[display.colorBy].type;
     }
 
     if (display.sizeBy !== undefined && display.sizeBy !== 'none') {
+        if (allLabels !== undefined && allLabels[display.sizeBy] == undefined) {
+            display.sizeBy = 'none';
+        }
+
         sizeData.type = allLabels[display.sizeBy].type;
     }
 
@@ -344,6 +353,9 @@ function getLabelType(label) {
     else if (q.some(isNaN)) {
         return 'categorical';
     }
+    else if (label !== 'none') {
+        return 'scalar';
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 // initialize the nodes (attempting to be smart about the number of them)
@@ -359,7 +371,7 @@ function computeNodes() {
             var networkNodes = [];
             var networkName = networkNames[i];
 
-            var adj = d3.values(wwdata.network[networkName].frames[display.networkFrame].adjList);
+            var adj = d3.values(wwdata.network[networkName].layers[display.networkLayer].adjList);
             for (i in adj) {
                 var edge = adj[i];
                 networkNodes.push(edge[0]);
@@ -367,10 +379,10 @@ function computeNodes() {
             }
             nodeCounts.push(d3.set(networkNodes).values().length);
 
-            var networkFrames = wwdata.network[networkName].frames;
-            for (var j in networkFrames) {
-                if (networkFrames[j].nodes !== undefined) {
-                    nodeCounts.push(networkFrames[j].nodes);
+            var networkLayers = wwdata.network[networkName].layers;
+            for (var j in networkLayers) {
+                if (networkLayers[j].nodes !== undefined) {
+                    nodeCounts.push(networkLayers[j].nodes);
                 }
             }
         }
@@ -404,12 +416,12 @@ function computeLinks() {
     links = [];
 
     // get the adjacencies
-    var adj = d3.values(wwdata.network[display.networkName].frames[display.networkFrame].adjList);
+    var adj = d3.values(wwdata.network[display.networkName].layers[display.networkLayer].adjList);
 
     var nodeIdsMap = {};
 
     // if we aren't given a number of nodes, make sure they're 0 indexed
-    if (wwdata.network[display.networkName].frames[display.networkFrame].nodes == undefined) {
+    if (wwdata.network[display.networkName].layers[display.networkLayer].nodes == undefined) {
         var nodeIds = [];
 
         for (var i in adj) {
@@ -424,7 +436,7 @@ function computeLinks() {
         }
     }
     else {
-        var numberOfNodes = wwdata.network[display.networkName].frames[display.networkFrame].nodes;
+        var numberOfNodes = wwdata.network[display.networkName].layers[display.networkLayer].nodes;
 
         // otherwise just trust the edges
         for (var i = 0; i < numberOfNodes; i++) {
@@ -1385,7 +1397,7 @@ function writeNetworkMenu(parent) {
         .attr("id", "networkSelect")
         .attr("onchange", "updateNetwork(this.value)")
 
-    writeNetworkFrameMenu(networkMenu);
+    writeNetworkLayerMenu(networkMenu);
 }
 function updateNetworkSelectMenu() {
     var networkSelect = d3.select("#networkSelect");
@@ -1401,7 +1413,7 @@ function updateNetworkSelectMenu() {
 
     networkSelect = document.getElementById('networkSelect');
     networkSelect.value = display.networkName;
-    updateNetworkFrameSelect();
+    updateNetworkLayerSelect();
 }
 function writeSizeMenu(parent) {
     var sizeMenu = parent.append("div")
@@ -1414,9 +1426,9 @@ function writeSizeMenu(parent) {
 
     writeBinaryInversionWidget(sizeMenu, 'size');
 }
-function setNetworkFrameMenuVisibility() {
+function setNetworkLayerMenuVisibility() {
     var visible;
-    if (wwdata.network[display.networkName].frames.length == 1) {
+    if (wwdata.network[display.networkName].layers.length == 1) {
         visible = false;
     }
     else {
@@ -1424,37 +1436,37 @@ function setNetworkFrameMenuVisibility() {
     }
 
     var visibility = visible ? 'inline' : 'none';
-    var networkFrameMenu = d3.select('#networkFrameMenu')
+    var networkLayerMenu = d3.select('#networkLayerMenu')
         .style('display', visibility);
 }
-function writeNetworkFrameMenu(parent) {
-    var networkFrameMenu = parent.append("span")
-        .attr("id", "networkFrameMenu")
-        .text(" frame: ");
+function writeNetworkLayerMenu(parent) {
+    var networkLayerMenu = parent.append("span")
+        .attr("id", "networkLayerMenu")
+        .text(" layer: ");
 
-    var frames = [];
-    for (var i in wwdata.network[display.networkName].frames) {
-        frames.push(i);
+    var layers = [];
+    for (var i in wwdata.network[display.networkName].layers) {
+        layers.push(i);
     }
 
-    networkFrameMenu.append("select")
-        .attr("id", "networkFrameMenuSelect")
-        .attr("onchange", "displayNetworkFrame(this.value)")
+    networkLayerMenu.append("select")
+        .attr("id", "networkLayerMenuSelect")
+        .attr("onchange", "displayNetworkLayer(this.value)")
         .selectAll("option")
-        .data(frames)
+        .data(layers)
         .enter()
         .append("option")
         .attr("value", function(d) { return d; })
         .text(function(d) { return d; });
 
-    updateNetworkFrameSelect();
+    updateNetworkLayerSelect();
 }
-function updateNetworkFrameSelect() {
-    networkFrameMenuSelect = document.getElementById('networkFrameMenuSelect');
-    networkFrameMenuSelect.value = display.networkFrame;
+function updateNetworkLayerSelect() {
+    networkLayerMenuSelect = document.getElementById('networkLayerMenuSelect');
+    networkLayerMenuSelect.value = display.networkLayer;
 }
-function displayNetworkFrame(frame) {
-    display.networkFrame = frame;
+function displayNetworkLayer(layer) {
+    display.networkLayer = layer;
     displayNetwork();
 }
 function updateSizeMenu() {
@@ -1869,24 +1881,24 @@ function changeNetworkListener(event) {
         }
     }
 }
-// binds the left/right arrow keys to change frames
-function changeNetworkFrameListener(event) {
-    var currentFrame = display.networkFrame;
-    var changeToFrame;
+// binds the left/right arrow keys to change layers
+function changeNetworkLayerListener(event) {
+    var currentLayer = display.networkLayer;
+    var changeToLayer;
 
     if (event.keyCode == 39) {
         // right arrow
-        changeToFrame = currentFrame + 1;
+        changeToLayer = currentLayer + 1;
     }
     else if (event.keyCode == 37) {
         // left arrow
-        changeToFrame = currentFrame - 1;
+        changeToLayer = currentLayer - 1;
     }
 
-    if (changeToFrame !== undefined) {
-        if (0 <= changeToFrame && changeToFrame < wwdata.network[display.networkName].frames.length) {
-            displayNetworkFrame(changeToFrame);
-            updateNetworkFrameSelect();
+    if (changeToLayer !== undefined) {
+        if (0 <= changeToLayer && changeToLayer < wwdata.network[display.networkName].layers.length) {
+            displayNetworkLayer(changeToLayer);
+            updateNetworkLayerSelect();
         }
     }
 }
@@ -1904,9 +1916,9 @@ window.onload = function() {
 };
 window.addEventListener("keydown", function (event) {
     listeners = {
-        37 : changeNetworkFrameListener,
+        37 : changeNetworkLayerListener,
         38 : changeNetworkListener,
-        39 : changeNetworkFrameListener,
+        39 : changeNetworkLayerListener,
         40 : changeNetworkListener,
     };
 

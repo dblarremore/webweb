@@ -18,11 +18,13 @@
             - can explicitly specify they are lists by passing "adjacency_type='list'"
 - examples:
     - add code to generate at top
-- frames --> layers
+#- 'viz-only' mode
+    - hides menus
+#- append_to_node
+    - pass id to append it to
+    - requires filename (for webweb.json)
+    - will create the element on the body if one does not exist
 - document named nodes behavior
-- BUG:
-    - stuff doesn't work when we update gravity and then change frames?
-
 
 # Features in descending order of priority (highest priority first)
 
@@ -49,19 +51,19 @@
             - update
             - toggle/change
         - this way we don't have to repeat element id code
-- add network- and frame-level display settings
+- add network- and layer-level display settings
     - eg:
         - network.networkname.display.w = 100
-        - network.networkname.frames[0].display.w = 100
+        - network.networkname.layers[0].display.w = 100
 - change label/node representation:
     - future:
         - display.labelTypes = { label: type }
         - network.netname.display.labelTypes = { label : type }
     - make nodes!
         - web.nodes = [{ 'name' : 'xyz', 'hunger' : 10 }]
-        - web.network.netname.add_frame(adj, nodes)
+        - web.network.netname.add_layer(adj, nodes)
 - ditch the global namespace entirely
-- gif of frames?
+- gif of layers?
     - this is actually really difficult
     - (would basically require abandoning the global namespace)
 - svg --> canvas

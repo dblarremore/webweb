@@ -27,7 +27,7 @@ while edges < 100:
 web = webweb()
 
 # Assign adjaceny lists in network
-web.networks.simple.add_frame(adjacency_matrix)
+web.networks.simple.add_layer(adjacency_matrix)
 
 # Launch webbrowser with result
 web.draw()

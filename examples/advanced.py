@@ -41,7 +41,7 @@ web.display.colorPalette = "Set2"
 web.display.invertBinarySizes = True
 
 # Build a few networks
-web.networks.snake.add_frame(
+web.networks.snake.add_layer(
     # the adjacency
     [[i + 1, i+2] for i in range(N-1)],
     # the labels
@@ -61,7 +61,7 @@ web.networks.snake.add_frame(
     }
 )
 
-web.networks.starfish.add_frame(
+web.networks.starfish.add_layer(
     [[0, i+1] for i in range(N-1)],
     {
         'texture' : {
@@ -85,7 +85,7 @@ web.display.nodeNames = ['dane', 'sebastian', 'manny', 'brock', 'ted', 'donnie']
 web.display.labels.hunger.type = 'scalar'
 web.display.labels.hunger.value = [4,9,2,4,12.1,5]
 
-web.networks.small_snake.add_frame(
+web.networks.small_snake.add_layer(
     [[i, i+1] for i in range(N-3)],
     # this snake has only 4 nodes
     nodes=4,

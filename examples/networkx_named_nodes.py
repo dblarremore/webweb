@@ -16,7 +16,7 @@ G.add_edge('brian', 'steve', weight=1)
 web = webweb()
 
 # Assign adjaceny lists in network
-web.networks.networkx.add_frame_from_networkx_graph(G)
+web.networks.networkx.add_layer_from_networkx_graph(G)
 
 # link widths will be scaled by their weight
 web.display.scaleLinkWidth = True

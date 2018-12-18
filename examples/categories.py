@@ -10,7 +10,7 @@ web.display.colorBy = 'alphabeticallity'
 web.display.colorPalette = "Dark2"
 
 # Build a few networks
-web.networks.square.add_frame(
+web.networks.square.add_layer(
     # the adjacency
     [[0, 1], [1, 2], [2, 3], [3, 0]],
     # the labels

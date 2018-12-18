@@ -95,18 +95,18 @@ def get_dict_from_labeled_obj(obj):
 
         if key == 'labels':
             _dict[key] = { k : vars(v) for k, v in vars(val).items() }
-        elif key == 'frames':
-            _dict['frames'] = []
-            for frame in val:
-                _frame = {
-                    'adjList' : frame['adjList'],
-                    'labels' : frame['labels'],
+        elif key == 'layers':
+            _dict['layers'] = []
+            for layer in val:
+                _layer = {
+                    'adjList' : layer['adjList'],
+                    'labels' : layer['labels'],
                 }
 
-                if frame.get('nodes'):
-                    _frame['nodes'] = frame['nodes']
+                if layer.get('nodes'):
+                    _layer['nodes'] = layer['nodes']
 
-                _dict['frames'].append(_frame)
+                _dict['layers'].append(_layer)
         else:
             _dict[key] = val
 
@@ -114,9 +114,9 @@ def get_dict_from_labeled_obj(obj):
 
 class Net(dict):
     def __init__(self):
-        self.frames = []
+        self.layers = []
 
-    def add_frame(self, adj, labels=None, nodes=None, adjacency_type=None):
+    def add_layer(self, adj, labels=None, nodes=None, adjacency_type=None):
         if not adjacency_type:
             if len(adj) and len(adj) > 3:
                 # we use a dumb heuristic here:
@@ -128,7 +128,7 @@ class Net(dict):
         if adjacency_type == 'matrix':
             adj = self.convert_adjacency_matrix_to_list(adj)
 
-        self.frames.append({
+        self.layers.append({
             'adjList' : copy.deepcopy(adj),
             'labels' : labels,
             'nodes' : nodes,
@@ -152,7 +152,7 @@ class Net(dict):
         return adjacency_list
 
 
-    def add_frame_from_networkx_graph(self, G):
+    def add_layer_from_networkx_graph(self, G):
         """ loads the edges and attributes from a network x graph """
         import networkx as nx
         adj = []
@@ -193,7 +193,7 @@ class Net(dict):
                 'value' : vals,
             }
 
-        self.add_frame(adj, labels=labels, nodes=len(list(G.nodes())))
+        self.add_layer(adj, labels=labels, nodes=len(list(G.nodes())))
 
     @property
     def adj(self):

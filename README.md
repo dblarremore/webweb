@@ -8,13 +8,13 @@ I got tired of having an adjacency matrix for a network in MATLAB with no way to
 
 # Documentation, etc
 
-A webweb object can have multiple _networks_, and each of those networks can have multiple _frames_.
+A webweb object can have multiple _networks_, and each of those networks can have multiple _layers_.
 
 The idea of a webweb object is for it to contain networks related to some set of nodes; if you're using a single webweb object to display several networks with no nodes in common, it would probably make sense to make multiple webweb objects instead.
 
 To define things that are shared by all nodes, set them in `display.labels` (see labels below)
 
-The idea of a webweb network is that the frames in it have a consistent definition of an edge.
+The idea of a webweb network is that the layers in it have a consistent definition of an edge.
 
 ### display parameters
 
