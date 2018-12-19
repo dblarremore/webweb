@@ -72,7 +72,7 @@ class webweb(dict):
         """.format(self.title, self.data_file)
 
 class Display(dict):
-    def __init__(self, num_nodes=None, name=None, w=None, h=None, l=None, r=None, c=None, g=None, nodeNames=None, webOnly=False):
+    def __init__(self, num_nodes=None, name=None, w=None, h=None, l=None, r=None, c=None, g=None, nodeNames=None, showWebOnly=None):
         self.N = num_nodes
         self.name = name
         self.w = w
@@ -83,7 +83,7 @@ class Display(dict):
         self.g = g
         self.nodeNames = nodeNames
         self.labels = Labels()
-        self.webOnly = webOnly
+        self.showWebOnly = showWebOnly
 
 def get_dict_from_labeled_obj(obj):
     """this function converts an object which might have subobjects (labels)
