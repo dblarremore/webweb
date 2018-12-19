@@ -7,10 +7,6 @@ G = nx.Graph()
 G.add_edge('hunter', 'brian', weight=1)
 G.add_edge('steve', 'hunter', weight=150)
 G.add_edge('brian', 'steve', weight=1)
-# G.add_edge(2, 3, weight=10)
-# G.add_edge(3, 4, weight=100)
-# G.add_edge(4, 5, weight=70)
-# G.add_edge(0, 3, weight=25)
 
 # Instantiate webweb object
 web = webweb()
