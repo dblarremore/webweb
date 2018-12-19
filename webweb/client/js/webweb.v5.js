@@ -63,10 +63,8 @@ function initializeVis() {
     var menu = center.append("div")
         .attr("id", "menu");
 
-    center.append("div")
-        .attr("id", "chart")
-        .append("div")
-        .attr("id", "svg_div");
+    var chart = center.append("div")
+        .attr("id", "chart");
 
     initWebweb();
     writeMenus(menu);
@@ -75,8 +73,8 @@ function initializeVis() {
 // updateVis: the update version of initializeVis
 // called when a file is dragged & dropped
 function updateVis(wwdata) {
-    // remove the old SVG
-    d3.select("#vis").remove();
+    // remove the old SVG div
+    d3.select("#svg_div").remove();
 
     initWebweb();
     updateNetworkSelectMenu();
@@ -145,6 +143,32 @@ function initWebweb() {
     scaleLinkOpacity = d3.scaleLinear().range([0.4, 0.9]);
 
     nameToMatch = "";
+
+    // this is sorta weird logic here. what we want to do is possibly hide
+    // everything but the visualization
+    // however, right now the coupling of things makes it such that we need to
+    // generate menus anways.
+    var centerDisplay;
+    var webContainerElement;
+    if (display.showWebOnly == true) {
+        centerDisplay = 'none';
+
+        webContainerElement = d3.select('body');
+    }
+    else {
+        centerDisplay = 'block';
+        webContainerElement = d3.select('#chart');
+    }
+
+    if (display.attachWebToElementWithId !== undefined) {
+        webContainerElement = d3.select('#' + display.attachWebToElementWithId);
+    }
+
+    d3.select('#center')
+        .style('display', centerDisplay)
+
+    webContainerElement.append('div')
+        .attr('id', 'svg_div');
 
     vis = d3.select("#svg_div")
         .append("svg")
@@ -315,7 +339,7 @@ function defineLabels() {
     // information.
     if (display.colorBy !== undefined && display.colorBy !== 'none') {
         if (allLabels !== undefined && allLabels[display.colorBy] == undefined) {
-            display.colorBy == 'none';
+            display.colorBy = 'none';
         }
 
         colorData.type = allLabels[display.colorBy].type;

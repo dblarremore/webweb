@@ -39,7 +39,9 @@
         - gml?
         - others?
 - documentation:
-    - add hyperlinks between stuff
+    - add in stuff about `append to element`
+        - document '#' behavior
+    - add in stuff about `webOnly`
 - bundle functions for UI elements
     - keep things synced between:
         1. display parameters
@@ -70,6 +72,8 @@
 - bundling:
     - use hotlinks?
     - spit all of it into the html file?
+- BUG:
+    - weight zero are scaled to zero even when scaleLink is off
 
 # python:
 - put up on pip
