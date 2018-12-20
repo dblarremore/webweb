@@ -13,8 +13,6 @@
 // Here are default values. 
 // If you don't put anything different in the JSON file, this is what you get!
 var displayDefaults = {
-    'w' : 800, // width
-    'h' : 800, // height
     'c' : 60, // charge
     'g' : 0.1, // gravity
     'l' : 20, // edge length
@@ -169,6 +167,14 @@ function initWebweb() {
 
     webContainerElement.append('div')
         .attr('id', 'svg_div');
+
+    if (display.w == undefined) {
+        display.w = Math.min.apply(null, [screen.width - 3 * 20, 1000]);
+    }
+
+    if (display.h == undefined) {
+        display.h = Math.min.apply(null, [screen.height - 3 * 20, 600, display.w]);
+    }
 
     vis = d3.select("#svg_div")
         .append("svg")
@@ -1384,13 +1390,8 @@ function writeSaveButtons(parent) {
         .on("click", writeWebwebDownloadLink);
 }
 function writeDropJSONArea() {
-    var dropJSONArea = d3.select("#chart")
-        .append("div")
-        .attr("id","dropJSONArea")
-        .html("drop webweb json here");
-
     // Setup the dnd listeners.
-    var dropZone = document.getElementById('chart');
+    var dropZone = document.getElementsByTagName("BODY")[0];
     dropZone.addEventListener('dragover', handleDragOver, false);
     dropZone.addEventListener('drop', readJSONDrop, false);
 }
@@ -1759,16 +1760,6 @@ function handleDragOver(evt) {
     evt.stopPropagation();
     evt.preventDefault();
     evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
-
-    // Make the border pop when something is dragged over. 
-    d3.select("#chart")
-        .style("border", "2.5px dashed")
-        .style("border-radius", "10px")
-        .style("color", "#888")
-        .transition().duration(400)
-        .style("border", "1.5px dashed")
-        .style("border-radius", "5px")
-        .style("color", "#bbb");
 }
 // This prepares to read in a json file if you drop it. 
 // It calls readJSON, which is below.

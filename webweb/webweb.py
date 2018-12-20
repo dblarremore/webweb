@@ -67,6 +67,7 @@ class webweb(dict):
                     <title>webweb {title}</title>
                     <script>{d3js}</script>
                     <style>{style}</style>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
                 <body>
                     <script type="text/javascript">{colorsjs}</script>

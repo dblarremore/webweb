@@ -6,12 +6,6 @@ web = webweb()
 # number of nodes
 N = 6
 
-# set the display width
-web.display.w = 200
-
-# set the display height
-web.display.h = 200
-
 # set the gravity
 web.display.g = 0.3
 
