@@ -1365,7 +1365,7 @@ function writeScaleLinkOpacityToggle(parent) {
 function writeFreezeNodesToggle(parent) {
     var freezeNodesToggle = parent.append("div")
         .attr("id", "nodesMoveToggle")
-        .text("Freeze Nodes ");
+        .text("Freeze nodes ");
 
     freezeNodesToggle.append("input")
         .attr("id", "freezeNodesToggle")
@@ -1443,7 +1443,7 @@ function updateNetworkSelectMenu() {
 function writeSizeMenu(parent) {
     var sizeMenu = parent.append("div")
         .attr("id", "sizeMenu")
-        .text("Compute node size from ");
+        .text("Scale node sizes by ");
 
     sizeMenu.append("select")
         .attr("id", "sizeSelect")
@@ -1525,7 +1525,7 @@ function writeColorMenu(parent) {
 
     var colorByMenu = colorMenu.append("span")
         .attr('id', 'colorByMenu')
-        .text("Compute node color from ");
+        .text("Color nodes by ");
 
     colorByMenu.append("select")
         .attr("id", "colorSelect")
@@ -1691,7 +1691,7 @@ function writeRadiusWidget(parent) {
 function writeMatchWidget(parent) {
     var matchWidget = parent.append("div")
         .attr("id", "matchWidget")
-        .text("Highlight nodes whose name matches ");
+        .text("Highlight nodes named ");
 
     matchWidget.append("input")
         .attr("id","matchText")
@@ -1702,7 +1702,7 @@ function writeMatchWidget(parent) {
 function writeShowNodeNamesWidget(parent) {
     var showNodeNamesWidget = parent.append("div")
         .attr("id", "showNodeNamesWidget")
-        .text("show node names ");
+        .text("Show node names ");
 
     var checked = 'unchecked';
     if (display.showNodeNames) {
