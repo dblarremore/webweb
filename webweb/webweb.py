@@ -23,6 +23,20 @@ class webweb(dict):
     def base_path(self):
         return os.path.dirname(os.path.realpath(__file__))
 
+    @property
+    def client_path(self):
+        parent = os.path.abspath(os.path.join(self.base_path, os.pardir))
+        return os.path.join(parent, "client")
+
+    def get_client_content(self, dir_name, file_name):
+        content_path = os.path.join(self.client_path, dir_name, file_name)
+
+        with open(content_path, 'r') as f:
+            content = f.read()
+
+        return content
+
+
     def draw(self):
         """ driver for the whole thing:
         1. saves the html file
@@ -50,20 +64,28 @@ class webweb(dict):
         return """
             <html>
                 <head>
-                    <title>webweb {}</title>
-                    <script src="../client/js/d3.v5.min.js"></script>
-                    <link type="text/css" rel="stylesheet" href="../client/css/style.css"/>
+                    <title>webweb {title}</title>
+                    <script>{d3js}</script>
+                    <style>{style}</style>
                 </head>
                 <body>
-                    <script type="text/javascript" src="../client/js/colors.js"></script>
-                    <script type="text/javascript" src ="../client/js/Blob.js"></script>
-                    <script type="text/javascript" src ="../client/js/FileSaver.min.js"></script>
-                    <script type="text/javascript">var wwdata = {};</script>
-                    <script type="text/javascript" src ="../client/js/webweb.v5.js">
-                    </script>
+                    <script type="text/javascript">{colorsjs}</script>
+                    <script type="text/javascript">{blobjs}</script>
+                    <script type="text/javascript">{filesaverjs}</script>
+                    <script type="text/javascript">var wwdata = {json};</script>
+                    <script type="text/javascript">{webwebjs}</script>
                 </body>
             </html>
-        """.format(self.title, self.json)
+        """.format(
+            title=self.title,
+            d3js=self.get_client_content('js', 'd3.v5.min.js'),
+            style=self.get_client_content('css', 'style.css'),
+            colorsjs=self.get_client_content('js', 'colors.js'),
+            blobjs=self.get_client_content('js', 'Blob.js'),
+            filesaverjs=self.get_client_content('js', 'FileSaver.min.js'),
+            json=self.json,
+            webwebjs=self.get_client_content('js', 'webweb.v5.js'),
+        )
 
 class Display(dict):
     def __init__(self, num_nodes=None, name=None, w=None, h=None, l=None, r=None, c=None, g=None, nodeNames=None, showWebOnly=None):
