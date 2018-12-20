@@ -32,18 +32,11 @@ class webweb(dict):
         with open(self.html_file, 'w') as f:
             f.write(self.html)
 
-        with open(self.data_file, 'w') as f:
-            f.write("var wwdata = {};".format(self.json))
-
         webbrowser.open_new("file://" + self.html_file)
 
     @property
     def html_file(self):
         return os.path.join(self.base_path, "{}.html".format(self.title))
-
-    @property
-    def data_file(self):
-        return os.path.join(self.base_path, "{}.json".format(self.title))
 
     @property
     def json(self, title=None):
@@ -60,16 +53,17 @@ class webweb(dict):
                     <title>webweb {}</title>
                     <script src="../client/js/d3.v5.min.js"></script>
                     <link type="text/css" rel="stylesheet" href="../client/css/style.css"/>
-                    <script type="text/javascript" src="{}"></script>
                 </head>
                 <body>
                     <script type="text/javascript" src="../client/js/colors.js"></script>
                     <script type="text/javascript" src ="../client/js/Blob.js"></script>
                     <script type="text/javascript" src ="../client/js/FileSaver.min.js"></script>
-                    <script type="text/javascript" src ="../client/js/webweb.v5.js"></script>
+                    <script type="text/javascript">var wwdata = {};</script>
+                    <script type="text/javascript" src ="../client/js/webweb.v5.js">
+                    </script>
                 </body>
             </html>
-        """.format(self.title, self.data_file)
+        """.format(self.title, self.json)
 
 class Display(dict):
     def __init__(self, num_nodes=None, name=None, w=None, h=None, l=None, r=None, c=None, g=None, nodeNames=None, showWebOnly=None):
