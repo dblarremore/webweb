@@ -452,17 +452,17 @@ function computeLinks() {
 
     // if we aren't given a number of nodes, make sure they're 0 indexed
     if (wwdata.network[display.networkName].layers[display.networkLayer].nodes == undefined) {
-        var nodeIds = [];
-
+        var unused_id = 0;
         for (var i in adj) {
-            nodeIds.push(adj[i][0]);
-            nodeIds.push(adj[i][1]);
-        }
+            var rawNodes = [adj[i][0], adj[i][1]];
 
-        nodeIds = d3.set(nodeIds).values().sort();
-
-        for (var i in nodeIds) {
-            nodeIdsMap[nodeIds[i]] = i;
+            for (var j in rawNodes) {
+                var rawNode = rawNodes[j];
+                if (nodeIdsMap[rawNode] == undefined) {
+                    nodeIdsMap[rawNode] = unused_id;
+                    unused_id += 1;
+                }
+            }
         }
     }
     else {
@@ -489,8 +489,8 @@ function computeLinks() {
     var weights = [];
     for (var i in adj) {
         var edge = adj[i];
-        var source = nodeIdsMap[parseInt(edge[0])];
-        var target = nodeIdsMap[parseInt(edge[1])];
+        var source = nodeIdsMap[edge[0]];
+        var target = nodeIdsMap[edge[1]];
 
         // if there's no edge weight, default it to 1
         var weight = edge.length == 3 ? parseFloat(edge[2]) : 1;
@@ -1845,8 +1845,11 @@ function writeWebwebDownloadLink() {
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-function isInt(n) {
-    return n % 1 === 0;
+function isInt(n){
+    return Number(n) === n && n % 1 === 0;
+}
+function isFloat(n){
+    return Number(n) === n && n % 1 !== 0;
 }
 function round(x, dec) {
     return (Math.round(x * dec) / dec);

@@ -8,7 +8,7 @@ web.networks.oroboros.add_layer(
     [[0, 1], [1, 2], [2, 3]],
     {
         'isHead' : {
-            'value' : [ False, False, False, True ],
+            'value' : [ True, False, False, False],
         } 
     },
     4,
@@ -21,7 +21,7 @@ web.networks.oroboros.add_layer(
     [[0, 1], [1, 2], [2, 3], [3, 0]],
     {
         'isHead' : {
-            'value' : [ False, False, False, True ],
+            'value' : [ True, False, False, False],
         } 
     },
     4,
@@ -32,7 +32,7 @@ web.networks.oroboros.add_layer(
     [[0, 1], [1, 2], [2, 0]],
     {
         'isHead' : {
-            'value' : [ False, False, True ],
+            'value' : [ True, False, False],
         } 
     },
     3,
@@ -42,7 +42,7 @@ web.networks.oroboros.add_layer(
     [[0, 1], [1, 0]],
     {
         'isHead' : {
-            'value' : [ False, True ],
+            'value' : [ True, False ],
         } 
     },
     2,

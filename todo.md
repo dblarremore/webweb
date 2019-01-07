@@ -1,8 +1,5 @@
 # before 'go live':
 - documentation:
-    - Table of Contents
-        - 
-    - images of graphs
     - installation:
         - python:
             - pip
@@ -12,10 +9,12 @@
         - "I have an adjacency, how do I display it?"
         - python
         - matlab
-    - example code gallery
-    - document adjacency list behavior
+    - adjacency list behavior
         - eg, 3 edge adjacency lists will be treated like matrixes
             - can explicitly specify they are lists by passing "adjacency_type='list'"
+    - add in stuff about `append to element`
+        - document '#' behavior
+    - add in stuff about `webOnly`
 - examples:
     - add code to generate at top
 #- 'viz-only' mode
@@ -29,19 +28,16 @@
 # Features in descending order of priority (highest priority first)
 
 # client:
-- resizability
-    - add toggle for `autoresize` window
-    - see dan/faculty
+- "play" frames
+    - frames can have a "duration" attribute
+        - specifies how many miliseconds or something a frame lasts
+        - then fire an event every time
 - edge scaling:
     - scale strength/length with weight of edge
 - edge loading:
     - add different formats?
         - gml?
         - others?
-- documentation:
-    - add in stuff about `append to element`
-        - document '#' behavior
-    - add in stuff about `webOnly`
 - bundle functions for UI elements
     - keep things synced between:
         1. display parameters
@@ -69,9 +65,6 @@
     - this is actually really difficult
     - (would basically require abandoning the global namespace)
 - svg --> canvas
-- bundling:
-    - use hotlinks?
-    - spit all of it into the html file?
 - BUG:
     - weight zero are scaled to zero even when scaleLink is off
 
