@@ -148,10 +148,15 @@ function initWebweb() {
     // generate menus anways.
     var centerDisplay;
     var webContainerElement;
+
+    var containerWidth = screen.width;
+    var containerHeight = screen.height;
+
     if (display.showWebOnly == true) {
         centerDisplay = 'none';
 
         webContainerElement = d3.select('body');
+        webContainerElement.style('margin', '0 auto');
     }
     else {
         centerDisplay = 'block';
@@ -160,6 +165,11 @@ function initWebweb() {
 
     if (display.attachWebToElementWithId !== undefined) {
         webContainerElement = d3.select('#' + display.attachWebToElementWithId);
+
+        rawContainerElement = document.getElementById(display.attachWebToElementWithId);
+
+        containerWidth = rawContainerElement.width;
+        containerHeight = rawContainerElement.height;
     }
 
     d3.select('#webweb-center')
@@ -169,11 +179,11 @@ function initWebweb() {
         .attr('id', 'svg_div');
 
     if (display.w == undefined) {
-        display.w = Math.min.apply(null, [screen.width - 3 * 20, 1000]);
+        display.w = Math.min.apply(null, [containerWidth - 3 * 20, 1000]);
     }
 
     if (display.h == undefined) {
-        display.h = Math.min.apply(null, [screen.height - 3 * 20, 600, display.w]);
+        display.h = Math.min.apply(null, [containerHeight - 3 * 20, 600, display.w]);
     }
 
     vis = d3.select("#svg_div")
