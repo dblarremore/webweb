@@ -56,13 +56,13 @@ function initializeVis() {
     // set up the DOM
     var center = d3.select("body")
         .append("div")
-        .attr("id", "center");
+        .attr("id", "webweb-center");
 
     var menu = center.append("div")
-        .attr("id", "menu");
+        .attr("id", "webweb-menu");
 
     var chart = center.append("div")
-        .attr("id", "chart");
+        .attr("id", "webweb-chart");
 
     initWebweb();
     writeMenus(menu);
@@ -155,14 +155,14 @@ function initWebweb() {
     }
     else {
         centerDisplay = 'block';
-        webContainerElement = d3.select('#chart');
+        webContainerElement = d3.select('#webweb-chart');
     }
 
     if (display.attachWebToElementWithId !== undefined) {
         webContainerElement = d3.select('#' + display.attachWebToElementWithId);
     }
 
-    d3.select('#center')
+    d3.select('#webweb-center')
         .style('display', centerDisplay)
 
     webContainerElement.append('div')
@@ -450,7 +450,7 @@ function computeLinks() {
 
     var nodeIdsMap = {};
 
-    // if we aren't given a number of nodes, make sure they're 0 indexed
+    // construct a mapping from node ids to our own "id"
     if (wwdata.network[display.networkName].layers[display.networkLayer].nodes == undefined) {
         var unused_id = 0;
         for (var i in adj) {
@@ -872,7 +872,8 @@ function updateGravityForce() {
     simulation.force("y", d3.forceY(display.h / 2).strength(display.g));
 }
 function updateLinkForce() {
-    simulation.force('link',
+    simulation.force(
+        'link',
         d3.forceLink()
             .links(links)
             .distance(display.l)
@@ -1136,12 +1137,12 @@ function binnedLegend(vals, bins) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 function drawLinks() {
-    link = vis.selectAll(".link")
+    link = vis.selectAll(".webweb-link")
         .data(links);
 
     link.enter()
-        .insert("line", ".node")
-        .attr("class", "link")
+        .insert("line", ".webweb-node")
+        .attr("class", "webweb-link")
         .attr("id", function(d, i) { 
             return "link_" + i; 
         })
@@ -1178,11 +1179,11 @@ function redrawLinks() {
     })
 }
 function drawNodes() {
-    vis.selectAll(".node")
+    vis.selectAll(".webweb-node")
         .data(nodes)
         .enter()
         .insert("circle")
-        .attr("class", "node")
+        .attr("class", "webweb-node")
         .attr("r", display.r)
         .attr("cx", function(d) {
             return d.x;
@@ -1197,7 +1198,7 @@ function drawNodes() {
         .style("stroke", d3.rgb(255, 255, 255))
         .exit().remove();
 
-    node = vis.selectAll(".node");
+    node = vis.selectAll(".webweb-node");
 
     node.on("mousedown", function(d) {
         if (! display.showNodeNames) {
@@ -1267,13 +1268,13 @@ function redrawNodes() {
 
 // tick attributes for links and nodes
 function tick() {
-    link = vis.selectAll(".link")
+    link = vis.selectAll(".webweb-link")
     link.attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
 
-    node = vis.selectAll(".node")
+    node = vis.selectAll(".webweb-node")
     node.attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; })
 }
@@ -1720,11 +1721,11 @@ function writeShowNodeNamesWidget(parent) {
 function writeMenus(menu) {
     var leftMenu = menu.append("div")
         .attr("id", "leftMenu")
-        .attr("class", "left");
+        .attr("class", "webweb-menu-left");
 
     var rightMenu = menu.append("div")
         .attr("id", "rightMenu")
-        .attr("class", "right");
+        .attr("class", "webweb-menu-right");
 
     writeNetworkMenu(leftMenu);
     writeSizeMenu(leftMenu);
