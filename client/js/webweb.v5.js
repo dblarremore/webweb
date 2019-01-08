@@ -156,7 +156,6 @@ function initWebweb() {
         centerDisplay = 'none';
 
         webContainerElement = d3.select('body');
-        webContainerElement.style('margin', '0 auto');
     }
     else {
         centerDisplay = 'block';
@@ -168,8 +167,8 @@ function initWebweb() {
 
         rawContainerElement = document.getElementById(display.attachWebToElementWithId);
 
-        containerWidth = rawContainerElement.width;
-        containerHeight = rawContainerElement.height;
+        containerWidth = rawContainerElement.clientWidth;
+        containerHeight = rawContainerElement.clientHeight;
     }
 
     d3.select('#webweb-center')
@@ -179,11 +178,22 @@ function initWebweb() {
         .attr('id', 'svg_div');
 
     if (display.w == undefined) {
-        display.w = Math.min.apply(null, [containerWidth - 3 * 20, 1000]);
+        var heuristic = containerWidth - 3 * 20;
+
+        if (heuristic <= 0) {
+            heuristic = 1000;
+        }
+        display.w = Math.min.apply(null, [heuristic, 1000]);
     }
 
     if (display.h == undefined) {
-        display.h = Math.min.apply(null, [containerHeight - 3 * 20, 600, display.w]);
+        var heuristic = containerHeight - 3 * 20;
+
+        if (heuristic <= 0) {
+            heuristic = 600;
+        }
+
+        display.h = Math.min.apply(null, [heuristic, 600, display.w]);
     }
 
     vis = d3.select("#svg_div")
