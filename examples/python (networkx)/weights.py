@@ -1,6 +1,5 @@
 from webweb.webweb import webweb
 import networkx as nx
-import random
 
 # make a small graph
 G = nx.Graph()

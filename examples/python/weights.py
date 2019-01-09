@@ -9,6 +9,12 @@ web = webweb()
 # Assign adjaceny lists in network
 web.networks.simple.add_layer(adjaceny_list)
 
+# link widths will be scaled by their weight
+web.display.scaleLinkWidth = True
+
+# link opacity will be scaled by their weight
+web.display.scaleLinkOpacity = True
+
 # Launch webbrowser with result
 web.draw()
 
