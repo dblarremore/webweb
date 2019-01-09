@@ -469,6 +469,7 @@ function computeLinks() {
     var adj = d3.values(wwdata.network[display.networkName].layers[display.networkLayer].adjList);
 
     var nodeIdsMap = {};
+    var nodeNamesMap = {}
 
     // construct a mapping from node ids to our own "id"
     if (wwdata.network[display.networkName].layers[display.networkLayer].nodes == undefined) {
@@ -480,6 +481,7 @@ function computeLinks() {
                 var rawNode = rawNodes[j];
                 if (nodeIdsMap[rawNode] == undefined) {
                     nodeIdsMap[rawNode] = unused_id;
+                    nodeNamesMap[unused_id] = rawNode;
                     unused_id += 1;
                 }
             }
@@ -491,6 +493,16 @@ function computeLinks() {
         // otherwise just trust the edges
         for (var i = 0; i < numberOfNodes; i++) {
             nodeIdsMap[i] = i;
+        }
+    }
+
+    // if we don't already have node names, use the mapping to assign them
+    // TODO: (really a warning)
+    // this might cause a bug with layered networks, or networks which define
+    // node names on a network-by-network or layer-by-layer basis.
+    for (var i in nodes) {
+        if (nodes[i]['name'] == undefined) {
+            nodes[i]['name'] = nodeNamesMap[nodes[i].idx]
         }
     }
 

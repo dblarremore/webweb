@@ -14,9 +14,7 @@
             - can explicitly specify they are lists by passing "adjacency_type='list'"
     - add in stuff about `append to element`
         - document '#' behavior
-    - add in stuff about `webOnly`
-- examples:
-    - add code to generate at top
+    - add in stuff about `showWebOnly`
 #- 'viz-only' mode
     - hides menus
 #- append_to_node

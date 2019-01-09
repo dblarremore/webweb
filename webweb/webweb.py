@@ -13,11 +13,15 @@ import json
 import webbrowser
 from collections import defaultdict
 
-class webweb(dict):
-    def __init__(self, title="webweb", *args, **kwargs):
+class Web(dict):
+    def __init__(self, adjacency=None, adjacency_type=None, title="webweb", *args, **kwargs):
         self.title = title
         self.display = Display(*args, **kwargs)
-        self.networks = Nets()
+        self.networks = Networks()
+
+        # if we have an adjacency, add it into the networks object
+        if adjacency:
+            getattr(self.networks, self.title).add_layer(adjacency, adjacency_type=adjacency_type)
 
     @property
     def base_path(self):
@@ -221,7 +225,7 @@ class Net(dict):
     def adj(self, adjList):
         self.adjList = copy.deepcopy(adjList)
 
-class Nets(dict):
+class Networks(dict):
     def __getattr__(self, name):
         if not self.__dict__.get(name):
             self.__dict__[name] = Net()
