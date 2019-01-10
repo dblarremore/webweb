@@ -1,7 +1,7 @@
-from webweb.webweb import webweb
+from webweb import Web
 
 # Instantiate webweb object
-web = webweb()
+web = Web()
 
 # we'll compute node color by the `alphabeticallity` attribute
 web.display.colorBy = 'alphabeticallity'

@@ -14,14 +14,14 @@ import webbrowser
 from collections import defaultdict
 
 class Web(dict):
-    def __init__(self, adjacency=None, adjacency_type=None, title="webweb", *args, **kwargs):
+    def __init__(self, adjacency=None, adjacency_type=None, nodes=None, title="webweb", display={}):
         self.title = title
-        self.display = Display(*args, **kwargs)
+        self.display = Display(display)
         self.networks = Networks()
 
         # if we have an adjacency, add it into the networks object
         if adjacency:
-            getattr(self.networks, self.title).add_layer(adjacency, adjacency_type=adjacency_type)
+            getattr(self.networks, self.title).add_layer(adjacency, adjacency_type=adjacency_type, nodes=nodes)
 
     @property
     def base_path(self):
@@ -58,8 +58,9 @@ class Web(dict):
 
     @property
     def json(self, title=None):
+        print(self.display)
         return json.dumps({
-            "display" : get_dict_from_labeled_obj(self.display),
+            "display" : vars(self.display),
             "network" : { key : get_dict_from_labeled_obj(val) for key, val in vars(self.networks).items()}
         })
 
@@ -93,18 +94,21 @@ class Web(dict):
         )
 
 class Display(dict):
-    def __init__(self, num_nodes=None, name=None, w=None, h=None, l=None, r=None, c=None, g=None, nodeNames=None, showWebOnly=None):
-        self.N = num_nodes
-        self.name = name
-        self.w = w
-        self.h = h
-        self.l = l
-        self.r = r
-        self.c = c
-        self.g = g
-        self.nodeNames = nodeNames
-        self.labels = Labels()
-        self.showWebOnly = showWebOnly
+    def __init__(self, kwargs):
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+
+        # self.N = num_nodes
+        # self.name = name
+        # self.w = w
+        # self.h = h
+        # self.l = l
+        # self.r = r
+        # self.c = c
+        # self.g = g
+        # self.nodeNames = nodeNames
+        # self.metadata = {}
+        # self.showWebOnly = showWebOnly
 
 def get_dict_from_labeled_obj(obj):
     """this function converts an object which might have subobjects (labels)
@@ -134,7 +138,7 @@ def get_dict_from_labeled_obj(obj):
 
     return _dict
 
-class Net(dict):
+class Network(dict):
     def __init__(self):
         self.layers = []
 
@@ -228,7 +232,7 @@ class Net(dict):
 class Networks(dict):
     def __getattr__(self, name):
         if not self.__dict__.get(name):
-            self.__dict__[name] = Net()
+            self.__dict__[name] = Network()
 
         return self.__dict__[name]
 

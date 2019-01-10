@@ -39,7 +39,7 @@ var colorData = {
     'type' : 'none',
     'scaledValues' : [],
     'rawValues' : [],
-    'labels' : {},
+    'metadata' : {},
     'categoryNames' : [],
 };
 
@@ -47,7 +47,7 @@ var sizeData = {
     'type' : 'none',
     'scaledValues' : [],
     'rawValues' : [],
-    'labels' : {},
+    'metadata' : {},
     'R' : 0,
 };
 
@@ -105,7 +105,7 @@ function initWebweb() {
             wwdata.network[networkNames[i]].layers = [
                 {
                     'adjList' : wwdata.network[networkNames[i]].adjList,
-                    'labels' : wwdata.network[networkNames[i]].labels,
+                    // 'metadata' : wwdata.network[networkNames[i]].metadata,
                 }
             ]
         }
@@ -119,6 +119,54 @@ function initWebweb() {
     for (var key in displayDefaults) {
         if (display[key] == undefined) {
             display[key] = displayDefaults[key];
+        }
+    }
+
+    // backwards compatibility:
+    // fix up display for the new node stuff
+    if (display.nodeNames) {
+        var displayNodes = {};
+        for (var i in display.nodeNames) {
+            displayNodes[i] = {
+                'name' : display.nodeNames[i],
+            }
+        }
+
+        display.nodes = displayNodes;
+
+        display.metadataInfo = {};
+
+        for (var i in networkNames) {
+            for (var j in wwdata.network[networkNames[i]].layers) {
+                var layer = wwdata.network[networkNames[i]].layers[j];
+
+                if (layer.labels !== undefined) {
+                    if (layer.nodes == undefined) {
+                        var layerNodes = {};
+                        for (var metadatum in layer.labels) {
+                            display.metadataInfo[metadatum] = {};
+                            if (layer.labels[metadatum].categories !== undefined) {
+                                display.metadataInfo[metadatum]['categories'] = layer.labels[metadatum].categories;
+                            }
+
+                            if (layer.labels[metadatum].type !== undefined) {
+                                display.metadataInfo[metadatum]['type'] = layer.labels[metadatum].type;
+
+                            }
+
+                            for (var k in layer.labels[metadatum].value) {
+                                if (layerNodes[k] == undefined) {
+                                    layerNodes[k] = {};
+                                }
+                                
+                                layerNodes[k][metadatum] = layer.labels[metadatum].value[k];
+                            }
+
+                        }
+                        wwdata.network[networkNames[i]].layers[j].nodes = layerNodes;
+                    }
+                }
+            }
         }
     }
 
@@ -216,13 +264,13 @@ function initWebweb() {
 // - changes the number of visible nodes
 // - computes links
 // - draws links
-// - defines labels
+// - defines metadata
 // - uses the force (luke)
 ////////////////////////////////////////////////////////////////////////////////
 function displayNetwork() {
     setVisibleNodes();
 
-    defineLabels();
+    setNodeMetadata();
 
     computeLinks();
     drawLinks();
@@ -300,63 +348,142 @@ function setVisibleNodes() {
         }
     }
 }
+
+function assignNodeMetadata(metadata, nodeIdsMap, nodeNamesMap) {
+    var unusedId = 0;
+    for (var i in nodeIdsMap) {
+        if (nodeIdsMap[i] > unusedId) {
+            unusedId = nodeIdsMap[i];
+        }
+    }
+    unusedId += 1;
+
+    for (var nodeKey in metadata) {
+        var nodeMetadata = metadata[nodeKey];
+
+        if (nodeIdsMap[nodeKey] == undefined) {
+            nodeIdsMap[nodeKey] = unusedId;
+            nodeNamesMap[unusedId] = nodeKey;
+            unusedId += 1;
+        }
+
+        // assign the metadata
+        for (var metadatum in nodeMetadata) {
+            nodes[nodeIdsMap[nodeKey]][metadatum] = nodeMetadata[metadatum];
+        }
+    }
+
+    return {
+        'ids' : nodeIdsMap,
+        'names' : nodeNamesMap,
+
+    }
+}
+function getMetadatumValues(metadatum) {
+    var metadatumValues = [];
+    for (var i in nodes) {
+        metadatumValues.push(nodes[i][metadatum]);
+    }
+    return metadatumValues;
+}
 ////////////////////////////////////////////////////////////////////////////////
-// loads the labels up from the places they could come from:
+// loads the metadata up from the places they could come from:
 // 1. the defaults (none, degree)
 // 2. the display parameters
 // 3. the network itself
 //
-// Priority is given to the network's labels, then display, then defaults
+// Priority is given to the network's metadata, then display, then defaults
 ////////////////////////////////////////////////////////////////////////////////
-function defineLabels() {
-    var allLabels = {
-        'none' : {},
+function setNodeMetadata() {
+    var allMetadata = {
+        'none' : {
+            'type' : 'none',
+        },
         'degree' : {
             'type' : 'scalar',
         },
     };
 
-    if (display.labels !== undefined) {
-        var displayLabels = display.labels;
-        for (var label in displayLabels) {
-            allLabels[label] = displayLabels[label];
+    // we should make a function for this... (the next ~30 lines are repeated in
+    // computeLinks; it's done in such a way as to not be a problem, but is
+    // still bad form.)
+    var unusedId = 0;
+    var nodeIdsMap = {};
+    var nodeNamesMap = {};
 
-            // assign the property to the node values
-            for (var i in nodes) {
-                nodes[i][label] = displayLabels[label].value[i];
+    var adj = d3.values(wwdata.network[display.networkName].layers[display.networkLayer].adjList);
+
+    // construct a mapping from node ids to our own "id"
+    var unused_id = 0;
+    for (var i in adj) {
+        var rawNodes = [adj[i][0], adj[i][1]];
+
+        for (var j in rawNodes) {
+            var rawNode = rawNodes[j];
+            if (nodeIdsMap[rawNode] == undefined) {
+                nodeIdsMap[rawNode] = unusedId;
+                nodeNamesMap[unusedId] = rawNode;
+                unusedId += 1;
             }
         }
+    }
+
+    var maps;
+    if (display.nodes !== undefined) {
+        maps = assignNodeMetadata(display.nodes, nodeIdsMap);
+        nodeIdsMap = maps['ids'];
+        nodeNamesMap = maps['names'];
     }
 
     var networkData = wwdata.network[display.networkName].layers[display.networkLayer];
-    if (networkData !== undefined && networkData.labels !== undefined) {
-        var networkLabels = networkData.labels;
-        for (var label in networkLabels) {
-            allLabels[label] = networkLabels[label];
 
-            // assign the property to the node values
-            for (var i in nodes) {
-                nodes[i][label] = networkLabels[label].value[i];
+    if (networkData.nodes !== undefined) {
+        maps = assignNodeMetadata(networkData.nodes, nodeIdsMap);
+        nodeIdsMap = maps['ids'];
+        nodeNamesMap = maps['names'];
+    }
+
+    var nonMetadataKeys = [ 'idx', 'fx', 'fy', 'x', 'y', 'vx', 'vy', 'index', 'degree', 'name' ];
+
+    // now we need to define the set of metadata
+    for (var i in nodes) {
+        var node = nodes[i];
+        for (var key in node) {
+            if (nonMetadataKeys.indexOf(key) < 0) {
+                allMetadata[key] = {};
+
+                if (display.metadataInfo !== undefined && display.metadataInfo[key] !== undefined) {
+                    // if we have categories, change the node values here
+                    if (display.metadataInfo[key].categories !== undefined) {
+                        var nodeCategoryNumber = nodes[i][key];
+                        nodes[i][key] = display.metadataInfo[key].categories[nodeCategoryNumber];
+
+                    }
+                }
             }
+        }
+
+        // if we don't already have node names, use the mapping to assign them
+        // TODO: (really a warning)
+        // this might cause a bug with layered networks, or networks which define
+        // node names on a network-by-network or layer-by-layer basis.
+        if (nodes[i]['name'] == undefined) {
+            nodes[i]['name'] = nodeNamesMap[nodes[i].idx]
         }
     }
 
-    sizeData.labels = {};
-    colorData.labels = {};
-    for (label in allLabels) {
-        if (label == "name") {
-            continue;
+    sizeData.metadata = {};
+    colorData.metadata = {};
+    for (metadatum in allMetadata) {
+        if (allMetadata[metadatum].type == undefined) {
+            allMetadata[metadatum].type = getMetadatumType(metadatum);
         }
 
-        if (allLabels[label].type == undefined) {
-            allLabels[label].type = getLabelType(allLabels[label])
-        }
-
-        if (allLabels[label].type !== "categorical") {
-            sizeData.labels[label] = allLabels[label];
+        if (allMetadata[metadatum].type !== "categorical") {
+            sizeData.metadata[metadatum] = allMetadata[metadatum];
 
         }
-        colorData.labels[label] = allLabels[label];
+        colorData.metadata[metadatum] = allMetadata[metadatum];
     }
 
     // these below if statements are only here because of poor design (says
@@ -364,34 +491,34 @@ function defineLabels() {
     // really, computeSizes and computeColors should already have this
     // information.
     if (display.colorBy !== undefined && display.colorBy !== 'none') {
-        if (allLabels !== undefined && allLabels[display.colorBy] == undefined) {
+        if (allMetadata !== undefined && allMetadata[display.colorBy] == undefined) {
             display.colorBy = 'none';
         }
 
-        colorData.type = allLabels[display.colorBy].type;
+        colorData.type = allMetadata[display.colorBy].type;
     }
 
     if (display.sizeBy !== undefined && display.sizeBy !== 'none') {
-        if (allLabels !== undefined && allLabels[display.sizeBy] == undefined) {
+        if (allMetadata !== undefined && allMetadata[display.sizeBy] == undefined) {
             display.sizeBy = 'none';
         }
 
-        sizeData.type = allLabels[display.sizeBy].type;
+        sizeData.type = allMetadata[display.sizeBy].type;
     }
 
-    // update the menus with these new labels
+    // update the menus with these new metadata
     updateSizeMenu();
     updateColorMenu();
 }
 ////////////////////////////////////////////////////////////////////////////////
-// tries to figure out the label type of a given label.
+// tries to figure out the metadatum type of a given metadatum.
 ////////////////////////////////////////////////////////////////////////////////
-function getLabelType(label) {
-    if (label.categories !== undefined) {
-        return 'categorical';
+function getMetadatumType(metadatum) {
+    if (metadatum == 'none') {
+        return;
     }
 
-    var q = d3.set(label.value).values().sort();
+    var q = d3.set(getMetadatumValues(metadatum)).values().sort();
 
     // check if this is a binary relation
     if (q.length == 2 && q[0] == 'false' && q[1] == 'true') {
@@ -403,9 +530,8 @@ function getLabelType(label) {
     else if (q.some(isNaN)) {
         return 'categorical';
     }
-    else if (label !== 'none') {
-        return 'scalar';
-    }
+
+    return 'scalar';
 }
 ////////////////////////////////////////////////////////////////////////////////
 // initialize the nodes (attempting to be smart about the number of them)
@@ -450,7 +576,6 @@ function computeNodes() {
         nodes.push({
             "idx" : i,
             "degree" : 0,
-            "name" : display.nodeNames !== undefined ? display.nodeNames[i] : undefined,
             "x" : display.nodeCoordinates !== undefined ? display.nodeCoordinates[i].x : undefined,
             "y" : display.nodeCoordinates !== undefined ? display.nodeCoordinates[i].y : undefined,
         });
@@ -469,40 +594,18 @@ function computeLinks() {
     var adj = d3.values(wwdata.network[display.networkName].layers[display.networkLayer].adjList);
 
     var nodeIdsMap = {};
-    var nodeNamesMap = {}
 
     // construct a mapping from node ids to our own "id"
-    if (wwdata.network[display.networkName].layers[display.networkLayer].nodes == undefined) {
-        var unused_id = 0;
-        for (var i in adj) {
-            var rawNodes = [adj[i][0], adj[i][1]];
+    var unused_id = 0;
+    for (var i in adj) {
+        var rawNodes = [adj[i][0], adj[i][1]];
 
-            for (var j in rawNodes) {
-                var rawNode = rawNodes[j];
-                if (nodeIdsMap[rawNode] == undefined) {
-                    nodeIdsMap[rawNode] = unused_id;
-                    nodeNamesMap[unused_id] = rawNode;
-                    unused_id += 1;
-                }
+        for (var j in rawNodes) {
+            var rawNode = rawNodes[j];
+            if (nodeIdsMap[rawNode] == undefined) {
+                nodeIdsMap[rawNode] = unused_id;
+                unused_id += 1;
             }
-        }
-    }
-    else {
-        var numberOfNodes = wwdata.network[display.networkName].layers[display.networkLayer].nodes;
-
-        // otherwise just trust the edges
-        for (var i = 0; i < numberOfNodes; i++) {
-            nodeIdsMap[i] = i;
-        }
-    }
-
-    // if we don't already have node names, use the mapping to assign them
-    // TODO: (really a warning)
-    // this might cause a bug with layered networks, or networks which define
-    // node names on a network-by-network or layer-by-layer basis.
-    for (var i in nodes) {
-        if (nodes[i]['name'] == undefined) {
-            nodes[i]['name'] = nodeNamesMap[nodes[i].idx]
         }
     }
 
@@ -543,7 +646,7 @@ function computeLinks() {
             nodes[target].degree += weight;
         }
     }
-    
+
     // scale the link weight and opacity by computing the range (extent) of the
     // adj weights.
     scaleLink.domain(d3.extent(weights));
@@ -573,14 +676,14 @@ function computeSizes() {
         }
     }
     else {
-        var label = sizeData.labels[display.sizeBy];
-        sizeData.type = label.type;
+        var metadatum = sizeData.metadata[display.sizeBy];
+        sizeData.type = metadatum.type;
 
         if (sizeData.type == 'binary') {
             changeInvertBinaryWidgetVisibility(true, 'size');
         }
 
-        rawValues = getRawNodeValues(display.sizeBy, label.type, 'size');
+        rawValues = getRawNodeValues(display.sizeBy, metadatum.type, 'size');
 
         for (var i in nodes) {
             scaledValues[i] = rawValues[i];
@@ -621,10 +724,10 @@ function computeColors() {
         return
     }
 
-    var label = colorData.labels[display.colorBy];
-    colorData.type = label.type;
+    var metadatum = colorData.metadata[display.colorBy];
+    colorData.type = metadatum.type;
 
-    var rawValues = getRawNodeValues(display.colorBy, label.type, 'color');
+    var rawValues = getRawNodeValues(display.colorBy, metadatum.type, 'color');
 
     categoryValues = [];
 
@@ -637,15 +740,15 @@ function computeColors() {
         colorData['categoryNames'] = [];
 
         // if we don't have categories, retrieve them as scalars from the
-        // values for the label
-        if (label.categories == undefined) {
+        // values for the metadatum
+        if (metadatum.categories == undefined) {
             colorData['categoryNames'] = d3.set(rawValues).values().sort();
             categoryValues = colorData['categoryNames'];
         }
         else {
-            colorData['categoryNames'] = label.categories;
+            colorData['categoryNames'] = metadatum.categories;
 
-            // Check to see if our categories are numeric or labels
+            // Check to see if our categories are numeric or not
             if (isNaN(d3.quantile(rawValues, 0.25))) {
                 categoryValues = colorData['categoryNames'].sort();
             }
@@ -702,16 +805,16 @@ function computeColors() {
 }
 ////////////////////////////////////////////////////////////////////////////////
 // returns raw values for:
-// - a labelName
-// - a labelType
+// - a metadatumName
+// - a metadatumType
 // - a displayType (color/size)
 ////////////////////////////////////////////////////////////////////////////////
-function getRawNodeValues(labelName, labelType, displayType) {
+function getRawNodeValues(metadatumName, metadatumType, displayType) {
     var rawValues = [];
     for (var i in nodes){
-        var val = nodes[i][labelName];
+        var val = nodes[i][metadatumName];
 
-        if (labelType == 'binary') {
+        if (metadatumType == 'binary') {
             val = getBinaryValue(val, displayType);
         }
 
@@ -720,7 +823,7 @@ function getRawNodeValues(labelName, labelType, displayType) {
 
     return rawValues;
 }
-// ColorWheel is a function that takes a node label, like a category or scalar
+// ColorWheel is a function that takes a node metadatum, like a category or scalar
 // and just gets the damn color. But it has to take into account what the 
 // current colorData.type is. Basically, this is trying to apply our prefs to colors
 function colorWheel(x) {
@@ -1532,19 +1635,19 @@ function updateSizeMenu() {
 
     sizeSelect.selectAll("option").remove();
 
-    var sizeLabelStrings = [];
-    for (var label in sizeData.labels) {
-        sizeLabelStrings.push(label);
+    var sizeMetadataStrings = [];
+    for (var metadatum in sizeData.metadata) {
+        sizeMetadataStrings.push(metadatum);
     }
 
     sizeSelect.selectAll("option")
-        .data(sizeLabelStrings)
+        .data(sizeMetadataStrings)
         .enter()
         .append("option")
         .attr("value", function(d) { return d; })
         .text(function(d) { return d; });
 
-    if (display.sizeBy == undefined || sizeData.labels[display.sizeBy] == undefined) {
+    if (display.sizeBy == undefined || sizeData.metadata[display.sizeBy] == undefined) {
         display.sizeBy = "none";
     }
 
@@ -1606,19 +1709,19 @@ function updateColorMenu() {
 
     colorSelect.selectAll("option").remove();
 
-    var colorLabelStrings = [];
-    for (var label in colorData.labels) {
-        colorLabelStrings.push(label);
+    var colorMetadataStrings = [];
+    for (var metadatum in colorData.metadata) {
+        colorMetadataStrings.push(metadatum);
     }
 
     colorSelect.selectAll("option")
-        .data(colorLabelStrings)
+        .data(colorMetadataStrings)
         .enter()
         .append("option")
         .attr("value",function(d){return d;})
         .text(function(d){return d;});
 
-    if (display.colorBy == undefined || colorData.labels[display.colorBy] == undefined) {
+    if (display.colorBy == undefined || colorData.metadata[display.colorBy] == undefined) {
         display.colorBy = "none";
     }
 
