@@ -1,4 +1,4 @@
-from webweb.webweb import webweb
+from webweb import Web
 import networkx as nx
 
 # make a small graph
@@ -11,7 +11,7 @@ G.add_edge(4, 5, weight=70)
 G.add_edge(0, 3, weight=25)
 
 # Instantiate webweb object
-web = webweb()
+web = Web()
 
 # Assign adjaceny lists in network
 web.networks.networkx.add_layer_from_networkx_graph(G)
