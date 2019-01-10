@@ -322,16 +322,22 @@ function setVisibleNodes() {
     //          - read from the dict
     if ('nodes' in wwdata.network[display.networkName].layers[display.networkLayer]) {
         var networkNodes = wwdata.network[display.networkName].layers[display.networkLayer].nodes;
-        if (networkNodes < nodes.length) {
-            while (networkNodes != nodes.length) {
+        var nodeCount = 0;
+        for (var k in networkNodes) {
+            if (networkNodes.hasOwnProperty(k)) {
+                nodeCount += 1;
+            }
+        }
+        if (nodeCount < nodes.length) {
+            while (nodeCount != nodes.length) {
                 var toRemove = nodes.pop();
                 var drawnNode = document.getElementById("node_" + toRemove.idx)
                 document.getElementById("vis").removeChild(drawnNode);
                 nodePersistence.push({ 'node' : toRemove, 'toDraw' : drawnNode });
             }
         }
-        else if (networkNodes > nodes.length) {
-            while (networkNodes != nodes.length) {
+        else if (nodeCount > nodes.length) {
+            while (nodeCount != nodes.length) {
                 var toAdd = nodePersistence.pop();
                 document.getElementById("vis").appendChild(toAdd.toDraw);
                 nodes.push(toAdd.node);
@@ -367,7 +373,6 @@ function assignNodeMetadata(metadata, nodeIdsMap, nodeNamesMap) {
             unusedId += 1;
         }
 
-        // assign the metadata
         for (var metadatum in nodeMetadata) {
             nodes[nodeIdsMap[nodeKey]][metadatum] = nodeMetadata[metadatum];
         }
@@ -430,15 +435,14 @@ function setNodeMetadata() {
 
     var maps;
     if (display.nodes !== undefined) {
-        maps = assignNodeMetadata(display.nodes, nodeIdsMap);
+        maps = assignNodeMetadata(display.nodes, nodeIdsMap, nodeNamesMap);
         nodeIdsMap = maps['ids'];
         nodeNamesMap = maps['names'];
     }
-
     var networkData = wwdata.network[display.networkName].layers[display.networkLayer];
 
     if (networkData.nodes !== undefined) {
-        maps = assignNodeMetadata(networkData.nodes, nodeIdsMap);
+        maps = assignNodeMetadata(networkData.nodes, nodeIdsMap, nodeNamesMap);
         nodeIdsMap = maps['ids'];
         nodeNamesMap = maps['names'];
     }
@@ -471,7 +475,6 @@ function setNodeMetadata() {
             nodes[i]['name'] = nodeNamesMap[nodes[i].idx]
         }
     }
-
 
     sizeData.metadata = {};
     colorData.metadata = {};
@@ -558,8 +561,15 @@ function computeNodes() {
 
             var networkLayers = wwdata.network[networkName].layers;
             for (var j in networkLayers) {
-                if (networkLayers[j].nodes !== undefined) {
-                    nodeCounts.push(networkLayers[j].nodes);
+                var layerNodes = networkLayers[j].nodes
+                if (layerNodes !== undefined) {
+                    var count = 0;
+                    for (var k in layerNodes) {
+                        if (layerNodes.hasOwnProperty(k)) {
+                            count += 1;
+                        }
+                    }
+                    nodeCounts.push(count);
                 }
             }
         }

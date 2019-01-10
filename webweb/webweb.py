@@ -110,7 +110,7 @@ class Display(dict):
         # self.showWebOnly = showWebOnly
 
 def get_dict_from_labeled_obj(obj):
-    """this function converts an object which might have subobjects (labels)
+    """this function converts an object which might have subobjects (layers)
     into a dictionary. It looks complicated, but really all it is doing is
     making two nested calls to vars()."""
     _dict = {}
@@ -118,9 +118,7 @@ def get_dict_from_labeled_obj(obj):
         if val == None:
             continue
 
-        if key == 'labels':
-            _dict[key] = { k : vars(v) for k, v in vars(val).items() }
-        elif key == 'layers':
+        if key == 'layers':
             _dict['layers'] = []
             for layer in val:
                 _layer = {
@@ -189,8 +187,7 @@ class Network(dict):
         nodes = { node : G.nodes[node] for node in G.nodes }
 
         for node, metadata in nodes.items():
-            if not metadata.get('name'):
-                nodes[node]['name'] = node
+            nodes[node]['name'] = metadata.get('name', node)
 
         self.add_layer(adj, nodes=nodes)
 
