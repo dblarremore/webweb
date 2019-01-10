@@ -320,8 +320,8 @@ function setVisibleNodes() {
     //          - draw them
     //      - if those nodes are a list:
     //          - read from the dict
-    if ('nodes' in wwdata.network[display.networkName].layers[display.networkLayer]) {
-        var networkNodes = wwdata.network[display.networkName].layers[display.networkLayer].nodes;
+    var networkNodes = wwdata.network[display.networkName].layers[display.networkLayer].nodes;
+    if (networkNodes !== undefined && networkNodes !== null) {
         var nodeCount = 0;
         for (var k in networkNodes) {
             if (networkNodes.hasOwnProperty(k)) {
