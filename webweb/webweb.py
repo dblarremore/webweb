@@ -1,9 +1,10 @@
 # Python version of webweb was originally created by Michael Iuzzolino
 # Cleaned up and harmonized with existing versions by Daniel Larremore
-# version 3.4
+# Altered significantly by Hunter Wapman
+# version 4
 #
 # Daniel Larremore + Contributors
-# August 29, 2018
+# January 10, 2019
 # daniel.larremore@colorado.edu
 # http://github.com/dblarremore/webweb Comments and suggestions always welcome.
 
@@ -14,7 +15,7 @@ import webbrowser
 from collections import defaultdict
 
 class Web(dict):
-    def __init__(self, adjacency=None, adjacency_type=None, nodes=None, title="webweb", display={}):
+    def __init__(self, adjacency=None, adjacency_type=None, nodes=None, title="webweb", display={}, nx_G=None):
         self.title = title
         self.display = Display(display)
         self.networks = Networks()
@@ -22,6 +23,8 @@ class Web(dict):
         # if we have an adjacency, add it into the networks object
         if adjacency:
             getattr(self.networks, self.title).add_layer(adjacency, adjacency_type=adjacency_type, nodes=nodes)
+        elif nx_G:
+            getattr(self.networks, self.title).add_layer(nx_G=nx_G)
 
     @property
     def base_path(self):
@@ -124,17 +127,20 @@ class Network(dict):
         if kwargs['adjacency']:
             self.add_layer(**kwargs)
 
-    def add_layer(self, adjacency, nodes=None, adjacency_type=None):
-        if not adjacency_type:
-            if len(adjacency) and len(adjacency) > 3:
-                # we use a dumb heuristic here:
-                # if the length of the list is the same as the length of the first
-                # element in the list, it's a matrix
-                if len(adjacency) == len(adjacency[0]):
-                    adjacency_type = "matrix"
+    def add_layer(self, adjacency=None, nodes=None, adjacency_type=None, nx_G=None):
+        if nx_G:
+            adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(nx_G)
+        else:
+            if not adjacency_type:
+                if len(adjacency) and len(adjacency) > 3:
+                    # we use a dumb heuristic here:
+                    # if the length of the list is the same as the length of the first
+                    # element in the list, it's a matrix
+                    if len(adjacency) == len(adjacency[0]):
+                        adjacency_type = "matrix"
 
-        if adjacency_type == 'matrix':
-            adjacency = self.convert_adjacency_matrix_to_list(adjacency)
+            if adjacency_type == 'matrix':
+                adjacency = self.convert_adjacency_matrix_to_list(adjacency)
 
         self.layers.append({
             'adjList' : copy.deepcopy(adjacency),
@@ -159,8 +165,8 @@ class Network(dict):
         return adjacency_list
 
 
-    def add_layer_from_networkx_graph(self, G):
-        """ loads the edges and attributes from a network x graph """
+    def get_adjacency_and_nodes_from_networkx_graph(self, G):
+        """loads the edges and attributes from a networkx graph"""
         import networkx as nx
         adj = []
 
@@ -175,4 +181,4 @@ class Network(dict):
         for node, metadata in nodes.items():
             nodes[node]['name'] = metadata.get('name', node)
 
-        self.add_layer(adj, nodes=nodes)
+        return adj, nodes

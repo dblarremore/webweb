@@ -105,7 +105,7 @@ function initWebweb() {
             wwdata.network[networkNames[i]].layers = [
                 {
                     'adjList' : wwdata.network[networkNames[i]].adjList,
-                    // 'metadata' : wwdata.network[networkNames[i]].metadata,
+                    'labels' : wwdata.network[networkNames[i]].labels,
                 }
             ]
         }

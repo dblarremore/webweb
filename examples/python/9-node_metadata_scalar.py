@@ -17,10 +17,6 @@ web = Web(
     },
 )
 
-
-# set the default color Palette for non-scalars
-web.display.colorPalette = "Dark2"
-
 # we'll compute node size by the `age` metadata attribute
 web.display.sizeBy = 'age'
 
