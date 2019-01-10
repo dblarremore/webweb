@@ -1,7 +1,5 @@
 from webweb import Web
 
-webweb traverses the matrix row-wise, and will use 
-
 # if both edges between two nodes are non-zero in the adjacency matrix, the
 # first edge's weight is used (webweb traverses adjacency matrixes row-wise).
 # i.e.:
