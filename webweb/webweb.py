@@ -58,7 +58,6 @@ class Web(dict):
 
     @property
     def json(self, title=None):
-        print(self.display)
         return json.dumps({
             "display" : vars(self.display),
             "network" : { key : get_dict_from_labeled_obj(val) for key, val in vars(self.networks).items()}
@@ -126,7 +125,6 @@ def get_dict_from_labeled_obj(obj):
             for layer in val:
                 _layer = {
                     'adjList' : layer['adjList'],
-                    'labels' : layer['labels'],
                 }
 
                 if layer.get('nodes'):
@@ -142,7 +140,7 @@ class Network(dict):
     def __init__(self):
         self.layers = []
 
-    def add_layer(self, adj, labels=None, nodes=None, adjacency_type=None):
+    def add_layer(self, adj, nodes=None, adjacency_type=None):
         if not adjacency_type:
             if len(adj) and len(adj) > 3:
                 # we use a dumb heuristic here:
@@ -156,7 +154,6 @@ class Network(dict):
 
         self.layers.append({
             'adjList' : copy.deepcopy(adj),
-            'labels' : labels,
             'nodes' : nodes,
         })
 
@@ -183,43 +180,19 @@ class Network(dict):
         import networkx as nx
         adj = []
 
-        unused_id = 0
-        node_id_map = {}
-        for node in G.nodes():
-            if node_id_map.get(node, -1) < 0:
-                node_id_map[node] = unused_id
-                unused_id += 1
-
         for u, v, d in G.edges(data=True):
-            u_id = node_id_map[u]
-            v_id = node_id_map[v]
-
-            edge = [u_id, v_id]
+            edge = [u, v]
             if d.get('weight'):
                 edge.append(d['weight'])
             adj.append(edge)
 
-        G_labels = {}
-        for node in G.nodes:
-            for label, val in G.nodes[node].items():
-                if not G_labels.get(label):
-                    G_labels[label] = [None for i in G.nodes()]
+        nodes = { node : G.nodes[node] for node in G.nodes }
 
-                G_labels[label][node_id_map[node]] = val
-                
-        if not G_labels.get('name'):
-            G_labels['name'] = [None for i in G.nodes()]
-            for node_name, node_id in node_id_map.items():
-                if node_name != node_id:
-                    G_labels['name'][node_id] = node_name
+        for node, metadata in nodes.items():
+            if not metadata.get('name'):
+                nodes[node]['name'] = node
 
-        labels = {}
-        for label, vals in G_labels.items():
-            labels[label] = {
-                'value' : vals,
-            }
-
-        self.add_layer(adj, labels=labels, nodes=len(list(G.nodes())))
+        self.add_layer(adj, nodes=nodes)
 
     @property
     def adj(self):
@@ -235,28 +208,3 @@ class Networks(dict):
             self.__dict__[name] = Network()
 
         return self.__dict__[name]
-
-class Labels(dict):
-    def __getattr__(self, name):
-        if not self.__dict__.get(name):
-            self.__dict__[name] = Label()
-
-        return self.__dict__[name]
-
-class Label(dict):
-    """a label has type, values, and possibly categories.
-    types:
-    1. scalar
-    2. categorical
-    3. binary
-
-    values:
-    - a list of N integers or strings (where N is the number of nodes)
-
-    categories (ignored if `type` is not categorical):
-    - a list of strings which will be used to name the categories
-    """
-    def __init__(self):
-        self.type = None
-        self.value = None
-        self.categories = None

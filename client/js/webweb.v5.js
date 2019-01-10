@@ -467,10 +467,11 @@ function setNodeMetadata() {
         // TODO: (really a warning)
         // this might cause a bug with layered networks, or networks which define
         // node names on a network-by-network or layer-by-layer basis.
-        if (nodes[i]['name'] == undefined) {
+        if (nodes[i]['name'] == undefined && nodeNamesMap !== undefined) {
             nodes[i]['name'] = nodeNamesMap[nodes[i].idx]
         }
     }
+
 
     sizeData.metadata = {};
     colorData.metadata = {};

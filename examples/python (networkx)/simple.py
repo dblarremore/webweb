@@ -1,9 +1,9 @@
-from webweb.webweb import webweb
+from webweb import Web
 import networkx as nx
 import random
 
 # Instantiate webweb object
-web = webweb()
+web = Web()
 
 # make a simple gnp random graph
 G = nx.fast_gnp_random_graph(100, .15)

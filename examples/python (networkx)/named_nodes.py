@@ -1,4 +1,4 @@
-from webweb.webweb import webweb
+from webweb import Web
 import networkx as nx
 import random
 
@@ -9,7 +9,7 @@ G.add_edge('steve', 'hunter', weight=150)
 G.add_edge('brian', 'steve', weight=1)
 
 # Instantiate webweb object
-web = webweb()
+web = Web()
 
 # Assign adjaceny lists in network
 web.networks.networkx.add_layer_from_networkx_graph(G)

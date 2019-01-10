@@ -49,25 +49,5 @@ web.display.colorBy = 'alphabeticallity'
 # set the default color Palette for non-scalars
 web.display.colorPalette = "Dark2"
 
-# # Build a few networks
-# web.networks.square.add_layer(
-#     # the labels
-#     {
-#         'alphabeticallity' : {
-#             'value' : [ 0, 1, 2, 3 ],
-#             # we have to put this if we want this to be displayed
-#             # categorically, as we used numbers above
-#             'categories' : ['A-Z', 'a-z', 'nope', 'yep']
-
-#         },
-#         'cooperativity' : {
-#             # we can omit categories here because we used strings
-#             'value' : [ 'high', 'low', 'medium', 'medium' ],
-#         },
-#     }
-# )
-
-# web.display.nodeNames = ['huberg', 'pierot', 'slartibartfast', 'cheese']
-
 web.draw()
 
