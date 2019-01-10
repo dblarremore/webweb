@@ -1,0 +1,32 @@
+#webweb-chart {
+    padding: 5px;
+    text-align: center;
+    color: #bbb;
+    padding-top: 10px;
+    font-size: 10px;
+    clear: both;
+}
+
+#webweb-menu {
+    font-size: 10px;
+}
+
+#webweb-center { 
+    margin-left: auto;
+    margin-right: auto;
+    background-color: white;
+    text-align: justify;
+    font-family: palatino, georgia, verdana, arial, sans-serif;
+    -moz-box-shadow: 0 0 10px #888;
+    -webkit-box-shadow: 0 0 10px#888;
+    box-shadow: 0 0 10px #888;
+    padding: 20px;
+}
+
+.webweb-menu-left { 
+    float: left;
+}
+.webweb-menu-right {
+    float: right;
+    text-align: right;
+}
