@@ -16,7 +16,7 @@ adjacency_matrix = [
 ]
 
 # create the web
-web = Web(adjacency_list)
+web = Web(adjacency_matrix)
 
 # scale edge widths by weight so we can see a visual difference
 web.display.scaleLinkWidth = True
