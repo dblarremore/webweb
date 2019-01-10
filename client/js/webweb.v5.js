@@ -358,11 +358,10 @@ function setVisibleNodes() {
 function assignNodeMetadata(metadata, nodeIdsMap, nodeNamesMap) {
     var unusedId = 0;
     for (var i in nodeIdsMap) {
-        if (nodeIdsMap[i] > unusedId) {
-            unusedId = nodeIdsMap[i];
+        if (nodeIdsMap[i] >= unusedId) {
+            unusedId = nodeIdsMap[i] + 1;
         }
     }
-    unusedId += 1;
 
     for (var nodeKey in metadata) {
         var nodeMetadata = metadata[nodeKey];
@@ -433,12 +432,24 @@ function setNodeMetadata() {
         }
     }
 
+    var nonMetadataKeys = [ 'idx', 'fx', 'fy', 'x', 'y', 'vx', 'vy', 'index', 'degree' ];
+
+    // reset node data
+    for (var i in nodes) {
+        for (var key in nodes[i]) {
+            if (nonMetadataKeys.indexOf(key) < 0) {
+                delete nodes[i][key];
+            }
+        }
+    }
+
     var maps;
     if (display.nodes !== undefined) {
         maps = assignNodeMetadata(display.nodes, nodeIdsMap, nodeNamesMap);
         nodeIdsMap = maps['ids'];
         nodeNamesMap = maps['names'];
     }
+
     var networkData = wwdata.network[display.networkName].layers[display.networkLayer];
 
     if (networkData.nodes !== undefined) {
@@ -446,8 +457,6 @@ function setNodeMetadata() {
         nodeIdsMap = maps['ids'];
         nodeNamesMap = maps['names'];
     }
-
-    var nonMetadataKeys = [ 'idx', 'fx', 'fy', 'x', 'y', 'vx', 'vy', 'index', 'degree', 'name' ];
 
     // now we need to define the set of metadata
     for (var i in nodes) {
@@ -468,9 +477,6 @@ function setNodeMetadata() {
         }
 
         // if we don't already have node names, use the mapping to assign them
-        // TODO: (really a warning)
-        // this might cause a bug with layered networks, or networks which define
-        // node names on a network-by-network or layer-by-layer basis.
         if (nodes[i]['name'] == undefined && nodeNamesMap !== undefined) {
             nodes[i]['name'] = nodeNamesMap[nodes[i].idx]
         }
@@ -690,12 +696,7 @@ function computeSizes() {
         var metadatum = sizeData.metadata[display.sizeBy];
         sizeData.type = metadatum.type;
 
-        if (sizeData.type == 'binary') {
-            changeInvertBinaryWidgetVisibility(true, 'size');
-        }
-
         rawValues = getRawNodeValues(display.sizeBy, metadatum.type, 'size');
-
         for (var i in nodes) {
             scaledValues[i] = rawValues[i];
             // if we're sizing by degree, square root the value
@@ -704,7 +705,17 @@ function computeSizes() {
             }
         }
 
-        scaleSize.domain(d3.extent(scaledValues), d3.max(scaledValues)).range([0.5, 1.5]);
+        if (sizeData.type == 'binary') {
+            changeInvertBinaryWidgetVisibility(true, 'size');
+
+            // scale between true and false even if we only have one of
+            // the two values
+            scaleSize.domain(d3.extent([true, false])).range([0.5, 1.5]);
+        }
+        else {
+            scaleSize.domain(d3.extent(scaledValues), d3.max(scaledValues)).range([0.5, 1.5]);
+        }
+
         for (var i in scaledValues) {
             scaledValues[i] = scaleSize(scaledValues[i]);
         }
@@ -1443,14 +1454,7 @@ function unHighlightNode(d) {
 // Highlight a node by showing its name next to it.
 // If the node has no name, show its index.  
 function showNodeText(d) {
-    var nodeName = "node";
-    var nodeId = d.idx;
-    if (d.name !== undefined) {
-        nodeName = d.name;
-        nodeId = "(" + nodeId + ")";
-    }
-
-    var nodeTextString = nodeName + " " + nodeId;
+    var nodeTextString = d.name == undefined ? d.idx : d.name;
 
     vis.append("text").text(nodeTextString)
         .attr("x", d.x + 1.5 * display.r)

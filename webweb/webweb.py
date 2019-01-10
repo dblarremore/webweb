@@ -42,10 +42,9 @@ class Web(dict):
 
 
     def draw(self):
-        """ driver for the whole thing:
+        """
         1. saves the html file
-        2. saves the js data file
-        3. opens the web browser
+        2. opens the web browser
         """
         with open(self.html_file, 'w') as f:
             f.write(self.html)
@@ -60,7 +59,7 @@ class Web(dict):
     def json(self, title=None):
         return json.dumps({
             "display" : vars(self.display),
-            "network" : { key : get_dict_from_labeled_obj(val) for key, val in vars(self.networks).items()}
+            'network' : { name : vars(data) for name, data in vars(self.networks).items()},
         })
 
     @property
@@ -109,49 +108,36 @@ class Display(dict):
         # self.metadata = {}
         # self.showWebOnly = showWebOnly
 
-def get_dict_from_labeled_obj(obj):
-    """this function converts an object which might have subobjects (layers)
-    into a dictionary. It looks complicated, but really all it is doing is
-    making two nested calls to vars()."""
-    _dict = {}
-    for key, val in vars(obj).items():
-        if val == None:
-            continue
+class Networks(dict):
+    def __getattr__(self, name, **kwargs):
+        if not self.__dict__.get(name):
+            self.__dict__[name] = Network(**kwargs)
 
-        if key == 'layers':
-            _dict['layers'] = []
-            for layer in val:
-                _layer = {
-                    'adjList' : layer['adjList'],
-                }
-
-                if layer.get('nodes'):
-                    _layer['nodes'] = layer['nodes']
-
-                _dict['layers'].append(_layer)
-        else:
-            _dict[key] = val
-
-    return _dict
+        return self.__dict__[name]
 
 class Network(dict):
-    def __init__(self):
+    def __init__(self, adjacency=None, nodes=None, adjacency_type=None):
         self.layers = []
 
-    def add_layer(self, adj, nodes=None, adjacency_type=None):
+    def __call__(self, **kwargs):
+        # if we have an adjacency, add it into the networks object
+        if kwargs['adjacency']:
+            self.add_layer(**kwargs)
+
+    def add_layer(self, adjacency, nodes=None, adjacency_type=None):
         if not adjacency_type:
-            if len(adj) and len(adj) > 3:
+            if len(adjacency) and len(adjacency) > 3:
                 # we use a dumb heuristic here:
                 # if the length of the list is the same as the length of the first
                 # element in the list, it's a matrix
-                if len(adj) == len(adj[0]):
+                if len(adjacency) == len(adjacency[0]):
                     adjacency_type = "matrix"
 
         if adjacency_type == 'matrix':
-            adj = self.convert_adjacency_matrix_to_list(adj)
+            adjacency = self.convert_adjacency_matrix_to_list(adjacency)
 
         self.layers.append({
-            'adjList' : copy.deepcopy(adj),
+            'adjList' : copy.deepcopy(adjacency),
             'nodes' : nodes,
         })
 
@@ -190,18 +176,3 @@ class Network(dict):
             nodes[node]['name'] = metadata.get('name', node)
 
         self.add_layer(adj, nodes=nodes)
-
-    @property
-    def adj(self):
-        return self.adjList
-
-    @adj.setter
-    def adj(self, adjList):
-        self.adjList = copy.deepcopy(adjList)
-
-class Networks(dict):
-    def __getattr__(self, name):
-        if not self.__dict__.get(name):
-            self.__dict__[name] = Network()
-
-        return self.__dict__[name]
