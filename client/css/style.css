@@ -1,16 +1,3 @@
-#webweb-chart {
-    padding: 5px;
-    text-align: center;
-    color: #bbb;
-    padding-top: 10px;
-    font-size: 10px;
-    clear: both;
-}
-
-#webweb-menu {
-    font-size: 10px;
-}
-
 #webweb-center { 
     margin-left: auto;
     margin-right: auto;
@@ -20,13 +7,25 @@
     -moz-box-shadow: 0 0 10px #888;
     -webkit-box-shadow: 0 0 10px#888;
     box-shadow: 0 0 10px #888;
-    padding: 20px;
+    width: 100%;
+    height: 100%;
 }
 
-.webweb-menu-left { 
+#webweb-menu {
+    font-size: 10px;
+    padding: 15px;
+}
+
+#webweb-menu-left { 
     float: left;
 }
-.webweb-menu-right {
+#webweb-menu-right {
     float: right;
     text-align: right;
+}
+
+#webweb-visualization-container > svg {
+    display: block;
+    margin: 0 auto;
+    clear: both;
 }
