@@ -17,7 +17,7 @@ web = Web(
                 'alphabeticallity' : 2,
             },
         },
-        'metadataInfo' : {
+        'metadata' : {
             'alphabeticallity' : {
                 'categories' : ['A-Z', 'a-z', 'W+'],
             }
