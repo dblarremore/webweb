@@ -14,10 +14,18 @@ web = Web(
                 'age' : 30,
             },
         },
+        'metadata' : {
+            'velocity' : {
+                'values' : [42, 100, 7]
+            },
+        },
     },
 )
 
 # we'll compute node size by the `age` metadata attribute
 web.display.sizeBy = 'age'
+
+# we'll compute node color by the `velocity` metadata attribute
+web.display.colorBy = 'velocity'
 
 web.draw()

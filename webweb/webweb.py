@@ -15,14 +15,14 @@ import webbrowser
 from collections import defaultdict
 
 class Web(dict):
-    def __init__(self, adjacency=None, adjacency_type=None, nodes=None, title="webweb", display={}, nx_G=None):
+    def __init__(self, adjacency=None, adjacency_type=None, nodes=None, title="webweb", display={}, nx_G=None, metadata=None):
         self.title = title
         self.display = Display(display)
         self.networks = Networks()
 
         # if we have an adjacency, add it into the networks object
         if adjacency:
-            getattr(self.networks, self.title).add_layer(adjacency, adjacency_type=adjacency_type, nodes=nodes)
+            getattr(self.networks, self.title).add_layer(adjacency, adjacency_type=adjacency_type, nodes=nodes, metadata=metadata)
         elif nx_G:
             getattr(self.networks, self.title).add_layer(nx_G=nx_G)
 
@@ -62,7 +62,7 @@ class Web(dict):
     def json(self, title=None):
         return json.dumps({
             "display" : vars(self.display),
-            'network' : { name : vars(data) for name, data in vars(self.networks).items()},
+            'networks' : { name : vars(data) for name, data in vars(self.networks).items()},
         })
 
     @property
@@ -119,15 +119,17 @@ class Networks(dict):
         return self.__dict__[name]
 
 class Network(dict):
-    def __init__(self, adjacency=None, nodes=None, adjacency_type=None):
+    def __init__(self, adjacency=None, nodes=None, adjacency_type=None, metadata=None, nx_G=None):
         self.layers = []
 
     def __call__(self, **kwargs):
         # if we have an adjacency, add it into the networks object
-        if kwargs['adjacency']:
+        if kwargs.get('adjacency'):
+            self.add_layer(**kwargs)
+        elif kwargs.get('nx_G'):
             self.add_layer(**kwargs)
 
-    def add_layer(self, adjacency=None, nodes=None, adjacency_type=None, nx_G=None):
+    def add_layer(self, adjacency=None, nodes=None, adjacency_type=None, nx_G=None, metadata=None):
         if nx_G:
             adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(nx_G)
         else:
@@ -143,8 +145,9 @@ class Network(dict):
                 adjacency = self.convert_adjacency_matrix_to_list(adjacency)
 
         self.layers.append({
-            'adjList' : copy.deepcopy(adjacency),
+            'edgeList' : copy.deepcopy(adjacency),
             'nodes' : nodes,
+            'metadata' : metadata,
         })
 
     def convert_adjacency_matrix_to_list(self, matrix):

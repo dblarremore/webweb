@@ -19,6 +19,8 @@ var displayDefaults = {
     'r' : 5, // node radius
     'linkStrength' : 1, // link strength
     'colorPalette' : 'Set1', // ... yaknow
+    'networkLayer' : 0,
+    'metadata' : {},
 };
 
 var display = {};
@@ -97,23 +99,10 @@ function updateVis(wwdata) {
 // - nodeCoordinates
 ////////////////////////////////////////////////////////////////////////////////
 function initWebweb() {
-    networkNames = Object.keys(wwdata.network);
-
-    // move things into "layers" if they're not
-    for (var i in networkNames) {
-        if (wwdata.network[networkNames[i]].layers == undefined) {
-            wwdata.network[networkNames[i]].layers = [
-                {
-                    'adjList' : wwdata.network[networkNames[i]].adjList,
-                    'labels' : wwdata.network[networkNames[i]].labels,
-                }
-            ]
-        }
-    }
+    networkNames = Object.keys(wwdata.networks);
 
     // the default network will be the first one in the list of networks
     displayDefaults['networkName'] = networkNames[0];
-    displayDefaults['networkLayer'] = 0;
 
     display = wwdata.display;
     for (var key in displayDefaults) {
@@ -122,53 +111,12 @@ function initWebweb() {
         }
     }
 
-    // backwards compatibility:
-    // fix up display for the new node stuff
-    if (display.nodeNames) {
-        var displayNodes = {};
-        for (var i in display.nodeNames) {
-            displayNodes[i] = {
-                'name' : display.nodeNames[i],
-            }
-        }
-
-        display.nodes = displayNodes;
-
-        display.metadataInfo = {};
-
-        for (var i in networkNames) {
-            for (var j in wwdata.network[networkNames[i]].layers) {
-                var layer = wwdata.network[networkNames[i]].layers[j];
-
-                if (layer.labels !== undefined) {
-                    if (layer.nodes == undefined) {
-                        var layerNodes = {};
-                        for (var metadatum in layer.labels) {
-                            display.metadataInfo[metadatum] = {};
-                            if (layer.labels[metadatum].categories !== undefined) {
-                                display.metadataInfo[metadatum]['categories'] = layer.labels[metadatum].categories;
-                            }
-
-                            if (layer.labels[metadatum].type !== undefined) {
-                                display.metadataInfo[metadatum]['type'] = layer.labels[metadatum].type;
-
-                            }
-
-                            for (var k in layer.labels[metadatum].value) {
-                                if (layerNodes[k] == undefined) {
-                                    layerNodes[k] = {};
-                                }
-                                
-                                layerNodes[k][metadatum] = layer.labels[metadatum].value[k];
-                            }
-
-                        }
-                        wwdata.network[networkNames[i]].layers[j].nodes = layerNodes;
-                    }
-                }
-            }
-        }
+    // standardize network representations
+    for (var i in networkNames) {
+        standardizeNetworkRepresentation(networkNames[i]);
     }
+
+    display.nodes = addVectorMetadataToNodes(display.metadata, display.nodes);
 
     // don't allow freezeNodeMovement to be true unless we have node coordinates
     if (display.nodeCoordinates == undefined) {
@@ -260,6 +208,65 @@ function initWebweb() {
     updateChargeForce();
     updateGravityForce();
 }
+function standardizeNetworkRepresentation(networkName) {
+    var network = wwdata.networks[networkName];
+
+    if (network.layers == undefined) {
+        network.layers = [
+            {
+                'edgeList' : network.edgeList,
+                'nodes' : network.nodes,
+                'metadata' : network.metadata,
+            }
+        ];
+    }
+
+    for (var i in network.layers) {
+        network.layers[i] = standardizeLayerRepresentation(network.layers[i]);
+    }
+
+    wwdata.networks[networkName] = network;
+}
+function standardizeLayerRepresentation(layer) {
+    if (layer.metadata !== undefined) {
+        for (var metadatum in layer.metadata) {
+            if (display.metadata[metadatum] == undefined) {
+                display.metadata[metadatum] = {};
+            }
+
+            if (layer.metadata[metadatum].categories !== undefined) {
+                display.metadata[metadatum]['categories'] = layer.metadata[metadatum].categories;
+            }
+
+            if (layer.metadata[metadatum].type !== undefined) {
+                display.metadata[metadatum]['type'] = layer.metadata[metadatum].type;
+
+            }
+
+        }
+
+        layer.nodes = addVectorMetadataToNodes(layer.metadata, layer.nodes);
+    }
+
+    return layer;
+}
+function addVectorMetadataToNodes(metadata, nodes) {
+    if (nodes == undefined) {
+        nodes = {};
+    }
+
+    for (var metadatum in metadata) {
+        for (var i in metadata[metadatum].values) {
+            if (nodes[i] == undefined) {
+                nodes[i] = {};
+            }
+        
+            nodes[i][metadatum] = metadata[metadatum].values[i];
+        }
+    }
+
+    return nodes;
+}
 ////////////////////////////////////////////////////////////////////////////////
 // - changes the number of visible nodes
 // - computes links
@@ -304,23 +311,7 @@ function displayNetwork() {
 // however, we would like to be able to do this by name (i.e. id).
 ////////////////////////////////////////////////////////////////////////////////
 function setVisibleNodes() {
-    // have to handle 2 things:
-    // - named nodes
-    // - unnamed nodes
-    //
-    // how?
-    // - after initing, save all nodes in `nodePersistence`, dict:
-    //      - key: index or nodeName (in order of display.nodeNames)
-    //      - values:
-    //          - element: html element
-    //          - graphic: svg element to draw
-    // - if we have nodes:
-    //      - if those nodes are a count:
-    //          - take the keys and spit them to the nodes array
-    //          - draw them
-    //      - if those nodes are a list:
-    //          - read from the dict
-    var networkNodes = wwdata.network[display.networkName].layers[display.networkLayer].nodes;
+    var networkNodes = wwdata.networks[display.networkName].layers[display.networkLayer].nodes;
     if (networkNodes !== undefined && networkNodes !== null) {
         var nodeCount = 0;
         for (var k in networkNodes) {
@@ -415,7 +406,7 @@ function setNodeMetadata() {
     var nodeIdsMap = {};
     var nodeNamesMap = {};
 
-    var adj = d3.values(wwdata.network[display.networkName].layers[display.networkLayer].adjList);
+    var adj = d3.values(wwdata.networks[display.networkName].layers[display.networkLayer].edgeList);
 
     // construct a mapping from node ids to our own "id"
     var unused_id = 0;
@@ -450,7 +441,7 @@ function setNodeMetadata() {
         nodeNamesMap = maps['names'];
     }
 
-    var networkData = wwdata.network[display.networkName].layers[display.networkLayer];
+    var networkData = wwdata.networks[display.networkName].layers[display.networkLayer];
 
     if (networkData.nodes !== undefined) {
         maps = assignNodeMetadata(networkData.nodes, nodeIdsMap, nodeNamesMap);
@@ -465,11 +456,11 @@ function setNodeMetadata() {
             if (nonMetadataKeys.indexOf(key) < 0) {
                 allMetadata[key] = {};
 
-                if (display.metadataInfo !== undefined && display.metadataInfo[key] !== undefined) {
+                if (display.metadata !== undefined && display.metadata[key] !== undefined) {
                     // if we have categories, change the node values here
-                    if (display.metadataInfo[key].categories !== undefined) {
+                    if (display.metadata[key].categories !== undefined) {
                         var nodeCategoryNumber = nodes[i][key];
-                        nodes[i][key] = display.metadataInfo[key].categories[nodeCategoryNumber];
+                        nodes[i][key] = display.metadata[key].categories[nodeCategoryNumber];
 
                     }
                 }
@@ -552,12 +543,11 @@ function computeNodes() {
 
         // if we don't have a node count, try to find one;
         // - make sets of each network's adjacency list and take the length
-        // - take the length of nodeNames, if present
         for (var i in networkNames) {
             var networkNodes = [];
             var networkName = networkNames[i];
 
-            var adj = d3.values(wwdata.network[networkName].layers[display.networkLayer].adjList);
+            var adj = d3.values(wwdata.networks[networkName].layers[display.networkLayer].edgeList);
             for (i in adj) {
                 var edge = adj[i];
                 networkNodes.push(edge[0]);
@@ -565,7 +555,7 @@ function computeNodes() {
             }
             nodeCounts.push(d3.set(networkNodes).values().length);
 
-            var networkLayers = wwdata.network[networkName].layers;
+            var networkLayers = wwdata.networks[networkName].layers;
             for (var j in networkLayers) {
                 var layerNodes = networkLayers[j].nodes
                 if (layerNodes !== undefined) {
@@ -578,10 +568,6 @@ function computeNodes() {
                     nodeCounts.push(count);
                 }
             }
-        }
-
-        if (display.nodeNames !== undefined) {
-            nodeCounts.push(display.nodeNames.length);
         }
 
         display.N = d3.max(nodeCounts);
@@ -608,7 +594,7 @@ function computeLinks() {
     links = [];
 
     // get the adjacencies
-    var adj = d3.values(wwdata.network[display.networkName].layers[display.networkLayer].adjList);
+    var adj = d3.values(wwdata.networks[display.networkName].layers[display.networkLayer].edgeList);
 
     var nodeIdsMap = {};
 
@@ -1604,7 +1590,7 @@ function writeSizeMenu(parent) {
 }
 function setNetworkLayerMenuVisibility() {
     var visible;
-    if (wwdata.network[display.networkName].layers.length == 1) {
+    if (wwdata.networks[display.networkName].layers.length == 1) {
         visible = false;
     }
     else {
@@ -1621,7 +1607,7 @@ function writeNetworkLayerMenu(parent) {
         .text(" layer: ");
 
     var layers = [];
-    for (var i in wwdata.network[display.networkName].layers) {
+    for (var i in wwdata.networks[display.networkName].layers) {
         layers.push(i);
     }
 
@@ -2065,7 +2051,7 @@ function changeNetworkLayerListener(event) {
     }
 
     if (changeToLayer !== undefined) {
-        if (0 <= changeToLayer && changeToLayer < wwdata.network[display.networkName].layers.length) {
+        if (0 <= changeToLayer && changeToLayer < wwdata.networks[display.networkName].layers.length) {
             displayNetworkLayer(changeToLayer);
             updateNetworkLayerSelect();
         }
