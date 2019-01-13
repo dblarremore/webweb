@@ -1428,7 +1428,6 @@ function writeFreezeNodesToggle(parent) {
         .attr("id", "freezeNodesToggle")
         .attr("type", "checkbox")
         .attr("onchange", "toggleFreezeNodes(this.checked)");
-
 }
 function writeSaveButtons(parent) {
     var saveButtons = parent.append("div")
@@ -1439,12 +1438,6 @@ function writeSaveButtons(parent) {
         .attr("type", "button")
         .attr("value", "Save SVG")
         .on("click", writeSVGDownloadLink);
-
-    saveButtons.append("input")
-        .attr("id", "saveJSONButton")
-        .attr("type", "button")
-        .attr("value", "Save webweb")
-        .on("click", writeWebwebDownloadLink);
 }
 function writeNetworkMenu(parent) {
     var networkMenu = parent.append("div")
@@ -1454,16 +1447,9 @@ function writeNetworkMenu(parent) {
         .attr("id", "networkSelectMenu")
         .text("Display data from ");
 
-    networkSelectMenu.append("select")
+    var networkSelect = networkSelectMenu.append("select")
         .attr("id", "networkSelect")
         .attr("onchange", "updateNetwork(this.value)")
-
-    writeNetworkLayerMenu(networkMenu);
-}
-function updateNetworkSelectMenu() {
-    var networkSelect = d3.select("#networkSelect");
-
-    networkSelect.selectAll("option").remove();
 
     networkSelect.selectAll("option")
         .data(networkNames)
@@ -1474,7 +1460,8 @@ function updateNetworkSelectMenu() {
 
     networkSelect = document.getElementById('networkSelect');
     networkSelect.value = display.networkName;
-    updateNetworkLayerSelect();
+
+    writeNetworkLayerMenu(networkMenu);
 }
 function writeSizeMenu(parent) {
     var sizeMenu = parent.append("div")
@@ -1782,8 +1769,6 @@ function writeMenus(container) {
     writeRadiusWidget(rightMenu);
     writeMatchWidget(rightMenu);
     writeShowNodeNamesWidget(rightMenu);
-
-    updateNetworkSelectMenu();
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1813,22 +1798,6 @@ function writeSVGDownloadLink() {
 
     saveIt(display.networkName, "image/svg+xml", html);
 };
-function writeWebwebDownloadLink() {
-    var webwebJSON = wwdata;
-    webwebJSON.display = display;
-
-    // save node coordinates
-    var nodeCoordinates = [];
-    node.attr("cx", function(d) {
-        nodeCoordinates.push({'x' : d.x, 'y' : d.y });
-        return d.x;
-    })
-
-    webwebJSON.display.nodeCoordinates = nodeCoordinates;
-
-    saveIt('webweb.json', 'json', JSON.stringify(webwebJSON));
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
