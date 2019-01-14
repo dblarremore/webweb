@@ -1,18 +1,10 @@
-from webweb.webweb import webweb
-
-nodes = 20
-
-# Build a simple network
-adjaceny_list = [(i, i + 1) for i in range(nodes)] + [(0, nodes)]
+from webweb import webweb
 
 # Instantiate webweb object
-web = webweb()
+web = Web([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]])
 
-# Assign adjaceny lists in network
-web.networks.simple.add_layer(adjaceny_list)
-
-# only show the visualization, no menus
-web.display.showWebOnly = True
+# hide webweb's menus
+web.display.hideMenu = True
 
 # Launch webbrowser with result
 web.draw()
