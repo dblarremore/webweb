@@ -144,6 +144,9 @@ function writeVisualization(container) {
         .attr("width", display.w)
         .attr("height", display.h)
         .attr("id", "vis");
+
+    d3.select("#webweb-visualization-container")
+        .append("br");
 }
 function standardizeRepresentation() {
     for (var i in networkNames) {
