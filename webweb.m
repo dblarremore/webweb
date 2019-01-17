@@ -40,23 +40,23 @@ function [] = webweb(varargin)
 % dis
 %     .name (str)
 %     .w,h,l,r,c,g (ints: width,height,linklength,radius,charge,gravity)
-%     .nodeNames (cell{str} Nx1)
-%     .labels
-%         .labelsObjects...
+%     .metadata
+%         .metadataObjects...
+%
 % nets
 %     .netObjects...
+%
 % netObject
 %     .adj (nonnegative, NxN. sparse or full)
-%     .labels
-%         .labelsObjects...
-% labelsObject
-%     .type (str: categorical, binary, scalar)
-%     .values (int Nx1)
-%     .categories (cell{str}, categorical names corresponding to values)
+%     .metadata
+%         .metadataObjects...
 %
+% metadataObject
+%     .values (required. int Nx1, bool Nx1, or cell{str} Nx1)
+%     .categories (optional. cell{str} of category names corresponding to int category values)
+%     .type (optional. if set to string 'binary' this will force interpretation of {0,1} values as T/F, isntead of as integers)
 %
-% For all usage examples, see webwebTest.m
-% http://danlarremore.com for updates.
+% http://github.com/dblarremore/webweb for updates
 
 % Check if varargin has nodeNames.
 % ------------------------------------------------
@@ -76,7 +76,7 @@ if isstruct(varargin{1}) % nodeNames exists as second element of varargin
                 || isfield(a,'c')...
                 || isfield(a,'g')...
                 || isfield(a,'nodeNames')...
-                || isfield(a,'labels')
+                || isfield(a,'metadata')
             webwebWrite(a,b);
         else
             webwebWrite(b,a);
@@ -125,7 +125,7 @@ if nargin==2
     % check to disambiguate netNames or nodeNames
     % if M == N, this is confusing...
     if nlayers == size(varargin{1}(:,:,1))
-        isNetNames = input('Are the labels that you passed network names? (y/n) ');
+        isNetNames = input('Are the metadata that you passed network names? (y/n) ');
         if strcmp(isNetNames,'y')
             isNetNames = 1;
         elseif strcmp(isNetNames,'n')
@@ -148,7 +148,7 @@ if nargin==2
         for m=1:nlayers
             nets.(['network' num2str(m)]).adj = varargin{1}(:,:,m);
         end
-        dis.nodeNames = varargin{2};
+        dis.metadata.names.values = varargin{2};
     end
     
     webwebWrite(dis,nets);
@@ -161,7 +161,7 @@ if nargin==3
     % check to disambiguate netNames or nodeNames
     % if M == N, this is confusing...
     if nlayers == size(varargin{1}(:,:,1))
-        isNetNames = input('Are the first labels that you passed network names? (y/n) ');
+        isNetNames = input('Are the first metadata that you passed network names? (y/n) ');
         if strcmp(isNetNames,'y')
             netNames = varargin{2};
             nodeNames = varargin{3};
@@ -184,7 +184,7 @@ if nargin==3
     for m=1:nlayers
         nets.(netNames{m}).adj = varargin{1}(:,:,m);
     end
-    dis.nodeNames = nodeNames;
+    dis.metadata.names.values = nodeNames;
     
     webwebWrite(dis,nets);
     return
@@ -232,21 +232,14 @@ end
 if isfield(dis,'g')
     fprintf(fid,'"g":%i,',dis.g);
 end
-if isfield(dis,'nodeNames')
-    fprintf(fid,'"nodeNames":[');
-    for i=1:length(dis.nodeNames)
-        fprintf(fid,'"%s",',dis.nodeNames{i});
-    end
-    fprintf(fid,'],');
-end
-fprintf(fid,'"labels":{');
-if isfield(dis,'labels')
-    q = dis.labels;
+fprintf(fid,'"metadata":{');
+if isfield(dis,'metadata')
+    q = dis.metadata;
     qNames = fieldnames(q);
     for ii=1:length(qNames)
         fprintf(fid,'"%s":{',qNames{ii});
         fprintf(fid,'"type":"%s",',q.(qNames{ii}).type);
-        fprintf(fid,'"value":[');
+        fprintf(fid,'"values":[');
         if iscell(q.(qNames{ii}).values)
             for j=1:length(q.(qNames{ii}).values)
                 fprintf(fid,'"%s",',q.(qNames{ii}).values{j});
@@ -270,24 +263,24 @@ end
 fprintf(fid,'},');
 fprintf(fid,'},');
 
-fprintf(fid,'"network":{');
+fprintf(fid,'"networks":{');
 for i=1:length(networkNames)
     p = getfield(nets,networkNames{i});
     fprintf(fid,'"%s":{',networkNames{i});
-    fprintf(fid,'"adjList":[');
+    fprintf(fid,'"edgeList":[');
     [r,c,v] = find(p.adj);
     for j=1:length(v)
         fprintf(fid,'[%i,%i,%i],',r(j)-1,c(j)-1,v(j));
     end
     fprintf(fid,'],');
-    fprintf(fid,'"labels":{');
-    if isfield(p,'labels')
-        q = p.labels;
+    fprintf(fid,'"metadata":{');
+    if isfield(p,'metadata')
+        q = p.metadata;
         qNames = fieldnames(q);
         for ii=1:length(qNames)
             fprintf(fid,'"%s":{',qNames{ii});
             fprintf(fid,'"type":"%s",',q.(qNames{ii}).type);
-            fprintf(fid,'"value":[');
+            fprintf(fid,'"values":[');
             if iscell(q.(qNames{ii}).values)
                 for j=1:length(q.(qNames{ii}).values)
                     fprintf(fid,'"%s",',q.(qNames{ii}).values{j});
