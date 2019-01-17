@@ -1,6 +1,7 @@
 **/__pycache__
 **/*.json
 **/*.html
+**/*.DS_Store
 webweb.egg-info
 dist
 build
