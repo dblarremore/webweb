@@ -6,5 +6,5 @@ adjacency_matrix = [...
     0, 0, 1, 0;...
 ];
 
-% pass it to webweb directly
-webweb(adjacency_matrix)
+% call webweb
+webweb(adjacency_matrix);

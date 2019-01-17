@@ -1,18 +1,15 @@
-from webweb import Web
+% define a weighted adjacency matrix
+adjacency_matrix = [...
+    0, .1, 0, 0, 0;...
+    .1, 0, .5, 0, 0;...
+    0, .5, 0, 1, 0;...
+    0, 0, 1, 0, 2;...
+    0, 0, 0, 2, 0;...
+];
 
-adjacency_matrix = [
-    [0, .1, 0, 0, 0],
-    [.1, 0, .5, 0, 0],
-    [0, .5, 0, 1, 0],
-    [0, 0, 1, 0, 2],
-    [0, 0, 0, 2, 0],
-]
+% call webweb
+webweb(adjacency_matrix);
 
-# create the web
-web = Web(adjacency_matrix)
+% [OPTIONAL] set webweb's display default: show weighted edges.
 
-# we'll scale edge widths by weight to create a visual difference
-web.display.scaleLinkWidth = True
-
-# open the browser with the result
-web.draw()
+% DBL TODO
