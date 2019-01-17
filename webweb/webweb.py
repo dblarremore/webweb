@@ -142,7 +142,14 @@ class Network(dict):
                         adjacency_type = "matrix"
 
             if adjacency_type == 'matrix':
+                adjacency_length = len(adjacency)
                 adjacency = self.convert_adjacency_matrix_to_list(adjacency)
+
+                if not nodes:
+                    nodes = {}
+
+                for i in range(adjacency_length):
+                    nodes[i] = {}
 
         self.layers.append({
             'edgeList' : copy.deepcopy(adjacency),
