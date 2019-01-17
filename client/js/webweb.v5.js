@@ -397,11 +397,15 @@ function setNodeMetadata() {
                 allMetadata[key] = {};
 
                 if (display.metadata !== undefined && display.metadata[key] !== undefined) {
-                    // if we have categories, change the node values here
-                    if (display.metadata[key].categories !== undefined) {
-                        var nodeCategoryNumber = nodes[i][key];
-                        nodes[i][key] = display.metadata[key].categories[nodeCategoryNumber];
+                    var metadatumInfo = display.metadata[key];
 
+                    // if we have categories, change the node values here
+                    if (metadatumInfo.categories !== undefined) {
+                        var nodeCategoryNumber = nodes[i][key];
+                        nodes[i][key] = metadatumInfo.categories[nodeCategoryNumber];
+                    }
+                    else if (metadatumInfo.type !== undefined && metadatumInfo.type == 'binary') {
+                        nodes[i][key] = nodes[i][key] ? true : false;
                     }
                 }
             }
@@ -508,14 +512,8 @@ function computeNodes() {
     for (var i = 0; i < display.N; i++) {
         nodes.push({
             "idx" : i,
-            "degree" : 0,
-            "x" : display.nodeCoordinates !== undefined ? display.nodeCoordinates[i].x : undefined,
-            "y" : display.nodeCoordinates !== undefined ? display.nodeCoordinates[i].y : undefined,
         });
     }
-}
-function getCurrentNetworkLayer() {
-    return wwdata.networks[display.networkName].layers[display.networkLayer];
 }
 ////////////////////////////////////////////////////////////////////////////////
 // initialize links/edges
@@ -527,12 +525,6 @@ function computeLinks() {
     links = [];
 
     var nodeIdMap = getNodeIdMap(display.networkName, display.networkLayer);
-
-    // make a matrix so edges between nodes can only occur once
-    var matrix = {}
-    for (var i in nodeIdMap) {
-        matrix[nodeIdMap[i]] = {};
-    }
 
     // reset the node degrees
     for (var i in nodes) {
@@ -559,20 +551,14 @@ function computeLinks() {
             w: weight,
         })
 
-        if (! matrix[source][target]) {
-            matrix[source][target] = true;
-            matrix[target][source] = true;
-
-            nodes[source].degree += weight;
-            nodes[target].degree += weight;
-        }
+        nodes[source].degree += weight;
+        nodes[target].degree += weight;
     }
 
     // scale the link weight and opacity by computing the range (extent) of the
     // edgeList weights.
     scales.links.width.domain(d3.extent(weights));
     scales.links.opacity.domain(d3.extent(weights));
-
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Compute the radius multipliers of the nodes, given the data and chosen parameters
