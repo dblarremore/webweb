@@ -99,18 +99,6 @@ class Display(dict):
         for key, val in kwargs.items():
             setattr(self, key, val)
 
-        # self.N = num_nodes
-        # self.name = name
-        # self.w = w
-        # self.h = h
-        # self.l = l
-        # self.r = r
-        # self.c = c
-        # self.g = g
-        # self.nodeNames = nodeNames
-        # self.metadata = {}
-        # self.showWebOnly = showWebOnly
-
 class Networks(dict):
     def __getattr__(self, name, **kwargs):
         if not self.__dict__.get(name):
@@ -149,7 +137,8 @@ class Network(dict):
                     nodes = {}
 
                 for i in range(adjacency_length):
-                    nodes[i] = {}
+                    if not nodes.get(i, None):
+                        nodes[i] = {}
 
         self.layers.append({
             'edgeList' : copy.deepcopy(adjacency),
