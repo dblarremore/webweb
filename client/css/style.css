@@ -28,4 +28,5 @@
     display: block;
     margin: 0 auto;
     clear: both;
+    border: solid 3px #f5f6fa;
 }

@@ -8,7 +8,7 @@ setuptools.setup(
     description="webweb: an easy-to-use network visualization tool",
     long_description="webweb: an easy-to-use network visualization tool",
     long_description_content_type="text/markdown",
-    url="https://github.com/hneutr/webweb",
+    url="https://github.com/dblarremore/webweb",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

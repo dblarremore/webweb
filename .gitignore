@@ -2,3 +2,5 @@
 **/*.json
 **/*.html
 webweb.egg-info
+dist
+build

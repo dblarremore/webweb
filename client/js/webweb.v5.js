@@ -74,11 +74,6 @@ function initializeWebweb() {
         }
     }
 
-    // don't allow freezeNodeMovement to be true unless we have node coordinates
-    // if (display.nodeCoordinates == undefined) {
-    //     display.freezeNodeMovement = false;
-    // }
-
     standardizeRepresentation();
 
     scales = {
