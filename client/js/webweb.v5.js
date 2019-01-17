@@ -75,9 +75,9 @@ function initializeWebweb() {
     }
 
     // don't allow freezeNodeMovement to be true unless we have node coordinates
-    if (display.nodeCoordinates == undefined) {
-        display.freezeNodeMovement = false;
-    }
+    // if (display.nodeCoordinates == undefined) {
+    //     display.freezeNodeMovement = false;
+    // }
 
     standardizeRepresentation();
 
@@ -235,6 +235,7 @@ function displayNetwork() {
     updateGravityForce();
 
     toggleFreezeNodes(display.freezeNodeMovement);
+    toggleShowNodeNames(display.showNodeNames);
     toggleInvertBinary(display[getBinaryInversionAttributeForType('color')], 'color')
     toggleInvertBinary(display[getBinaryInversionAttributeForType('size')], 'size')
 
@@ -261,9 +262,8 @@ function displayNetwork() {
 // however, we would like to be able to do this by name (i.e. id).
 ////////////////////////////////////////////////////////////////////////////////
 function setVisibleNodes() {
-    var networkNodes = wwdata.networks[display.networkName].layers[display.networkLayer].nodes;
-
-    var nodeCount = getObjetPropertyCount(networkNodes);
+    var nodeIdMap = getNodeIdMap(display.networkName, display.networkLayer);
+    var nodeCount = getObjetPropertyCount(nodeIdMap);
 
     if (nodeCount) {
         if (nodeCount < nodes.length) {
@@ -792,7 +792,7 @@ function changeSizes(sizeBy) {
     computeLegend();
     redrawNodes();
     if (display.nameToMatch != "") {
-        matchNodes(display.nameToMatch);
+        matchNodesNamed(display.nameToMatch);
     };
 }
 function changeColors(colorBy) {
@@ -801,7 +801,7 @@ function changeColors(colorBy) {
     computeLegend();
     redrawNodes();
     if (display.nameToMatch != "") {
-        matchNodes(display.nameToMatch);
+        matchNodesNamed(display.nameToMatch);
     };
 }
 function setColorPalette(colorPalette) {
@@ -908,18 +908,16 @@ function getBinaryValues(type) {
     return [getBinaryValue(false, type), getBinaryValue(true, type)];
 }
 function redisplayNodeNames() {
-    hideNodeText();
+    hideAllNodeText();
 
-    if (display.showNodeNames) {
+    if (display.showNodeNames || display.nameToMatch) {
         showNodeNamesWhenStable();
     }
 }
 function showNodeNamesWhenStable() {
     window.setTimeout(function() {
         if (simulation.alpha() < .01) {
-            for (var i in nodes) {
-                showNodeText(nodes[i]);
-            }
+            showAppropriateNodeText();
         }
         else {
             showNodeNamesWhenStable();
@@ -962,22 +960,29 @@ function toggleLinkOpacity(checked) {
     }
     redrawLinks();
 }
-function matchNodes(x) {
+function matchNodesNamed(x) {
     display.nameToMatch = x;
-    if (x.length == 0){
-        nodes.forEach(function(d) {
-            unHighlightNode(d);
-        });
+
+    nodes.forEach(function(d) {
+        unHighlightNode(d);
+
+        if (nodeNameMatches(d)) {
+            highlightNode(d);
+        }
+    });
+
+    showAppropriateNodeText();
+}
+function nodeNameMatches(node) {
+    var name = node.name;
+    var nameToMatch = display.nameToMatch;
+    if (nameToMatch !== undefined && nameToMatch.length > 0) {
+        if (name !== undefined && name.indexOf(nameToMatch) >= 0) {
+            return true;
+        }
     }
     else {
-        nodes.forEach(function(d) {
-            if (d.name.indexOf(display.nameToMatch) < 0) {
-                unHighlightNode(d);
-            }
-            else {
-                highlightNode(d);
-            }
-        })
+        return false;
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -1265,7 +1270,7 @@ function drawNodes() {
 
     node.on("mousedown", function(d) {
         if (! display.showNodeNames) {
-            hideNodeText(d);
+            hideOneNodeText(d);
         }
     });
 
@@ -1273,14 +1278,14 @@ function drawNodes() {
         highlightNode(d); 
 
         if (! display.showNodeNames) {
-            showNodeText(d);
+            showOneNodeText(d);
         }
     });
 
     node.on("mouseout", function(d) {
         unHighlightNode(d);
-        if (! display.showNodeNames) {
-            hideNodeText(d);
+        if (! display.showNodeNames && ! nodeNameMatches(d)) {
+            hideOneNodeText(d);
         }
     });
 
@@ -1291,10 +1296,8 @@ function drawNodes() {
     );
 }
 function dragstarted(d) {
-    display.storedShowNodeNames = display.showNodeNames;
-
     // hide node text while we are dragging
-    hideNodeText();
+    hideAllNodeText();
 
     d3.event.sourceEvent.stopPropagation();
     if (!d3.event.active) {
@@ -1359,20 +1362,59 @@ function unHighlightNode(d) {
 }
 // Highlight a node by showing its name next to it.
 // If the node has no name, show its index.  
-function showNodeText(d) {
-    var nodeTextString = d.name == undefined ? d.idx : d.name;
+function showAppropriateNodeText() {
+    for (var i in nodes) {
+        var node = nodes[i];
+        var name = node.name;
+        var text = name == undefined ? node.idx : name;
 
-    vis.append("text").text(nodeTextString)
-        .attr("x", d.x + 1.5 * display.r)
-        .attr("y", d.y - 1.5 * display.r)
-        .attr("fill", "black")
-        .attr("font-size", 12)
-        .attr("id", "nodeText");
+        var shouldShowNodeText = false;
+
+        var nameToMatch = display.nameToMatch;
+        if (nameToMatch !== undefined && nameToMatch.length > 0) {
+            if (name.indexOf(nameToMatch) >= 0) {
+                shouldShowNodeText = true;
+            }
+        }
+
+        if (display.showNodeNames !== undefined && display.showNodeNames) {
+            shouldShowNodeText = true;
+        }
+
+        if (shouldShowNodeText) {
+            showOneNodeText(node);
+        }
+        else {
+            hideOneNodeText(node);
+        }
+    }
+}
+function hideOneNodeText(node) {
+    vis.selectAll("#nodeTextId-" + node.idx).remove();
+}
+function showOneNodeText(node) {
+    var name = node.name;
+    var text = name == undefined ? node.idx : name;
+
+    var classes;
+
+    var nodeTextElement = document.getElementById("nodeTextId-" + node.idx);
+
+    if (nodeTextElement == undefined) {
+        vis.append("text").text(text)
+            .attr("x", node.x + 1.5 * display.r)
+            .attr("y", node.y - 1.5 * display.r)
+            .attr("fill", "black")
+            .attr("font-size", 12)
+            .attr("class", "nodeText")
+            .attr("id",  "nodeTextId-" + node.idx);
+    }
+
 }
 // guess!
 // (Removes a node's text)
-function hideNodeText() {
-    vis.selectAll("#nodeText").remove();
+function hideAllNodeText() {
+    vis.selectAll(".nodeText").remove();
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1719,8 +1761,9 @@ function writeMatchWidget(parent) {
     matchWidget.append("input")
         .attr("id","matchText")
         .attr("type", "text")
-        .attr("onchange", "matchNodes(this.value)")
-        .attr("size", 3);
+        .attr("value", display.nameToMatch)
+        .attr("onchange", "matchNodesNamed(this.value)")
+        .attr("size", 10);
 }
 function writeShowNodeNamesWidget(parent) {
     var showNodeNamesWidget = parent.append("div")
@@ -1730,7 +1773,6 @@ function writeShowNodeNamesWidget(parent) {
     var checked = 'unchecked';
     if (display.showNodeNames) {
         checked = 'checked';
-        toggleShowNodeNames(true);
     }
 
     showNodeNamesWidget.append("input")
