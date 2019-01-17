@@ -1358,37 +1358,23 @@ function unHighlightNode(d) {
             .style("stroke", d3.rgb(255, 255, 255));
     }
 }
-// Highlight a node by showing its name next to it.
-// If the node has no name, show its index.  
+////////////////////////////////////////////////////////////////////////////////
+// shows node text which should be shown (because it matches the current match
+// string or because we're showing all nodes)
+// hides 'em when they should be hidden
+////////////////////////////////////////////////////////////////////////////////
 function showAppropriateNodeText() {
     for (var i in nodes) {
         var node = nodes[i];
-        var name = node.name;
-        var text = name == undefined ? node.idx : name;
+        var text = node.name == undefined ? node.idx : node.name;
 
-        var shouldShowNodeText = false;
-
-        var nameToMatch = display.nameToMatch;
-        if (nameToMatch !== undefined && nameToMatch.length > 0) {
-            if (name.indexOf(nameToMatch) >= 0) {
-                shouldShowNodeText = true;
-            }
-        }
-
-        if (display.showNodeNames !== undefined && display.showNodeNames) {
-            shouldShowNodeText = true;
-        }
-
-        if (shouldShowNodeText) {
+        if (nodeNameMatches(node) || getTruthinessSafely(display.showNodeNames)) {
             showOneNodeText(node);
         }
         else {
             hideOneNodeText(node);
         }
     }
-}
-function hideOneNodeText(node) {
-    vis.selectAll("#nodeTextId-" + node.idx).remove();
 }
 function showOneNodeText(node) {
     var name = node.name;
@@ -1409,8 +1395,9 @@ function showOneNodeText(node) {
     }
 
 }
-// guess!
-// (Removes a node's text)
+function hideOneNodeText(node) {
+    vis.selectAll("#nodeTextId-" + node.idx).remove();
+}
 function hideAllNodeText() {
     vis.selectAll(".nodeText").remove();
 }
@@ -1760,7 +1747,7 @@ function writeMatchWidget(parent) {
         .attr("id","matchText")
         .attr("type", "text")
         .attr("value", display.nameToMatch)
-        .attr("onchange", "matchNodesNamed(this.value)")
+        .attr("oninput", "matchNodesNamed(this.value)")
         .attr("size", 10);
 }
 function writeShowNodeNamesWidget(parent) {
@@ -1879,6 +1866,13 @@ function getObjetPropertyCount(_object) {
         }
     }
     return count;
+}
+function getTruthinessSafely(variable) {
+    if (variable !== undefined && variable == true) {
+        return true;
+    }
+
+    return false;
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
