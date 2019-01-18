@@ -67,7 +67,7 @@ function initializeWebweb() {
     // default the network to display to the first in networks list
     displayDefaults['networkName'] = networkNames[0];
 
-    display = wwdata.display;
+    display = wwdata.display == undefined ? {} : wwdata.display;
     for (var key in displayDefaults) {
         if (display[key] == undefined) {
             display[key] = displayDefaults[key];
