@@ -526,17 +526,18 @@ function computeNodes() {
 // - calculate node weights/degrees
 ////////////////////////////////////////////////////////////////////////////////
 function computeLinks() {
-    links = [];
-
     var nodeIdMap = getNodeIdMap(display.networkName, display.networkLayer);
 
-    // TODO: add edge weights up
-    var matrix = {}
+    var linkMatrix = {}
 
     // reset the node degrees
     for (var i in nodes) {
         nodes[i].degree = 0;
-        matrix[i] = {};
+
+        linkMatrix[i] = {};
+        for (var j in nodes) {
+            linkMatrix[i][j] = 0;
+        }
     }
 
     var networkData = getNetworkData(display.networkName, display.networkLayer);
@@ -552,15 +553,29 @@ function computeLinks() {
         var weight = edge.length == 3 ? parseFloat(edge[2]) : 1;
 
         weights.push(weight);
-            
-        links.push({
-            source: source,
-            target: target,
-            w: weight,
-        })
 
+        if (source <= target) {
+            linkMatrix[source][target] += weight;
+        }
+        else {
+            linkMatrix[target][source] += weight;
+        }
+            
         nodes[source].degree += weight;
         nodes[target].degree += weight;
+    }
+
+    links = [];
+    for (var source in linkMatrix) {
+        for (var target in linkMatrix[source]) {
+            if (linkMatrix[source][target]) {
+                links.push({
+                    source: source,
+                    target: target,
+                    w: linkMatrix[source][target],
+                })
+            }
+        }
     }
 
     // scale the link weight and opacity by computing the range (extent) of the
