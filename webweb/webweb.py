@@ -147,22 +147,32 @@ class Network(dict):
         })
 
     def convert_adjacency_matrix_to_list(self, matrix):
-        adjacency_list = []
+        edge_list = []
 
-        matrix_len = len(matrix)
+        # if the matrix is symmetric, only examine the upper triangular
+        is_symmetric = self.adjacency_matrix_is_symmetric(matrix)
 
-        for n1 in range(matrix_len):
-            for n2 in range(matrix_len):
-                if n1 == n2:
+        for i in range(len(matrix)):
+            for j in range(len(matrix)):
+                if i == j:
                     continue
 
-                weight = matrix[n1][n2]
+                if is_symmetric and j >= i:
+                    continue
+
+                weight = matrix[i][j]
 
                 if weight:
-                    adjacency_list.append([n1, n2, weight])
+                    edge_list.append([i, j, weight])
         
-        return adjacency_list
+        return edge_list
 
+    def adjacency_matrix_is_symmetric(self, matrix):
+        for i in range(len(matrix)):
+            for j in range(len(matrix)):
+                if matrix[i][j] != matrix[j][i]:
+                    return False
+        return True
 
     def get_adjacency_and_nodes_from_networkx_graph(self, G):
         """loads the edges and attributes from a networkx graph"""

@@ -420,6 +420,10 @@ function setNodeMetadata() {
     sizeData.metadata = {};
     colorData.metadata = {};
     for (metadatum in allMetadata) {
+        if (metadatum == 'name') {
+            continue;
+        }
+
         if (allMetadata[metadatum].type == undefined) {
             allMetadata[metadatum].type = getMetadatumType(metadatum);
         }
@@ -526,9 +530,13 @@ function computeLinks() {
 
     var nodeIdMap = getNodeIdMap(display.networkName, display.networkLayer);
 
+    // TODO: add edge weights up
+    var matrix = {}
+
     // reset the node degrees
     for (var i in nodes) {
         nodes[i].degree = 0;
+        matrix[i] = {};
     }
 
     var networkData = getNetworkData(display.networkName, display.networkLayer);
