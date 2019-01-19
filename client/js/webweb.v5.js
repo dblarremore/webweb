@@ -153,7 +153,7 @@ function standardizeRepresentation() {
         standardizeNetworkRepresentation(networkNames[i]);
     }
 
-    display.nodes = addMetadataVectorsToNodes(display.metadata, display.nodes);
+    // display.nodes = addMetadataVectorsToNodes(display.metadata, display.nodes);
 }
 function standardizeNetworkRepresentation(networkName) {
     var network = wwdata.networks[networkName];
@@ -192,27 +192,17 @@ function standardizeLayerRepresentation(layer) {
 
         }
 
-        layer.nodes = addMetadataVectorsToNodes(layer.metadata, layer.nodes);
+        // layer.nodes = addMetadataVectorsToNodes(layer.metadata, layer.nodes);
     }
 
     return layer;
 }
-function addMetadataVectorsToNodes(metadata, nodes) {
-    if (nodes == undefined) {
-        nodes = {};
-    }
-
+function addMetadataVectorsToNodes(metadata) {
     for (var metadatum in metadata) {
         for (var i in metadata[metadatum].values) {
-            if (nodes[i] == undefined) {
-                nodes[i] = {};
-            }
-        
             nodes[i][metadatum] = metadata[metadatum].values[i];
         }
     }
-
-    return nodes;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // - changes the number of visible nodes
@@ -290,14 +280,16 @@ function setVisibleNodes() {
         }
     }
 }
-function addNodeMetadata(metadata, nodeIdMap) {
-    if (getObjetPropertyCount(metadata) == 0) {
+function addNodeMetadata(source, nodeIdMap) {
+    addMetadataVectorsToNodes(source.metadata);
+
+    if (getObjetPropertyCount(source.nodes) == 0) {
         return;
     }
 
-    for (var i in metadata) {
-        for (var metadatum in metadata[i]) {
-            nodes[nodeIdMap[i]][metadatum] = metadata[i][metadatum];
+    for (var i in source.nodes) {
+        for (var metadatum in source.nodes[i]) {
+            nodes[nodeIdMap[i]][metadatum] = source.nodes[i][metadatum];
         }
     }
 }
@@ -342,7 +334,39 @@ function getNodeIdMap(networkName, networkLayer) {
         }
     }
 
+    var displayMetadataValuesCount = metadataValuesCount(display.metadata);
+
+    if (displayMetadataValuesCount > unusedId) {
+        while (displayMetadataValuesCount > unusedId) {
+            nodeIdMap[unusedId] = unusedId;
+            unusedId += 1;
+        }
+    }
+
+    var networkMetadataValuesCount = metadataValuesCount(networkData.metadata);
+
+    if (networkMetadataValuesCount > unusedId) {
+        while (networkMetadataValuesCount > unusedId) {
+            nodeIdMap[unusedId] = unusedId;
+            unusedId += 1;
+        }
+    }
     return nodeIdMap;
+}
+function metadataValuesCount(metadata) {
+    var maxValuesCount = 0;
+    if (metadata !== undefined) {
+        for (var metadatum in metadata) {
+            var values = metadata[metadatum].values;
+            if (values !== undefined) {
+                var valuesCount = values.length;
+                if (valuesCount > maxValuesCount) {
+                    maxValuesCount = valuesCount;
+                }
+            }
+        }
+    }
+    return maxValuesCount;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // loads the metadata up from the places they could come from:
@@ -379,10 +403,10 @@ function setNodeMetadata() {
 
     var nodeIdMap = getNodeIdMap(display.networkName, display.networkLayer);
 
-    addNodeMetadata(display.nodes, nodeIdMap);
+    addNodeMetadata(display, nodeIdMap);
 
     var networkData = wwdata.networks[display.networkName].layers[display.networkLayer];
-    addNodeMetadata(networkData.nodes, nodeIdMap);
+    addNodeMetadata(networkData, nodeIdMap);
 
     var nodeNameMap = {};
     for(var key in nodeIdMap){

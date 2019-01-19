@@ -16,12 +16,20 @@ web = Web(
             'Carl' : {
                 'wearsGlasses' : False,
             },
+            'Tzu-Chi' : {},
         },
+        'metadata' : {
+            'wearsContacts' : {
+                'values' : [True, False, True, False, False],
+            }
+        }
     },
 )
 
 # use the 'wearsGlasses' to compute node sizes
 web.display.sizeBy = 'wearsGlasses'
+
+web.display.colorBy = 'wearsContacts'
 
 # open the browser with the result
 web.draw()
