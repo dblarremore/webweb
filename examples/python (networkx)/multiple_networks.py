@@ -63,14 +63,14 @@ starfish.nodes[0]['power'] = 3.1415
 # add the 'starfish' network
 web.networks.starfish(nx_G=starfish)
 
-# display the `snake` network first
+# display the `starfish` network first
 web.display.networkName = 'starfish'
 
 # we'll compute node color by the `hunger` attribute
-web.display.colorBy = 'texture'
+web.display.colorBy = 'hunger'
 
 # we'll compute node size by the `isHead` attribute
-web.display.sizeBy = 'hunger'
+web.display.sizeBy = 'isHead'
 
 # open the browser with the result
 web.draw()

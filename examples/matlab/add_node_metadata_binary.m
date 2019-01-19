@@ -1,27 +1,21 @@
-from webweb import Web
+% define an edge list
+edge_list = [...
+    1, 2;
+    2, 3;
+    2, 4;
+    3, 4;
+    ];
+% define names for the nodes
+names = {'Dan','Hunter','Brian','Carl'};
 
-web = Web(
-    adjacency=[['Dan', 'Hunter'], ['Brian', 'Hunter'], ['Carl', 'Hunter'], ['Carl', 'Brian']],
-    display={
-        'nodes' : {
-            'Dan' : {
-                'wearsGlasses' : True,
-            },
-            'Hunter' : {
-                'wearsGlasses' : True,
-            },
-            'Brian' : {
-                'wearsGlasses' : True,
-            },
-            'Carl' : {
-                'wearsGlasses' : False,
-            },
-        },
-    },
-)
+% put the edge list and names into a webweb struct called ww
+ww.networks.network.edgeList = edge_list;
+ww.display.metadata.name.values = names;
 
-# use the 'wearsGlasses' to compute node sizes
-web.display.sizeBy = 'wearsGlasses'
+% put some boolean metadata into the same struct
+wearsGlasses = [1,1,1,0];
+ww.display.metadata.wearsGlasses.values = wearsGlasses;
+ww.display.metadata.wearsGlasses.type   = 'binary';
 
-# open the browser with the result
-web.draw()
+% call webweb
+webweb(ww);

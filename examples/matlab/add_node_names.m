@@ -1,20 +1,16 @@
-from webweb import Web
+% define a couple edges
+edges = [...
+    1,2;
+    2,3;...
+    ];
+% Place the edges in a webweb struct called ww
+ww.networks.network.edgeList = edges;
 
-web = Web(
-    adjacency=[[0, 1], [1, 2]],
-    display={
-        'nodes' : {
-            0 : {
-                'name' : 'Huberg',
-            },
-            1 : {
-                'name' : 'Pierot',
-            },
-            2 : {
-                'name' : 'Slartibertfast',
-            },
-        },
-    },
-)
+% Define some names in an array of cells containing strings
+names = {'Huberg','Pierot','Slartibertfast'};
 
-web.draw()
+% Put the names in metadata with the special key "names"
+ww.display.metadata.name.values = names;
+
+% Call webweb
+webweb(ww)

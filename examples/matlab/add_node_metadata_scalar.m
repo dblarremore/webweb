@@ -1,31 +1,24 @@
-from webweb import Web
+% define a couple edges
+edges = [...
+    1,2;
+    2,3;...
+    ];
+% Place the edges in a webweb struct called ww
+ww.networks.network.edgeList = edges;
 
-web = Web(
-    adjacency=[[0, 1], [1, 2]],
-    display={
-        'nodes' : {
-            0 : {
-                'age' : 10,
-            },
-            1 : {
-                'age' : 20,
-            },
-            2 : {
-                'age' : 30,
-            },
-        },
-        'metadata' : {
-            'velocity' : {
-                'values' : [42, 100, 7]
-            },
-        },
-    },
-)
+% Define two scalar metadata sets
+age = [10,20,30];
+velocity = [42,100,7];
 
-# we'll compute node size by the `age` metadata attribute
-web.display.sizeBy = 'age'
+% Put them in the webweb struct
+ww.display.metadata.age.values = age;
+ww.display.metadata.velocity.values = velocity
 
-# we'll compute node color by the `velocity` metadata attribute
-web.display.colorBy = 'velocity'
+% BONUS: ask webweb to use age for default node size
+%        ask webweb to use velocity for default node color
+% These assignments simply need to match the key of the metadata above.
+ww.display.sizeBy = 'age';
+ww.display.colorBy = 'velocity';
 
-web.draw()
+% call webweb
+webweb(ww);
