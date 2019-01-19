@@ -63,7 +63,7 @@ starfish.nodes[0]['power'] = 3.1415
 # add the 'starfish' network
 web.networks.starfish(nx_G=starfish)
 
-# display the `snake` network first
+# display the `starfish` network first
 web.display.networkName = 'starfish'
 
 # we'll compute node color by the `hunger` attribute

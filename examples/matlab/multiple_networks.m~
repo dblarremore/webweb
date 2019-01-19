@@ -1,4 +1,7 @@
-from webweb import Web
+% set some node names and a metadata attribute (hunger) to appear for all
+% of the networks that we will display. Since these metadata attributes
+% apply globally, we put them under ww.display
+ww.display.metadata.names = {'dane','sebastian','manny','brock'
 
 # define the node names and a hunger metadata attribute to appear in all networks
 web = Web(
@@ -88,7 +91,7 @@ web.networks.starfish(
     }
 )
 
-# display the `starfish` network first
+# display the `snake` network first
 web.display.networkName = 'starfish'
 
 # we'll compute node color by the `hunger` attribute

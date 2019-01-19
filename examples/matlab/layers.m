@@ -1,60 +1,43 @@
-from webweb import Web
+% define a few layers' edge lists for a multilayer network called oroboros
+l_one = [1,2; 2,3; 3,4];
+l_two = [1,2; 2,3; 3,4; 4,1];
+l_three = [1,2; 2,3; 3,1];
+l_four = [1,2; 2,1];
+l_five = [];
 
-web = Web(
-    title='oroboros',
-    adjacency=[[0, 1], [1, 2], [2, 3]],
-    metadata={
-        'isHead' : {
-            'values' : [True, False, False, False],
-        }
-    }
-)
+% Place the layers under oroboros in the order that you'd like them.
+% Let's initialize an empty array of layers first
+ww.networks.oroboros.layers = {};
+% Build the first layer as a networkObject
+netObj.edgeList = l_one;
+% Assign it its *own* metadata, specific to this layer
+netObj.metadata.isHead.values = [1,0,0,0];
+% Append it to the layers
+ww.networks.oroboros.layers{end+1} = netObj;
 
-# oroboros begins chompin'
-web.networks.oroboros.add_layer(
-    adjacency=[[0, 1], [1, 2], [2, 3], [3, 0]],
-    metadata={
-        'isHead' : {
-            'values' : [True, False, False, False],
-        }
-    }
-)
+% Repeat for layer 2
+netObj.edgeList = l_two;
+netObj.metadata.isHead.values = [1,0,0,0];
+ww.networks.oroboros.layers{end+1} = netObj;
 
-web.networks.oroboros.add_layer(
-    adjacency=[[0, 1], [1, 2], [2, 0]],
-    metadata={
-        'isHead' : {
-            'values' : [True, False, False],
-        }
-    }
-)
+% ... and layer 3.
+netObj.edgeList = l_three;
+netObj.metadata.isHead.values = [1,0,0];
+ww.networks.oroboros.layers{end+1} = netObj;
 
-web.networks.oroboros.add_layer(
-    adjacency=[[0, 1], [1, 0]],
-    metadata={
-        'isHead' : {
-            'values' : [True, False],
-        }
-    }
-)
+% ... and layer 4.
+netObj.edgeList = l_four;
+netObj.metadata.isHead.values = [1,0];
+ww.networks.oroboros.layers{end+1} = netObj;
 
-# lame symbol for infinity if you ask me.
-web.networks.oroboros.add_layer(
-    adjacency=[],
-    metadata={
-        'isHead' : {
-            'values' : [True],
-        }
-    }
-)
+% ... and layer 5.
+netObj.edgeList = l_five;
+netObj.metadata.isHead.values = [1];
+ww.networks.oroboros.layers{end+1} = netObj;
 
-# display the first layer first (you could put, say, 1 here and it would display the second)
-web.display.networkLayer = 0
 
-# we'll compute node color by the `isHead` attribute
-web.display.colorBy = 'isHead'
+% BONUS: set default node color and size to the `isHead` attribute
+ww.display.colorBy = 'isHead';
+ww.display.sizeBy = 'isHead';
 
-# we'll compute node size by the `isHead` attribute
-web.display.sizeBy = 'isHead'
-
-web.draw()
+webwebdev(ww);
