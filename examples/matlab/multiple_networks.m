@@ -14,15 +14,11 @@ ww.networks.starfish.metadata.texture.values={'gooey','fishy','chewy',...
     'crunchy','chewy','gooey'};
 ww.networks.starfish.metadata.power.values={1,3,3.8,0.2,1,3.1415};
 
-% BONUS force the snake network to 
+% BONUS force the starfish network to display first by default
+ww.display.networkName = 'starfish';
+% BONUS force node color to texture metadata
+ww.display.colorBy = 'texture';
+% BONUS force node size to isHead metadata
+ww.display.sizeBy = 'hunger';
 
-# display the `snake` network first
-web.display.networkName = 'starfish'
-
-# we'll compute node color by the `hunger` attribute
-web.display.colorBy = 'texture'
-
-# we'll compute node size by the `isHead` attribute
-web.display.sizeBy = 'hunger'
-
-web.draw()
+webweb(ww)
