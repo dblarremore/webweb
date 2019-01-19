@@ -19,5 +19,5 @@ web = Web(
 
 web.display.freezeNodeMovement = True
 
-# Launch webbrowser with result
-web.draw()
+# show the visualization
+web.show()

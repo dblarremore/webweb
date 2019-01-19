@@ -10,5 +10,5 @@ web = Web(nx_G=G)
 # scale edge widths by weight so we can see a visual difference
 web.display.scaleLinkWidth = True
 
-# open the browser with the result
-web.draw()
+# show the visualization
+web.show()

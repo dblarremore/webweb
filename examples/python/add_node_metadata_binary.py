@@ -31,5 +31,5 @@ web.display.sizeBy = 'wearsGlasses'
 
 web.display.colorBy = 'wearsContacts'
 
-# open the browser with the result
-web.draw()
+# show the visualization
+web.show()

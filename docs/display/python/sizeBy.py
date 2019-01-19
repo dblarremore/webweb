@@ -13,5 +13,5 @@ web = Web([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]], display={
 # use the 'happiness' attribute to size nodes
 web.display.sizeBy = 'happiness'
 
-# Launch webbrowser with result
-web.draw()
+# show the visualization
+web.show()

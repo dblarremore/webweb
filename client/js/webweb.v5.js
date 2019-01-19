@@ -24,6 +24,15 @@ var displayDefaults = {
     'nameToMatch' : "",
 };
 
+var displayParameterSynonyms = [
+    ['c', 'charge'],
+    ['g', 'gravity'],
+    ['h', 'height'],
+    ['l', 'linkLength'],
+    ['r', 'radius'],
+    ['w', 'width'],
+];
+
 var display = {};
 var networkNames;
 
@@ -68,6 +77,7 @@ function initializeWebweb() {
     displayDefaults['networkName'] = networkNames[0];
 
     display = wwdata.display == undefined ? {} : wwdata.display;
+    display = standardizeDisplayParameterSynonyms(display);
     for (var key in displayDefaults) {
         if (display[key] == undefined) {
             display[key] = displayDefaults[key];
@@ -99,6 +109,19 @@ function initializeWebweb() {
 
     displayNetwork();
 }
+function standardizeDisplayParameterSynonyms(display) {
+    for (var i in displayParameterSynonyms) {
+        var key1 = displayParameterSynonyms[i][0];
+        var key2 = displayParameterSynonyms[i][1];
+
+        if (display[key1] == undefined && display[key2] !== undefined) {
+            display[key1] = display[key2];
+        }
+
+        delete display[key2];
+    }
+    return display;
+}
 function initializeHTML() {
     var container;
 
@@ -107,6 +130,10 @@ function initializeHTML() {
         container.setAttribute('id', 'webweb-center');
 
         document.getElementsByTagName("body")[0].appendChild(container);
+
+        if (wwdata.title !== undefined) {
+            document.title = wwdata.title;
+        }
     }
     else {
         container = document.getElementById(display.attachWebwebToElementWithId);
@@ -536,14 +563,12 @@ function computeNodes() {
         var network = wwdata.networks[networkName];
         for (var layer in network.layers) {
             var nodeIdMap = getNodeIdMap(networkName, layer);
-            console.log(nodeIdMap)
             var count = getObjetPropertyCount(nodeIdMap);
             nodeCounts.push(count);
         }
     }
 
     var maxObservedNodeCount = d3.max(nodeCounts);
-    console.log(maxObservedNodeCount)
 
     // if display.N is undefined, or if it is less than the max number of nodes
     // we've observed, set it to the max observed
@@ -1778,7 +1803,7 @@ function writeGravityWidget(parent) {
 function writeRadiusWidget(parent) {
     var radiusWidget = parent.append("div")
         .attr("id", "radiusWidget")
-        .text("Node r: ");
+        .text("Node radius: ");
 
     radiusWidget.append("input")
         .attr("id","rText")
@@ -1819,7 +1844,7 @@ function writeShowNodeNamesWidget(parent) {
 function writeMenus(container) {
     var menu = document.createElement('div')
     menu.setAttribute('id', 'webweb-menu')
-    menu.style.display = display.hideMenu !== undefined ? 'none' : 'block';
+    menu.style.display = display.hideMenu == true ? 'none' : 'block';
     container.appendChild(menu);
 
     var menu = d3.select('#webweb-menu');

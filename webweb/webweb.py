@@ -15,16 +15,22 @@ import webbrowser
 from collections import defaultdict
 
 class Web(dict):
-    def __init__(self, adjacency=None, adjacency_type=None, nodes=None, title="webweb", display={}, nx_G=None, metadata=None):
+    def __init__(self, adjacency=None, title="webweb", display={}, **kwargs):
+        """a webweb object. 
+
+        parameters:
+        - adjacency: adjacency to make a visulization from. see `Network.add_layer`
+        - title: string. Will set the html title of the visualization if display.attachWebwebToElementWithId = None
+        - display: dictionary of display parameters
+        - see `Network.add_layer` for all other parameters."""
         self.title = title
         self.display = Display(display)
         self.networks = Networks()
 
         # if we have an adjacency, add it into the networks object
-        if adjacency:
-            getattr(self.networks, self.title).add_layer(adjacency, adjacency_type=adjacency_type, nodes=nodes, metadata=metadata)
-        elif nx_G:
-            getattr(self.networks, self.title).add_layer(nx_G=nx_G)
+        if adjacency or kwargs.get('nx_G'):
+            kwargs['adjacency'] = adjacency
+            getattr(self.networks, self.title)(**kwargs)
 
     @property
     def base_path(self):
@@ -43,16 +49,24 @@ class Web(dict):
 
         return content
 
-
-    def draw(self):
-        """
-        1. saves the html file
-        2. opens the web browser
+    def show(self):
+        """display the webweb visualization.
+        - creates the html file
+        - opens the web browser
         """
         with open(self.html_file, 'w') as f:
             f.write(self.html)
 
         webbrowser.open_new("file://" + self.html_file)
+
+    def save(self, path):
+        """saves the webweb visualization to the specified path
+
+        parameters: 
+        - path: the path to save to.
+        """
+        with open(path, 'w') as f:
+            f.write(self.html)
 
     @property
     def html_file(self):
@@ -63,6 +77,7 @@ class Web(dict):
         return json.dumps({
             "display" : vars(self.display),
             'networks' : { name : vars(data) for name, data in vars(self.networks).items()},
+            "title" : self.title,
         })
 
     @property
@@ -70,7 +85,6 @@ class Web(dict):
         return """
             <html>
                 <head>
-                    <title>webweb {title}</title>
                     <script>{d3js}</script>
                     <style>{style}</style>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -107,17 +121,41 @@ class Networks(dict):
         return self.__dict__[name]
 
 class Network(dict):
-    def __init__(self, adjacency=None, nodes=None, adjacency_type=None, metadata=None, nx_G=None):
+    def __init__(self):
+        """a webweb Network object"""
         self.layers = []
 
     def __call__(self, **kwargs):
+        """see `add_layer`"""
         # if we have an adjacency, add it into the networks object
         if kwargs.get('adjacency'):
             self.add_layer(**kwargs)
         elif kwargs.get('nx_G'):
             self.add_layer(**kwargs)
 
-    def add_layer(self, adjacency=None, nodes=None, adjacency_type=None, nx_G=None, metadata=None):
+    def add_layer(self, adjacency=None, adjacency_type=None, nodes=None,  metadata=None, nx_G=None):
+        """adds a layer to the network.
+
+        parameters:
+        - adjacency: edge list or adjacency matrix
+        - adjacency_type: string. 'matrix' or 'edge list'. Supply if passing an adjacency matrix with fewer than 3 nodes
+        - nodes: dict of node attribute dicts
+        - metadata: dict of vectorized metadata and display information. 
+        {
+            'attribute' : {
+                'values' : [ "attribute_value", ...],
+                'categories' : ["category1", "category2", ...] (supply if values is categorical but contains numbers; values in the `values` array will be used as indexes to this array)
+                'type' : string. Only necessary if displaying binary information with 0/1 and not True/False.
+            }
+        }
+        - nx_G: a networkx graph.
+
+        call with at least one of:
+        - adjacency
+        - nodes
+        - metadata
+        - nx_G
+        """
         if nx_G:
             adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(nx_G)
         else:

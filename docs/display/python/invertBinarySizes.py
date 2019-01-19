@@ -16,5 +16,5 @@ web.display.sizeBy = 'isHappy'
 # invert the sizes used for `False` and `True` (make `False` big and `True` small)
 web.display.invertBinarySizes = True
 
-# Launch webbrowser with result
-web.draw()
+# show the visualization
+web.show()

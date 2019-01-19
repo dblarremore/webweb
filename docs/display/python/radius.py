@@ -3,7 +3,8 @@ from webweb import Web
 # Instantiate webweb object
 web = Web([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]])
 
-web.display.g = .01
+# make nodes really big
+web.display.radius = 20
 
-# Launch webbrowser with result
-web.draw()
+# show the visualization
+web.show()

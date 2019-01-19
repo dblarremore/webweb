@@ -29,4 +29,5 @@ web = Web(
 # (categorical metadata can't be used to compute node sizes)
 web.display.colorBy = 'alphabeticallity'
 
-web.draw()
+# show the visualization
+web.show()

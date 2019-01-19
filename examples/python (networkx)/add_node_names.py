@@ -11,5 +11,5 @@ G.nodes[2]['name'] = 'Slartibertfast'
 # create the web
 web = Web(nx_G=G)
 
-# open the browser with the result
-web.draw()
+# show the visualization
+web.show()

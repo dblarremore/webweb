@@ -3,7 +3,7 @@ from webweb import Web
 # Instantiate webweb object
 web = Web([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]])
 
-web.display.c = 150
+web.display.gravity = .01
 
-# Launch webbrowser with result
-web.draw()
+# show the visualization
+web.show()

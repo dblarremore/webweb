@@ -5,3 +5,4 @@
 webweb.egg-info
 dist
 build
+**/*.pyc

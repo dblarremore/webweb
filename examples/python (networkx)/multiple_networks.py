@@ -72,5 +72,5 @@ web.display.colorBy = 'hunger'
 # we'll compute node size by the `isHead` attribute
 web.display.sizeBy = 'isHead'
 
-# open the browser with the result
-web.draw()
+# show the visualization
+web.show()

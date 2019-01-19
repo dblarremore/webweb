@@ -17,4 +17,5 @@ web = Web(
     },
 )
 
-web.draw()
+# show the visualization
+web.show()

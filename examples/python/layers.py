@@ -57,4 +57,5 @@ web.display.colorBy = 'isHead'
 # we'll compute node size by the `isHead` attribute
 web.display.sizeBy = 'isHead'
 
-web.draw()
+# show the visualization
+web.show()

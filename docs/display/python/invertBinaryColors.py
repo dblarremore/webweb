@@ -16,5 +16,5 @@ web.display.colorBy = 'isHappy'
 # invert the colors used for `False` and `True`
 web.display.invertBinaryColors = True
 
-# Launch webbrowser with result
-web.draw()
+# show the visualization
+web.show()

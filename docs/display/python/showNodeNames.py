@@ -19,4 +19,5 @@ web = Web(
 
 web.display.showNodeNames = True
 
-web.draw()
+# show the visualization
+web.show()

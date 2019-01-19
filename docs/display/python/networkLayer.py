@@ -7,5 +7,5 @@ web.networks.webweb.add_layer(adjacency=[[0, 1], [1, 2]])
 
 web.display.networkLayer = 1
 
-# Launch webbrowser with result
-web.draw()
+# show the visualization
+web.show()

@@ -19,4 +19,5 @@ web = Web(
 
 web.display.nameToMatch = 'Pierot'
 
-web.draw()
+# show the visualization
+web.show()

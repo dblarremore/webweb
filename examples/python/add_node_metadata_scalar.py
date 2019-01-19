@@ -28,4 +28,5 @@ web.display.sizeBy = 'age'
 # we'll compute node color by the `velocity` metadata attribute
 web.display.colorBy = 'velocity'
 
-web.draw()
+# show the visualization
+web.show()

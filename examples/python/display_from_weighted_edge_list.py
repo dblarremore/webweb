@@ -9,5 +9,5 @@ web = Web(edge_list)
 # we'll scale edge widths by weight to create a visual difference
 web.display.scaleLinkWidth = True
 
-# open the browser with the result
-web.draw()
+# show the visualization
+web.show()

@@ -94,7 +94,8 @@ web.display.networkName = 'starfish'
 # we'll compute node color by the `texture` attribute
 web.display.colorBy = 'texture'
 
-# we'll compute node size by the `isHead` attribute
-web.display.sizeBy = 'isHead'
+# we'll compute node size by the `hunger` attribute
+web.display.sizeBy = 'hunger'
 
-web.draw()
+# show the visualization
+web.show()

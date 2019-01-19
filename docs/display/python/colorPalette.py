@@ -18,5 +18,5 @@ web.display.colorBy = 'emotion'
 # categorical or binary attribute
 web.display.colorPalette = 'Set3'
 
-# Launch webbrowser with result
-web.draw()
+# show the visualization
+web.show()

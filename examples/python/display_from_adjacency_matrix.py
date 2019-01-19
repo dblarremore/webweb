@@ -13,5 +13,5 @@ adjacency_matrix = [
 # web = Web(adjacency_matrix, adjacency_type='matrix')
 web = Web(adjacency_matrix)
 
-# open the browser with the result
-web.draw()
+# show the visualization
+web.show()

@@ -21,5 +21,5 @@ web = Web(nx_G=G)
 # use the 'wearsGlasses' to compute node sizes
 web.display.sizeBy = 'wearsGlasses'
 
-# open the browser with the result
-web.draw()
+# show the visualization
+web.show()
