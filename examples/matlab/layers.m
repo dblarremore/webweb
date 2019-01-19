@@ -40,4 +40,4 @@ ww.networks.oroboros.layers{end+1} = netObj;
 ww.display.colorBy = 'isHead';
 ww.display.sizeBy = 'isHead';
 
-webwebdev(ww);
+webweb(ww);
