@@ -91,10 +91,10 @@ web.networks.starfish(
 # display the `starfish` network first
 web.display.networkName = 'starfish'
 
-# we'll compute node color by the `hunger` attribute
+# we'll compute node color by the `texture` attribute
 web.display.colorBy = 'texture'
 
 # we'll compute node size by the `isHead` attribute
-web.display.sizeBy = 'hunger'
+web.display.sizeBy = 'isHead'
 
 web.draw()
