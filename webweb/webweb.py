@@ -15,10 +15,11 @@ import webbrowser
 from collections import defaultdict
 
 class Web(dict):
+    """a webweb object. 
+    a collection of named webweb Network objects, a set of display parameters, and a title
+    """
     def __init__(self, adjacency=None, title="webweb", display={}, **kwargs):
-        """a webweb object. 
-
-        parameters:
+        """parameters:
         - adjacency: adjacency to make a visulization from. see `Network.add_layer`
         - title: string. Will set the html title of the visualization if display.attachWebwebToElementWithId = None
         - display: dictionary of display parameters
@@ -121,8 +122,8 @@ class Networks(dict):
         return self.__dict__[name]
 
 class Network(dict):
+    """a webweb Network object"""
     def __init__(self):
-        """a webweb Network object"""
         self.layers = []
 
     def __call__(self, **kwargs):
