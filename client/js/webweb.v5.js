@@ -324,6 +324,10 @@ function getNodeIdMap(networkName, networkLayer) {
         }
     }
 
+    if (allInts(nodeNames)) {
+        nodeNames.sort();
+    }
+
     var unusedId = 0;
     var nodeIdMap = {};
     for (var i in nodeNames) {
@@ -336,9 +340,17 @@ function getNodeIdMap(networkName, networkLayer) {
 
     var displayMetadataValuesCount = metadataValuesCount(display.metadata);
 
+    var unusedName = 0;
+    for(var key in nodeIdMap){
+        if (isInt(key) && key >= unusedName) {
+            unusedName = key + 1;
+        }
+    }
+
     if (displayMetadataValuesCount > unusedId) {
         while (displayMetadataValuesCount > unusedId) {
-            nodeIdMap[unusedId] = unusedId;
+            nodeIdMap[unusedName] = unusedId;
+            unusedName += 1;
             unusedId += 1;
         }
     }
@@ -347,10 +359,12 @@ function getNodeIdMap(networkName, networkLayer) {
 
     if (networkMetadataValuesCount > unusedId) {
         while (networkMetadataValuesCount > unusedId) {
-            nodeIdMap[unusedId] = unusedId;
+            nodeIdMap[unusedName] = unusedId;
+            unusedName += 1;
             unusedId += 1;
         }
     }
+
     return nodeIdMap;
 }
 function metadataValuesCount(metadata) {
@@ -522,12 +536,14 @@ function computeNodes() {
         var network = wwdata.networks[networkName];
         for (var layer in network.layers) {
             var nodeIdMap = getNodeIdMap(networkName, layer);
+            console.log(nodeIdMap)
             var count = getObjetPropertyCount(nodeIdMap);
             nodeCounts.push(count);
         }
     }
 
     var maxObservedNodeCount = d3.max(nodeCounts);
+    console.log(maxObservedNodeCount)
 
     // if display.N is undefined, or if it is less than the max number of nodes
     // we've observed, set it to the max observed
