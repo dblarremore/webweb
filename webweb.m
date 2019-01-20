@@ -1,3 +1,13 @@
+% WEBWEB is a tool for visualizing complex networks and their metadata. 
+% It creates intuitive and lightweight visualizations in your web browser.
+% Full documentation at http://github.com/dblarremore/webweb
+% ------------------------------------------------------------------------ 
+% Contributors: 
+%   Dan Larremore http://danlarremore.com
+%   K. Hunter Wapman http://hneutr.github.io 
+%   Michael Iuzzolino https://michael-iuzzolino.github.io/
+% ------------------------------------------------------------------------
+%
 % webweb for MATLAB accepts a few input types:
 %
 % webweb(adjacency_matrix)
@@ -34,7 +44,6 @@
 %   scaleLinkWidth, scaleLinkOpacity
 %   colorPalette
 %   freezeNodeMovement, showNodeNames, invertBinaryColors, invertBinarySizes
-%   nodeCoordinates
 %   see http://github.com/dblarremore/webweb for full documentation
 
 function [] = webweb(x)
