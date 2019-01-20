@@ -43,8 +43,8 @@ if isstruct(x)
             % edgeList!
             x.networks.(mynets{i}).edgeList = ...
                 clean_edgeList(x.networks.(mynets{i}).edgeList);
-            myMetadata = fieldnames(x.networks.(mynets{i}).metadata);
-            if ~isempty(myMetadata)
+            if isfield(x.networks.(mynets{i}),'metadata')
+                myMetadata = fieldnames(x.networks.(mynets{i}).metadata);
                 for k = 1:length(myMetadata)
                     x.networks.(mynets{i}).metadata.(myMetadata{k}).values = ...
                         force_brackets(x.networks.(mynets{i}).metadata.(myMetadata{k}).values);
@@ -55,8 +55,8 @@ if isstruct(x)
             for j=1:length(x.networks.(mynets{i}).layers)
                 x.networks.(mynets{i}).layers{j}.edgeList = ...
                     clean_edgeList(x.networks.(mynets{i}).layers{j}.edgeList);
-                myMetadata = fieldnames(x.networks.(mynets{i}).layers{j}.metadata);
-                if ~isempty(myMetadata)
+                if isfield(x.networks.(mynets{i}).layers{j},'metadata')
+                    myMetadata = fieldnames(x.networks.(mynets{i}).layers{j}.metadata);
                     for k = 1:length(myMetadata)
                         x.networks.(mynets{i}).layers{j}.metadata.(myMetadata{k}).values = ...
                             force_brackets(x.networks.(mynets{i}).layers{j}.metadata.(myMetadata{k}).values);
@@ -171,7 +171,7 @@ function rcv = to_edgeList(myArray)
 nrows   = size(myArray, 1);
 ncols   = size(myArray, 2);
 if ((nrows <= 3) || (ncols <= 3))
-    rcv = clean_edgeList(myEdges);
+    rcv = clean_edgeList(myArray);
     return
 else
     rcv = adj_to_edgeList(myArray);
