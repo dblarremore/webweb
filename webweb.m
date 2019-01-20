@@ -1,368 +1,161 @@
-function [] = webweb(varargin)
-% WEBWEB makes pretty interactive network diagrams in your browser
-% version 3.4
-% http://github.com/dblarremore/webweb
-% Daniel Larremore + Contributors
-% Comments, suggestions, or forks always welcome.
+% wwstruct
+%     .networks
+%         .networkObject
+%         - or -
+%         .layers
+%             .networkObject
+%     .display
+%         .metadataObject
+%         .[optional display parameters]
 %
-% BASIC USAGE:
-% WEBWEB(net)                       (see EXAMPLE 1 in webwebTest.m)
-% WEBWEB(net,nodeNames);            (see EXAMPLE 2 in webwebTest.m)
-% WEBWEB(nets)                      (see EXAMPLE 3 in webwebTest.m)
-% WEBWEB(nets,nodeNames);           (see EXAMPLE 4 in webwebTest.m)
-% WEBWEB(nets,netNames);            (see EXAMPLE 5 in webwebTest.m)
-% WEBWEB(nets,netNames,nodeNames);  (see EXAMPLE 6 in webwebTest.m)
-% WEBWEB(nets,nodeNames,netNames);  (see EXAMPLE 7 in webwebTest.m)
-%
-% INPUTS:
-% net                   NxN Adjacency matrix. Can we weighted, unweighted,
-%   symmetric or asymmetric. All displayed networks are displayed as
-%   undirected, however.
-% nets                  NxNxM Adjacency array of M adjacency matrices
-% nodeNames             Nx1 cell{string} of names for the nodes
-% netNames              Mx1 cell{string} of names for the networks
-%
-% OUTPUTS:
-% Provided that you have webweb.v3.js, style.css, and d3.v3.min.js in the
-% same folder as this file, WEBWEB will write a file called network.html
-% and a file called network.json to the same folder and then open the html
-% file for network display
-%
-% EXAMPLES (see webwebTest.m)
-%
-% ADVANCED USAGE
-%
-% WEBWEB(nets)
-% WEBWEB(dis,nets)                  (see ADVANCED EXAMPLE in webwebTest.m)
-%
-% where dis and nets are structs with optional fields as described below:
-%
-% dis
-%     .name (str)
-%     .w,h,l,r,c,g (ints: width,height,linklength,radius,charge,gravity)
-%     .metadata
-%         .metadataObjects...
-%
-% nets
-%     .netObjects...
-%
-% netObject
-%     .adj (nonnegative, NxN. sparse or full)
-%     .metadata
-%         .metadataObjects...
+% networkObject
+%     .edgeList [2 or 3]
+%     .metadataObject
 %
 % metadataObject
-%     .values (required. int Nx1, bool Nx1, or cell{str} Nx1)
-%     .categories (optional. cell{str} of category names corresponding to int category values)
-%     .type (optional. if set to string 'binary' this will force interpretation of {0,1} values as T/F, isntead of as integers)
-%
-% http://github.com/dblarremore/webweb for updates
+%     .values
+%     .type (optional)
+%     .categories (optional)
 
-% Check if varargin has nodeNames.
-% ------------------------------------------------
-if isstruct(varargin{1}) % nodeNames exists as second element of varargin
-    if nargin==1
-        dis = struct;
-        webwebWrite(dis,varargin{1});
-    elseif nargin==2
-        a = varargin{1};
-        b = varargin{2};
-        if...
-                isfield(a,'name')...
-                || isfield(a,'w')...
-                || isfield(a,'h')...
-                || isfield(a,'l')...
-                || isfield(a,'r')...
-                || isfield(a,'c')...
-                || isfield(a,'g')...
-                || isfield(a,'nodeNames')...
-                || isfield(a,'metadata')
-            webwebWrite(a,b);
-        else
-            webwebWrite(b,a);
+function [] = webweb(x)
+
+if isstruct(x)
+    %%% PARSE A webweb STRUCT %%%
+    
+    % Basically, if you're passing in a struct, we're going to assume that
+    % you have set all the parameters already. :)
+    %
+    % However, we're still going to go through and check that you're not
+    % sending in weights unnecessarily, and that all adjacency matrices
+    % have been changed to edge lists (which is what the js expects).
+    %
+    % We will also check all edgelists to make sure that they are
+    % zero-indexed instead of one-indexed.
+    %
+    % We're also going to look for layers and check THOSE the same as we
+    % checked single layers above.
+    
+    % Get the names of the networks. We'll iterate through each.
+    mynets = fieldnames(x.networks);
+    for i = 1:length(mynets)
+        % Does this network have an .edgeList or .layers?
+        if isfield(x.networks.(mynets{i}),'edgeList')
+            % edgeList!
+            x.networks.(mynets{i}).edgeList = ...
+                clean_edgeList(x.networks.(mynets{i}).edgeList);
+            myMetadata = fieldnames(x.networks(mynets{i}).metadata);
+            if ~isempty(myMetadata)
+                for k = 1:length(myMetadata)
+                    x.networks(mynets{i}).metadata.(myMetadata{k}).values = ...
+                        force_brackets(x.networks(mynets{i}).metadata.(myMetadata{k}).values);
+                end
+            end
+        elseif isfield(x.networks.(mynets{i}),'layers')
+            % layers!
+            for j=1:length(x.networks.(mynets{i}).layers)
+                x.networks.(mynets{i}).layers{j}.edgeList = ...
+                    clean_edgeList(x.networks.(mynets{i}).layers{j}.edgeList);
+                myMetadata = fieldnames(x.networks.(mynets{i}).layers{j}.metadata);
+                if ~isempty(myMetadata)
+                    for k = 1:length(myMetadata)
+                        x.networks.(mynets{i}).layers{j}.metadata.(myMetadata{k}).values = ...
+                            force_brackets(x.networks.(mynets{i}).layers{j}.metadata.(myMetadata{k}).values);
+                    end
+                end
+            end
         end
     end
-    return
-end
-% ------------------------------------------------
-
-nrows   = size(varargin{1}, 1);
-ncols   = size(varargin{1}, 2);
-nlayers = size(varargin{1}, 3);
-% if you've got an edgelist, convert it to a sparse matrix.
-if ((nrows <= 3) || (ncols <= 3)) && (nlayers==1)
-    varargin{1} = edgelist_to_adj(varargin{1});
-end
-
-if nlayers==1
-    varargin{1} = remove_undirected_redundancy(varargin{1});
+    webwebWrite(x)
 else
-    for m=1:nlayers
-        % check to see if each matrix is symmetric.
-        % if true, pass upper triangular matrix to avoid doublecounting links
-        varargin{1}(:,:,m) = remove_undirected_redundancy(varargin{1}(:,:,m));
-    end
-end
-
-if nargin==1
-    if size(varargin{1},3)==1
-        dis = struct;
-        nets.network.adj = varargin{1};
+    %%% PARSE A MATRIX OR TENSOR %%%
+    % Is it a matrix or a tensor?
+    if size(x, 3)==1
+        % It's a matrix
+        wwstruct.networks.network.edgeList = to_edgeList(x);
     else
-        dis = struct;
-        nets = struct;
-        for m=1:nlayers
-            nets.(['network' num2str(m)]).adj = varargin{1}(:,:,m);
+        % It's a tensor
+        wwstruct.networks.network.layers = {};
+        for m=1:size(x,3)
+            netObj.edgeList = to_edgeList(x);
+            wwstruct.networks.network.layers{end+1} = netObj;
         end
     end
-    webwebWrite(dis,nets);
-    return
-end
-
-if nargin==2
-    nets = struct;
-    dis = struct;
-    % check to disambiguate netNames or nodeNames
-    % if M == N, this is confusing...
-    if nlayers == size(varargin{1}(:,:,1))
-        isNetNames = input('Are the metadata that you passed network names? (y/n) ');
-        if strcmp(isNetNames,'y')
-            isNetNames = 1;
-        elseif strcmp(isNetNames,'n')
-            isNetNames = 0;
-        end
-    else
-        % decide if we have netNames or nodeNames
-        a = length(varargin{2});
-        if a==nlayers
-            isNetNames = 1;
-        else
-            isNetNames = 0;
-        end
-    end
-    if isNetNames
-        for m=1:nlayers
-            nets.(varargin{2}{m}).adj = varargin{1}(:,:,m);
-        end
-    else
-        for m=1:nlayers
-            nets.(['network' num2str(m)]).adj = varargin{1}(:,:,m);
-        end
-        dis.metadata.names.values = varargin{2};
-    end
-    
-    webwebWrite(dis,nets);
-    return
-end
-
-if nargin==3
-    nets = struct;
-    dis = struct;
-    % check to disambiguate netNames or nodeNames
-    % if M == N, this is confusing...
-    if nlayers == size(varargin{1}(:,:,1))
-        isNetNames = input('Are the first metadata that you passed network names? (y/n) ');
-        if strcmp(isNetNames,'y')
-            netNames = varargin{2};
-            nodeNames = varargin{3};
-        elseif strcmp(isNetNames,'n')
-            netNames = varargin{3};
-            nodeNames = varargin{2};
-        end
-    else
-        % decide if we have netNames or nodeNames
-        a = length(varargin{2});
-        if a==nlayers
-            netNames = varargin{2};
-            nodeNames = varargin{3};
-        else
-            netNames = varargin{3};
-            nodeNames = varargin{2};
-        end
-    end
-    
-    for m=1:nlayers
-        nets.(netNames{m}).adj = varargin{1}(:,:,m);
-    end
-    dis.metadata.names.values = nodeNames;
-    
-    webwebWrite(dis,nets);
-    return
+    webwebWrite(wwstruct);
 end
 
 end
+%%%%%%%%%%
 
-function webwebWrite(dis, nets)
-% webwebloc = '~/Desktop/webweb/';
+%%%%%%%%%%
+function webwebWrite(wwstruct)
+% if you want all your webwebs written elsewhere, you can...
+% Default = here.
 webwebloc = '';
+% Alternative = uncomment and customize the line below.
+% webwebloc = '~/Desktop/webweb/';
 
-if isfield(dis,'name')
-    name = dis.name;
+% Open the file.
+if isfield(wwstruct,'title')
+    fid = fopen([webwebloc wwstruct.title '.html'],'w');
+    fname = wwstruct.title;
 else
-    name = 'network';
+    fid = fopen([webwebloc 'webweb.html'],'w');
+    fname = 'webweb';
 end
-
-networkNames = fieldnames(nets);
-N=0;
-for i=1:length(networkNames)
-    N = max(N,max(size(nets.(networkNames{i}).adj)));
-end
-
-%%%%%%%%%%
-fid = fopen([webwebloc name '.json'],'w');
-fprintf(fid,'var wwdata = {');
-fprintf(fid,'"display":{');
-fprintf(fid,'"N":%i,',N);
-fprintf(fid,'"name":"%s",',name);
-if isfield(dis,'w')
-    fprintf(fid,'"w":%i,',dis.w);
-end
-if isfield(dis,'h')
-    fprintf(fid,'"h":%i,',dis.h);
-end
-if isfield(dis,'l')
-    fprintf(fid,'"l":%i,',dis.l);
-end
-if isfield(dis,'r')
-    fprintf(fid,'"r":%i,',dis.r);
-end
-if isfield(dis,'c')
-    fprintf(fid,'"c":%i,',dis.c);
-end
-if isfield(dis,'g')
-    fprintf(fid,'"g":%i,',dis.g);
-end
-fprintf(fid,'"metadata":{');
-if isfield(dis,'metadata')
-    q = dis.metadata;
-    qNames = fieldnames(q);
-    for ii=1:length(qNames)
-        fprintf(fid,'"%s":{',qNames{ii});
-        fprintf(fid,'"type":"%s",',q.(qNames{ii}).type);
-        fprintf(fid,'"values":[');
-        if iscell(q.(qNames{ii}).values)
-            for j=1:length(q.(qNames{ii}).values)
-                fprintf(fid,'"%s",',q.(qNames{ii}).values{j});
-            end
-        else
-            for j=1:length(q.(qNames{ii}).values)
-                fprintf(fid,'%i,',q.(qNames{ii}).values(j));
-            end
-        end
-        fprintf(fid,'],');
-        if isfield(q.(qNames{ii}),'categories')
-            fprintf(fid,'"categories":[');
-            for j=1:length(q.(qNames{ii}).categories)
-                fprintf(fid,'"%s",',q.(qNames{ii}).categories{j});
-            end
-            fprintf(fid,'],');
-        end
-        fprintf(fid,'},');
-    end
-end
-fprintf(fid,'},');
-fprintf(fid,'},');
-
-fprintf(fid,'"networks":{');
-for i=1:length(networkNames)
-    p = getfield(nets,networkNames{i});
-    fprintf(fid,'"%s":{',networkNames{i});
-    fprintf(fid,'"edgeList":[');
-    [r,c,v] = find(p.adj);
-    for j=1:length(v)
-        fprintf(fid,'[%i,%i,%i],',r(j)-1,c(j)-1,v(j));
-    end
-    fprintf(fid,'],');
-    fprintf(fid,'"metadata":{');
-    if isfield(p,'metadata')
-        q = p.metadata;
-        qNames = fieldnames(q);
-        for ii=1:length(qNames)
-            fprintf(fid,'"%s":{',qNames{ii});
-            fprintf(fid,'"type":"%s",',q.(qNames{ii}).type);
-            fprintf(fid,'"values":[');
-            if iscell(q.(qNames{ii}).values)
-                for j=1:length(q.(qNames{ii}).values)
-                    fprintf(fid,'"%s",',q.(qNames{ii}).values{j});
-                end
-            else
-                for j=1:length(q.(qNames{ii}).values)
-                    fprintf(fid,'%i,',q.(qNames{ii}).values(j));
-                end
-            end
-            fprintf(fid,'],');
-            if isfield(q.(qNames{ii}),'categories')
-                fprintf(fid,'"categories":[');
-                for j=1:length(q.(qNames{ii}).categories)
-                    fprintf(fid,'"%s",',q.(qNames{ii}).categories{j});
-                end
-                fprintf(fid,'],');
-            end
-            fprintf(fid,'},');
-        end
-    end
-    fprintf(fid,'},');
-    fprintf(fid,'},');
-end
-fprintf(fid,'}}');
-fclose(fid);
-
-% Strip out all instances of ,] and ,} which are not JSONic.
-fid = fopen([webwebloc name '.json'],'r');
-tline = fgetl(fid);
-fclose(fid);
-
-tline = strrep(tline,',]',']');
-tline = strrep(tline,',}','}');
-
-fid = fopen([webwebloc name '.json'],'w');
-fprintf(fid,tline);
-fclose(fid)
-
-%%%%%%%%%%
-fid = fopen([webwebloc name '.html'],'w');
+%%%%%%%%%% WRITE THE DATA TO HTML/JSON %%%%%%%%%%
 fprintf(fid,'<!DOCTYPE html>\n');
 fprintf(fid,'<html>\n');
 fprintf(fid,'<head>\n');
-fprintf(fid,'\t<title>webweb %s</title>\n',name);
+if isfield(wwstruct,'title')
+    fprintf(fid,'\t<title>webweb %s</title>\n',wwstruct.title); %TITLE
+else
+    fprintf(fid,'\t<title>webweb</title>\n'); %TITLE
+end
 fprintf(fid,'\t<script src="client/js/d3.v5.min.js"></script>\n');
 fprintf(fid,'\t<link type="text/css" rel="stylesheet" href="client/css/style.css"/>\n');
-fprintf(fid,'\t<script type="text/javascript" src="%s.json"></script>\n',name);
+fprintf(fid,'\t<meta name="viewport" content="width=device-width, initial-scale=1.0">\n');
 fprintf(fid,'</head>\n');
 fprintf(fid,'<body>\n');
 fprintf(fid,'\t<script type="text/javascript" src="client/js/colors.js"></script>\n');
 fprintf(fid,'\t<script type="text/javascript" src ="client/js/Blob.js"></script>\n');
 fprintf(fid,'\t<script type="text/javascript" src ="client/js/FileSaver.min.js"></script>\n');
+fprintf(fid,'\t<script type="text/javascript">var wwdata = %s;</script>\n',...
+    jsonencode(wwstruct)); %JSON
 fprintf(fid,'\t<script type="text/javascript" src ="client/js/webweb.v5.js"></script>\n');
 fprintf(fid,'</body>\n');
 fprintf(fid,'</html>\n');
-fclose(fid);
+
 fclose('all');
-%%%%%%%%%%
+
+%%%%%%%%%% OPEN THE FILE %%%%%%%%%%
 comp = computer;
 if ~isempty(strfind(comp,'PCWIN'))
-    dos([webwebloc name '.html'],'-echo');
+    dos([webwebloc fname '.html'],'-echo');
 else
-    unix(['open ' webwebloc name '.html']);
+    unix(['open ' webwebloc fname '.html']);
+end
+
+end
+%%%%%
+
+
+
+%%%%%
+function rcv = adj_to_edgeList(A)
+% we'll simply return a Mx3 edgelist if the network is weighted
+% and a Mx2 edgelist if the network is unweighted
+[r,c,v] = find(remove_undirected_redundancy(A));
+if sum(v==1)==length(v)
+    rcv = [r-1,c-1];
+    return
+else
+    rcv = [r-1,c-1,v];
+    return
 end
 end
 
-function A = edgelist_to_adj(RCV)
-% If it's a sideways edgelist, flip it.
-if size(RCV,1) < size(RCV,2)
-    RCV = RCV';
-end
-% If there are no edge weights, make a bunch of ones
-if size(RCV,2)==2
-    v = ones(size(RCV,1),1);
-else
-    v = RCV(:,3);
-end
-N = max(max(RCV(:,1:2)));
-A = sparse(RCV(:,1),RCV(:,2),v,N,N);
-return
-end
 
+%%%%%
 function B = remove_undirected_redundancy(A)
 if ~sum(sum(A~=A'))
     B = triu(A);
@@ -372,3 +165,59 @@ end
 return
 end
 
+
+%%%%%
+function rcv = to_edgeList(myArray)
+nrows   = size(myArray, 1);
+ncols   = size(myArray, 2);
+if ((nrows <= 3) || (ncols <= 3))
+    rcv = clean_edgeList(myEdges);
+    return
+else
+    rcv = adj_to_edgeList(myArray);
+    return
+end
+end
+
+
+%%%%%
+function rcv = clean_edgeList(myEdges)
+% if the edges are just empty, return nothing.
+if size(myEdges,1)==0
+    rcv = {[]};
+    return
+end
+% if the edges are sizeways (3xM instead of Mx3 for instance) flip them
+if size(myEdges,1) < size(myEdges,2)
+    myEdges = myEdges';
+end
+% if there are no edge weights, return
+if size(myEdges,2)==2
+    rcv = myEdges;
+    return
+end
+% if there are edge weights...
+if size(myEdges,2)==3
+    % are they all ones, and can be discarded?
+    if sum(myEdges(:,3)==1)==size(myEdges,1)
+        % yes
+        rcv = myEdges(:,1:2);
+        return
+    else
+        % no
+        rcv = myEdges;
+        return
+    end
+end
+error('Unable to parse edgeList. Possible cause: did you pass in an adjacency matrix?');
+end
+
+%%%%%
+function md = force_brackets(metadata)
+if length(metadata)==1
+    md = {metadata};
+else
+    md = metadata;
+end
+return
+end
