@@ -137,11 +137,10 @@ class Network(dict):
     def add_layer(self, adjacency=None, adjacency_type=None, nodes=None,  metadata=None, nx_G=None):
         """adds a layer to the network.
 
-        parameters:
-        - adjacency: edge list or adjacency matrix
-        - adjacency_type: string. 'matrix' or 'edge list'. Supply if passing an adjacency matrix with fewer than 3 nodes
-        - nodes: dict of node attribute dicts
-        - metadata: dict of vectorized metadata and display information. 
+        :param adjacency: edge list or adjacency matrix
+        :param adjacency_type: string. 'matrix' or 'edge list'. Supply if passing an adjacency matrix with fewer than 3 nodes
+        :param nodes: dict of node attribute dicts
+        :param metadata: dict of vectorized metadata and display information. 
         {
             'attribute' : {
                 'values' : [ "attribute_value", ...],
@@ -149,7 +148,7 @@ class Network(dict):
                 'type' : string. Only necessary if displaying binary information with 0/1 and not True/False.
             }
         }
-        - nx_G: a networkx graph.
+        :param nx_G: a networkx graph.
 
         call with at least one of:
         - adjacency
