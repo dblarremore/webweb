@@ -12,27 +12,32 @@ ww.networks.oroboros.layers = {};
 netObj.edgeList = l_one;
 % Assign it its *own* metadata, specific to this layer
 netObj.metadata.isHead.values = [1,0,0,0];
+netObj.metadata.isHead.type = 'binary';
 % Append it to the layers
 ww.networks.oroboros.layers{end+1} = netObj;
 
 % Repeat for layer 2
 netObj.edgeList = l_two;
 netObj.metadata.isHead.values = [1,0,0,0];
+netObj.metadata.isHead.type = 'binary';
 ww.networks.oroboros.layers{end+1} = netObj;
 
 % ... and layer 3.
 netObj.edgeList = l_three;
 netObj.metadata.isHead.values = [1,0,0];
+netObj.metadata.isHead.type = 'binary';
 ww.networks.oroboros.layers{end+1} = netObj;
 
 % ... and layer 4.
 netObj.edgeList = l_four;
 netObj.metadata.isHead.values = [1,0];
+netObj.metadata.isHead.type = 'binary';
 ww.networks.oroboros.layers{end+1} = netObj;
 
 % ... and layer 5.
 netObj.edgeList = l_five;
-netObj.metadata.isHead.values = [1];
+netObj.metadata.isHead.values = 1;
+netObj.metadata.isHead.type = 'binary';
 ww.networks.oroboros.layers{end+1} = netObj;
 
 

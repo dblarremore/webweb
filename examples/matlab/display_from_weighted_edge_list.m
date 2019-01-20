@@ -10,6 +10,12 @@ edge_list = [...
 % call webweb
 webweb(edge_list);
 
-% [OPTIONAL] set webweb's display default: show weighted edges.
-
-% DBL TODO
+%% [OPTIONAL] Set default: show weighted edges.
+% To set a default parameter, we need to creat a webweb struct
+% and place our parameter setting in it.
+% Place this edgeList into a network within the webweb struct
+ww.networks.network.edgeList = edge_list;
+% Set scaleLinkWidth to True. 
+ww.display.scaleLinkWidth = 'True';
+% call webweb
+webweb(ww);

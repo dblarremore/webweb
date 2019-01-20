@@ -12,7 +12,7 @@ velocity = [42,100,7];
 
 % Put them in the webweb struct
 ww.display.metadata.age.values = age;
-ww.display.metadata.velocity.values = velocity
+ww.display.metadata.velocity.values = velocity;
 
 % BONUS: ask webweb to use age for default node size
 %        ask webweb to use velocity for default node color
