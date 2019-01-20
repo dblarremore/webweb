@@ -1,7 +1,19 @@
-% wwstruct
+% webweb for MATLAB accepts a few input types:
+%
+% webweb(adjacency_matrix)
+%   adjacency_matrix must be at least 4x4; may be directed or undirected.
+%   Note: any 3x3 or 2x2 matrix will be parsed as an edge_list instead.
+%   
+% webweb(edge_list)
+%   edge_list representing M edges must be Mx3 [from, to, weight] or 
+%      Mx2 [from,to]. Passing 2xM or 3xM is also ok.
+%
+% webweb(webweb_struct)
+%   webweb_struct is a MATLAB struct enabling full webweb functionality.
+%      all elements of its hierarchical struct is:
 %     .networks
 %         .networkObject
-%         - or -
+%         - and/or -
 %         .layers
 %             .networkObject
 %     .display
@@ -14,8 +26,16 @@
 %
 % metadataObject
 %     .values
-%     .type (optional)
+%     .type (optional generally; required 'binary' if metadata are 0,1)
 %     .categories (optional)
+%
+% [optional display parameters]
+%   w, h, c, g, l, r, linkStrength,
+%   scaleLinkWidth, scaleLinkOpacity
+%   colorPalette
+%   freezeNodeMovement, showNodeNames, invertBinaryColors, invertBinarySizes
+%   nodeCoordinates
+%   see http://github.com/dblarremore/webweb for full documentation
 
 function [] = webweb(x)
 
