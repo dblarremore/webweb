@@ -6,3 +6,4 @@ webweb.egg-info
 dist
 build
 **/*.pyc
+webweb/client

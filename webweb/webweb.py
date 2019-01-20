@@ -12,7 +12,10 @@ import os
 import copy
 import json
 import webbrowser
+import requests
 from collections import defaultdict
+
+GITURL = "https://raw.githubusercontent.com/dblarremore/webweb/master"
 
 class Web(dict):
     """a webweb object. 
@@ -39,16 +42,30 @@ class Web(dict):
 
     @property
     def client_path(self):
-        parent = os.path.abspath(os.path.join(self.base_path, os.pardir))
-        return os.path.join(parent, "client")
+        return os.path.abspath(os.path.join(self.base_path, 'client'))
 
     def get_client_content(self, dir_name, file_name):
-        content_path = os.path.join(self.client_path, dir_name, file_name)
+        if not os.path.isdir(self.client_path):
+            os.mkdir(self.client_path)
 
-        with open(content_path, 'r') as f:
-            content = f.read()
+        dir_dir = os.path.join(self.client_path, dir_name)
 
-        return content
+        if not os.path.isdir(dir_dir):
+            os.mkdir(dir_dir)
+
+        content_path = os.path.join(dir_dir, file_name)
+        if not os.path.exists(content_path):
+            github_file_url = "/".join([GITURL, 'client', dir_name, file_name])
+            content = requests.get(github_file_url).text
+
+            with open(content_path, 'w') as f:
+                f.write(content)
+                return content
+        else:
+            with open(content_path, 'r') as f:
+                content = f.read()
+
+            return content
 
     def show(self):
         """display the webweb visualization.
