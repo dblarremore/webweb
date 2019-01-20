@@ -43,11 +43,11 @@ if isstruct(x)
             % edgeList!
             x.networks.(mynets{i}).edgeList = ...
                 clean_edgeList(x.networks.(mynets{i}).edgeList);
-            myMetadata = fieldnames(x.networks(mynets{i}).metadata);
+            myMetadata = fieldnames(x.networks.(mynets{i}).metadata);
             if ~isempty(myMetadata)
                 for k = 1:length(myMetadata)
-                    x.networks(mynets{i}).metadata.(myMetadata{k}).values = ...
-                        force_brackets(x.networks(mynets{i}).metadata.(myMetadata{k}).values);
+                    x.networks.(mynets{i}).metadata.(myMetadata{k}).values = ...
+                        force_brackets(x.networks.(mynets{i}).metadata.(myMetadata{k}).values);
                 end
             end
         elseif isfield(x.networks.(mynets{i}),'layers')
