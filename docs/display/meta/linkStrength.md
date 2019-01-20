@@ -1,5 +1,7 @@
 ---
 name: linkStrength
+type: positive non-zero float
+default: 1
 
 ---
 

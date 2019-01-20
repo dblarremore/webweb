@@ -1,5 +1,7 @@
 ---
 name: hideMenu
+type: boolean
+default: false
 
 ---
 

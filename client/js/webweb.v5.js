@@ -22,6 +22,11 @@ var displayDefaults = {
     'networkLayer' : 0,
     'metadata' : {},
     'nameToMatch' : "",
+    'freezeNodeMovement' : false,
+    'hideMenu' : false,
+    'invertBinaryColors' : false,
+    'invertBinarySizes' : false,
+    'scaleLinkOpacity' : false,
 };
 
 var displayParameterSynonyms = [

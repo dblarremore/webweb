@@ -1,5 +1,7 @@
 ---
 name: invertBinarySizes
+type: boolean
+default: false
 
 ---
 
