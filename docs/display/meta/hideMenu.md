@@ -5,6 +5,4 @@ default: false
 
 ---
 
-Boolean.
-
-If `true`, webweb's menu's will be hidden and only the network visualization will be shown.
+If `true`, webweb's interactive menu will be hidden and only the network visualization will be shown.
