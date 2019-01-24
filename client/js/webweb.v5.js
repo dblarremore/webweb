@@ -175,7 +175,7 @@ function writeVisualization(container) {
         .append("svg")
         .attr("width", display.w)
         .attr("height", display.h)
-        .attr("id", "vis");
+        .attr("id", "webweb-vis");
 
     d3.select("#webweb-visualization-container")
         .append("br");
@@ -290,14 +290,14 @@ function setVisibleNodes() {
             while (nodeCount != nodes.length) {
                 var toRemove = nodes.pop();
                 var drawnNode = document.getElementById("node_" + toRemove.idx)
-                document.getElementById("vis").removeChild(drawnNode);
+                document.getElementById("webweb-vis").removeChild(drawnNode);
                 nodePersistence.push({ 'node' : toRemove, 'toDraw' : drawnNode });
             }
         }
         else if (nodeCount > nodes.length) {
             while (nodeCount != nodes.length) {
                 var toAdd = nodePersistence.pop();
-                document.getElementById("vis").appendChild(toAdd.toDraw);
+                document.getElementById("webweb-vis").appendChild(toAdd.toDraw);
                 nodes.push(toAdd.node);
             }
         }
@@ -307,7 +307,7 @@ function setVisibleNodes() {
         // of nodes to the maximum
         while (nodes.length != display.N) {
             var toAdd = nodePersistence.pop();
-            document.getElementById("vis").appendChild(toAdd.toDraw);
+            document.getElementById("webweb-vis").appendChild(toAdd.toDraw);
             nodes.push(toAdd.node);
         }
     }
@@ -920,8 +920,8 @@ function changeLinkStrength(linkStrength) {
     }
 }
 function changeGravity(g) {
-    if (g >= 0) {
-        display.g = g;
+    if (parseFloat(g) >= 0) {
+        display.g = parseFloat(g);
         updateGravityForce();
     }
     else {
@@ -1008,6 +1008,7 @@ function updateChargeForce() {
 function updateGravityForce() {
     simulation.force("x", d3.forceX(display.w / 2).strength(display.g));
     simulation.force("y", d3.forceY(display.h / 2).strength(display.g));
+    simulation.alpha(1).restart();
 }
 function updateLinkForce() {
     simulation.force(
@@ -1801,7 +1802,7 @@ function writeGravityWidget(parent) {
     gravityWidget.append("input")
         .attr("id", "gravityText")
         .attr("type", "text")
-        .attr("onchange", "changeGravity(this.value)")
+        .attr("oninput", "changeGravity(this.value)")
         .attr("value", display.g)
         .attr("size", 3);
 }
@@ -1896,13 +1897,12 @@ function saveIt(fileName, fileType, content) {
     }
 }
 function writeSVGDownloadLink() {
-    var html = d3.select("svg")
-        .attr("title", display.networkName)
-        .attr("version", 1.1)
-        .attr("xmlns", "http://www.w3.org/2000/svg")
-        .node().parentNode.innerHTML;
+    var svg = document.getElementById('webweb-vis');
+    svg.setAttribute("title", display.networkName);
+    svg.setAttribute("version", 1.1)
+    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg")
 
-    saveIt(display.networkName, "image/svg+xml", html);
+    saveIt(display.networkName, "image/svg+xml", svg.outerHTML);
 };
 ////////////////////////////////////////////////////////////////////////////////
 //
