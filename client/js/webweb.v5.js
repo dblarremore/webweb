@@ -1802,7 +1802,7 @@ function writeGravityWidget(parent) {
     gravityWidget.append("input")
         .attr("id", "gravityText")
         .attr("type", "text")
-        .attr("oninput", "changeGravity(this.value)")
+        .attr("onchange", "changeGravity(this.value)")
         .attr("value", display.g)
         .attr("size", 3);
 }

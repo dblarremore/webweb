@@ -40,6 +40,7 @@ class Web(dict):
     def base_path(self):
         return os.path.dirname(os.path.realpath(__file__))
 
+
     @property
     def client_path(self):
         return os.path.abspath(os.path.join(self.base_path, 'client'))
