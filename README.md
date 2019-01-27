@@ -5,26 +5,6 @@ webweb was made for networks researchers who use MATLAB or Python. The idea is t
 
 check out the [documentation](https://webwebpage.github.io) for the full documentation, examples, and a bunch of pretty visualizations!
 
-### display parameters
-
-These are the parameters you can set:
-
-- w: positive number; the width of the network visualization
-- h: positive number; the height of the network visualization
-- c: positive number; the charge of the nodes (the strength of the repulsion force between nodes)
-- g: positive number; gravity, the strength of the force pulling nodes to the center
-- l: positive number; link length, how long links "like" to be
-- r: positive number; the radius of the nodes
-- linkStrength: positive number; how much force it takes to shrink or grow the length of a link
-- scaleLinkWidth: boolean; scale the width of the link by its weight
-- scaleLinkOpacity: boolean; scale the opacity of the link by its weight
-- colorPalette: string; which color palette to use
-- freezeNodeMovement: boolean; stop forces from being applied
-- nodeCoordinates: `[{ 'x': 1, 'y' : 1}, ...]`; the initial positions of the nodes. Note: this is ignored unless `freezeNodeMovement` is true (otherwise you'll just get a bunch of stacked circles in the corner...)
-- showNodeNames: boolean; should we show node names (it's kinda ugly with more than like, 2 nodes)
-- invertBinaryColors: boolean; if true, the colors used for `true` and `false` will be swapped. Ignored if the label in colorBy isn't binary
-- invertBinarySizes: boolean; if true, `true` will be small and `false` will be big. Ignored if the label in sizeBy isn't binary label
-
 ## installing
 
 python: 
