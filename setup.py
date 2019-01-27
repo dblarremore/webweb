@@ -20,7 +20,7 @@ def read_requirements(filename):
 
 setup(
     name="webweb",
-    version="0.0.6",
+    version="0.0.7",
     author="Dan Larremore; Hunter Wapman",
     author_email="hunter.wapman@gmail.com",
     description="webweb: an easy-to-use network visualization tool",
@@ -34,7 +34,7 @@ setup(
     keywords='webweb',
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         "Operating System :: OS Independent",
         'Natural Language :: English'
     ],
