@@ -5,6 +5,8 @@ webweb was made for networks researchers who use MATLAB or Python. The idea is t
 
 check out the [documentation](https://webwebpage.github.io) for the full documentation, examples, and a bunch of pretty visualizations!
 
+![Infinite Jest webweb](infinite_jest.png)
+
 ## installing
 
 python: 
