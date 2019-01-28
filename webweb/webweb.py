@@ -29,7 +29,7 @@ class Web(dict):
         self.networks = Networks()
 
         # if we have an adjacency, add it into the networks object
-        if adjacency or kwargs.get('nx_G'):
+        if adjacency != None or kwargs.get('nx_G'):
             kwargs['adjacency'] = adjacency
             getattr(self.networks, self.title)(**kwargs)
 
@@ -39,7 +39,14 @@ class Web(dict):
 
     @property
     def client_path(self):
-        return os.path.abspath(os.path.join(self.base_path, 'client'))
+        par_dir = os.path.join(self.base_path, os.pardir)
+
+        par_dir_client = os.path.join(par_dir, 'client')
+
+        if os.path.exists(par_dir_client):
+            return par_dir_client
+        else:
+            return os.path.abspath(os.path.join(self.base_path, 'client'))
 
     def get_client_content(self, dir_name, file_name):
         content_path = os.path.join(self.client_path, dir_name, file_name)
