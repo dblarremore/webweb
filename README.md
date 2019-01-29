@@ -6,7 +6,7 @@ Please head to the [webweb documentation page](https://webwebpage.github.io) for
 
 [//]: # (![Infinite Jest webweb](infinite_jest.png)
 
-## installing
+## Installing
 
 python and networkx: 
 `pip install webweb`
@@ -14,7 +14,7 @@ python and networkx:
 matlab: 
 `git clone https://github.com/dblarremore/webweb`
 
-## the simplest example
+## The simplest example
 python: 
 ```python
 from webweb import Web
@@ -37,11 +37,11 @@ edge_list = [...
 webweb(edge_list);
 ```
 
-## How to use it:
+## How to use webweb
 
 See the [examples](https://webwebpage.github.io/examples/) on the documentation site!
 
-## Feedback/Bugs
+## Feedback and bugs
 
 If you find a bug, create an issue! We want webweb to be as great as possible. 
 
