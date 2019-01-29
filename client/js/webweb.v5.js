@@ -766,8 +766,6 @@ function computeColors() {
         }
     }
 
-    console.log('hey')
-
     if (categoryValues.length) {
         // if there are fewer than 9 categories, use the colorbrewer
         // TODO:
@@ -787,7 +785,6 @@ function computeColors() {
             changeColorPaletteMenuVisibility(true);
         }
         else {
-            console.log('que')
             // otherwise, treat like scalars
             colorData.type = "scalarCategorical";
 
@@ -804,7 +801,6 @@ function computeColors() {
         }
     }
 
-    console.log('sup')
     if (colorData.type != 'categorical') {
         scales.colors.scalar.domain(d3.extent(rawValues)).range([0,1]);
     }
