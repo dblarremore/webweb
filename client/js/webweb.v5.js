@@ -748,6 +748,7 @@ function computeColors() {
         // values for the metadatum
         if (metadatum.categories == undefined) {
             colorData['categoryNames'] = d3.set(rawValues).values().sort();
+
             categoryValues = colorData['categoryNames'];
         }
         else {
@@ -765,19 +766,28 @@ function computeColors() {
         }
     }
 
+    console.log('hey')
+
     if (categoryValues.length) {
         // if there are fewer than 9 categories, use the colorbrewer
         // TODO:
         // actually check how many colors there are in the user's selected
         // colorbrewer
         // update the list for this...
-        if (categoryValues.length <= 9) {
+        var categoryValuesCount = categoryValues.length;
+        if (categoryValuesCount <= 9) {
+            // make sure there's enough categories even if there aren't
+            if (categoryValuesCount == 1) {
+                categoryValuesCount += 1;
+            }
+
             scales.colors.categorical.domain(categoryValues)
-                .range(colorbrewer[display.colorPalette][categoryValues.length]);
+                .range(colorbrewer[display.colorPalette][categoryValuesCount]);
 
             changeColorPaletteMenuVisibility(true);
         }
         else {
+            console.log('que')
             // otherwise, treat like scalars
             colorData.type = "scalarCategorical";
 
@@ -794,6 +804,7 @@ function computeColors() {
         }
     }
 
+    console.log('sup')
     if (colorData.type != 'categorical') {
         scales.colors.scalar.domain(d3.extent(rawValues)).range([0,1]);
     }
