@@ -1,9 +1,8 @@
 # webweb
-a tool for creating, displaying, and sharing interactive network visualizations on the web designed for simplicity and ease of use.
 
-webweb was made for networks researchers who use MATLAB or Python. The idea is to make it easy to create and share interactive network visualizations. View your webs on the web! Webweb!
+webweb is a tool for creating, displaying, and sharing interactive network visualizations on the web, designed for simplicity and ease of use. It's made for Python, NetworkX, and MATLAB users.
 
-check out the [documentation](https://webwebpage.github.io) for the full documentation, examples, and a bunch of pretty visualizations!
+Complete instructions, examples, and documentation are found on the [webweb documentation page](https://webwebpage.github.io).
 
 ![Infinite Jest webweb](infinite_jest.png)
 
