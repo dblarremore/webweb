@@ -1,2 +1,2 @@
 recursive-include webweb/client *
-requirements.txt
+include requirements.txt

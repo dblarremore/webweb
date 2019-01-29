@@ -18,7 +18,7 @@ class Web(dict):
     """a webweb object. 
     a collection of named webweb Network objects, a set of display parameters, and a title
     """
-    def __init__(self, adjacency=None, title="webweb", display={}, **kwargs):
+    def __init__(self, adjacency=[], title="webweb", display={}, **kwargs):
         """parameters:
         - adjacency: adjacency to make a visulization from. see `Network.add_layer`
         - title: string. Will set the html title of the visualization if display.attachWebwebToElementWithId = None
@@ -29,7 +29,7 @@ class Web(dict):
         self.networks = Networks()
 
         # if we have an adjacency, add it into the networks object
-        if adjacency != None or kwargs.get('nx_G'):
+        if len(adjacency) or kwargs.get('nx_G'):
             kwargs['adjacency'] = adjacency
             getattr(self.networks, self.title)(**kwargs)
 
@@ -135,12 +135,12 @@ class Network(dict):
     def __call__(self, **kwargs):
         """see `add_layer`"""
         # if we have an adjacency, add it into the networks object
-        if kwargs.get('adjacency'):
+        if len(kwargs.get('adjacency', [])):
             self.add_layer(**kwargs)
         elif kwargs.get('nx_G'):
             self.add_layer(**kwargs)
 
-    def add_layer(self, adjacency=None, adjacency_type=None, nodes=None,  metadata=None, nx_G=None):
+    def add_layer(self, adjacency=[], adjacency_type=None, nodes=None,  metadata=None, nx_G=None):
         """adds a layer to the network.
 
         - adjacency: edge list or adjacency matrix
@@ -162,6 +162,14 @@ class Network(dict):
         - metadata
         - nx_G
         """
+        if len(adjacency):
+            try:
+                import numpy as np
+                if type(adjacency) is np.ndarray:
+                    adjacency = adjacency.tolist()
+            except:
+                pass
+
         if nx_G:
             adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(nx_G)
         else:
