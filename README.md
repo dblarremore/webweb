@@ -4,7 +4,7 @@
 
 Please head to the [webweb documentation page](https://webwebpage.github.io) for complete instructions, examples, and documentation.
 
-![Infinite Jest webweb](infinite_jest.png)
+[//]: # ![Infinite Jest webweb](infinite_jest.png)
 
 ## installing
 
