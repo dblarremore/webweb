@@ -163,13 +163,7 @@ function writeVisualization(container) {
     }
 
     if (display.h == undefined) {
-        var heuristic = container.clientHeight - 3 * 20;
-
-        if (heuristic <= 0) {
-            heuristic = 600;
-        }
-
-        display.h = Math.min.apply(null, [heuristic, 600, display.w]);
+        display.h = Math.min.apply(null, [display.w, 600]);
     }
     vis = d3.select("#webweb-visualization-container")
         .append("svg")
