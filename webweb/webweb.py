@@ -132,7 +132,9 @@ class Network(dict):
     def __init__(self):
         """calling a `webweb.Network` object sets the first layer of that
         `webweb.Network` object using the parameters passed.
+
         if the object already had layers, those layers will be removed.
+
         see `add_layer` for parameter information
         """
         self.layers = []
@@ -150,15 +152,24 @@ class Network(dict):
         """adds a layer to the network.
 
         - adjacency: edge list or adjacency matrix
-        - adjacency_type: string. 'matrix' or 'edge list'. Supply if passing an adjacency matrix with fewer than 3 nodes
+        - adjacency_type: string. 'matrix' or 'edge list'. Supply if passing an
+        adjacency matrix with fewer than 3 nodes
         - nodes: dict of node attribute dicts
         - metadata: dict of vectorized metadata and display information. 
-        ```json
+        ```python
         {
             'attribute' : {
                 'values' : [ "attribute_value", ...],
-                'categories' : ["category1", "category2", ...] (supply if `values` is categorical but contains numbers; values in the `values` array will be used as indexes to this array)
-                'type' : string. Only necessary if displaying binary information with 0/1 and not True/False.
+
+                # `categories` only needs to be supplied if `values` holds
+                # categorical represented by numbers.
+                # the values in the `values` array will be used as indexes to
+                # this array.
+                'categories' : ["category1", "category2", ...]
+
+                # `type` only needs to be set if you're displaying binary
+                # information with 0/1 instead of True/False 
+                'type' : 'binary',
             }
         }
         ```
