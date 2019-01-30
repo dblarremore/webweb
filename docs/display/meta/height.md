@@ -2,6 +2,7 @@
 name: height
 synonyms: h
 type: positive non-zero integer
+fix_height: true
 
 ---
 

@@ -2,6 +2,7 @@
 name: width
 synonyms: w
 type: positive non-zero float
+fix_width: true
 
 ---
 
