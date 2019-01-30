@@ -130,14 +130,20 @@ class Networks(dict):
 class Network(dict):
     """a webweb Network object"""
     def __init__(self):
+        """calling a `webweb.Network` object sets the first layer of that
+        `webweb.Network` object using the parameters passed.
+        if the object already had layers, those layers will be removed.
+        see `add_layer` for parameter information
+        """
         self.layers = []
 
     def __call__(self, **kwargs):
-        """see `add_layer`"""
         # if we have an adjacency, add it into the networks object
         if len(kwargs.get('adjacency', [])):
+            self.layers = []
             self.add_layer(**kwargs)
         elif kwargs.get('nx_G'):
+            self.layers = []
             self.add_layer(**kwargs)
 
     def add_layer(self, adjacency=[], adjacency_type=None, nodes=None,  metadata=None, nx_G=None):
@@ -147,13 +153,15 @@ class Network(dict):
         - adjacency_type: string. 'matrix' or 'edge list'. Supply if passing an adjacency matrix with fewer than 3 nodes
         - nodes: dict of node attribute dicts
         - metadata: dict of vectorized metadata and display information. 
-        ```{
+        ```json
+        {
             'attribute' : {
                 'values' : [ "attribute_value", ...],
-                'categories' : ["category1", "category2", ...] (supply if values is categorical but contains numbers; values in the `values` array will be used as indexes to this array)
+                'categories' : ["category1", "category2", ...] (supply if `values` is categorical but contains numbers; values in the `values` array will be used as indexes to this array)
                 'type' : string. Only necessary if displaying binary information with 0/1 and not True/False.
             }
-        }```
+        }
+        ```
         - nx_G: a networkx graph.
 
         call with at least one of:
