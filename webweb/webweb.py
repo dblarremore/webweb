@@ -183,6 +183,8 @@ class Network(dict):
         ```
         - nx_G: a networkx graph.
 
+        ---
+
         nodes which appear in both the adjacency and as keys in the `nodes`
         dictionary will be given the values of the attributes under their
         corresponding key in the `nodes` dictionary
