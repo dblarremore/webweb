@@ -184,8 +184,6 @@ function standardizeRepresentation() {
     for (var i in networkNames) {
         standardizeNetworkRepresentation(networkNames[i]);
     }
-
-    // display.nodes = addMetadataVectorsToNodes(display.metadata, display.nodes);
 }
 function standardizeNetworkRepresentation(networkName) {
     var network = wwdata.networks[networkName];
@@ -223,8 +221,6 @@ function standardizeLayerRepresentation(layer) {
             }
 
         }
-
-        // layer.nodes = addMetadataVectorsToNodes(layer.metadata, layer.nodes);
     }
 
     return layer;
@@ -1857,7 +1853,7 @@ function writeShowNodeNamesWidget(parent) {
 function writeMenus(container) {
     var menu = document.createElement('div')
     menu.setAttribute('id', 'webweb-menu')
-    menu.style.display = display.hideMenu == true ? 'none' : 'block';
+    menu.style.display = display.hideMenu == true ? 'none' : 'flex';
     container.appendChild(menu);
 
     var menu = d3.select('#webweb-menu');

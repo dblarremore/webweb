@@ -4,9 +4,6 @@
     background-color: white;
     text-align: justify;
     font-family: palatino, georgia, verdana, arial, sans-serif;
-    -moz-box-shadow: 0 0 10px #888;
-    -webkit-box-shadow: 0 0 10px#888;
-    box-shadow: 0 0 10px #888;
     width: 100%;
     height: 100%;
 }
@@ -14,19 +11,46 @@
 #webweb-menu {
     font-size: 10px;
     padding: 15px;
+    /* flexbox stuff.. */
+    display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-direction: row;
+    -ms-flex-direction: row;
+    flex-direction: row;
+    -webkit-flex-wrap: nowrap;
+    -ms-flex-wrap: nowrap;
+    flex-wrap: nowrap;
+    -webkit-justify-content: space-between;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    -webkit-align-content: space-between;
+    -ms-flex-line-pack: justify;
+    align-content: space-between;
+    -webkit-align-items: flex-start;
+    -ms-flex-align: start;
+    align-items: flex-start;
 }
 
-#webweb-menu-left { 
-    float: left;
-}
 #webweb-menu-right {
-    float: right;
     text-align: right;
 }
 
+@media (max-width: 600px) {
+    #webweb-menu {
+        -webkit-flex-direction: column;
+        -ms-flex-direction: column;
+        flex-direction: column;
+    }
+    #webweb-menu-right {
+        text-align: left;
+    }
+}
+#webweb-visualization-container {
+    overflow: hidden;
+}
 #webweb-visualization-container > svg {
+    border: solid 3px #f5f6fa;
     display: block;
     margin: 0 auto;
-    clear: both;
-    border: solid 3px #f5f6fa;
 }
