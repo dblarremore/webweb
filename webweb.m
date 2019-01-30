@@ -1,6 +1,6 @@
 % WEBWEB is a tool for visualizing complex networks and their metadata. 
 % It creates intuitive and lightweight visualizations in your web browser.
-% Full documentation at http://github.com/dblarremore/webweb
+% See https://webwebpage.github.io for full documentation
 % ------------------------------------------------------------------------ 
 % Contributors: 
 %   Dan Larremore http://danlarremore.com
@@ -44,7 +44,7 @@
 %   scaleLinkWidth, scaleLinkOpacity
 %   colorPalette
 %   freezeNodeMovement, showNodeNames, invertBinaryColors, invertBinarySizes
-%   see http://github.com/dblarremore/webweb for full documentation
+%   see https://webwebpage.github.io for full documentation
 
 function [] = webweb(x)
 
