@@ -129,7 +129,7 @@ class Networks(dict):
 
 class Network(dict):
     """a webweb Network object"""
-    def __init__(self):
+    def __init__(self, **kwargs):
         """calling a `webweb.Network` object sets the first layer of that
         `webweb.Network` object using the parameters passed.
 
@@ -138,6 +138,7 @@ class Network(dict):
         see `add_layer` for parameter information
         """
         self.layers = []
+        self.__call__(**kwargs)
 
     def __call__(self, **kwargs):
         # if we have an adjacency, add it into the networks object
