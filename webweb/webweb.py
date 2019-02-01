@@ -12,6 +12,7 @@ import os
 import copy
 import json
 import webbrowser
+import tempfile
 from collections import defaultdict
 
 class Web(dict):
@@ -77,7 +78,7 @@ class Web(dict):
 
     @property
     def html_file(self):
-        return os.path.join(self.base_path, "{}.html".format(self.title))
+        return os.path.join(tempfile.gettempdir(), "webweb.html")
 
     @property
     def json(self, title=None):
