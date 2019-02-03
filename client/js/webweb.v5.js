@@ -112,6 +112,8 @@ function initializeWebweb() {
         .force("center", d3.forceCenter(display.w / 2, display.h / 2))
         .on('tick', tick);
 
+    simulation.alphaDecay = 0.001
+
     displayNetwork();
 }
 function standardizeDisplayParameterSynonyms(display) {
@@ -165,6 +167,7 @@ function writeVisualization(container) {
     if (display.h == undefined) {
         display.h = Math.min.apply(null, [display.w, 600]);
     }
+
     vis = d3.select("#webweb-visualization-container")
         .append("svg")
         .attr("width", display.w)
@@ -246,8 +249,10 @@ function displayNetwork() {
 
     toggleFreezeNodes(display.freezeNodeMovement);
     toggleShowNodeNames(display.showNodeNames);
-    toggleInvertBinary(display[getBinaryInversionAttributeForType('color')], 'color')
-    toggleInvertBinary(display[getBinaryInversionAttributeForType('size')], 'size')
+    toggleInvertBinaryColors(display.invertBinaryColors);
+    toggleInvertBinarySizes(display.invertBinarySizes);
+    toggleLinkWidthScaling(display.scaleLinkWidth);
+    toggleLinkOpacityScaling(display.scaleLinkOpacity);
 
     // if we've frozen node movement manually tick so new edges are evaluated.
     if (display.freezeNodeMovement) {
@@ -257,12 +262,9 @@ function displayNetwork() {
     // change the display of the layers widget
     setNetworkLayerMenuVisibility();
 
-    computeColors();
-    computeSizes();
-    computeLegend();
     redrawLinks();
-    redrawNodes();
-    redisplayNodeNames();
+    redraw();
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -418,7 +420,7 @@ function setNodeMetadata() {
             'type' : 'none',
         },
         'degree' : {
-            'type' : 'scalar',
+            'type' : 'degree',
         },
     };
 
@@ -838,10 +840,6 @@ function colorWheel(x) {
     else {
         // Rainbow HSL
         return d3.hsl(210 * (1 - scales.colors.scalar(x)), 0.7, 0.5);
-        // Greyscale
-        // return [0.8*255*x,0.8*255*x,0.8*255*x];
-        // Copper
-        // return [255*Math.min(x/0.75,1),0.78*255*x,0.5*255*x];
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -853,8 +851,8 @@ function colorWheel(x) {
 // These functions are bound to the various menus that we create in the GUI.
 // On menu change, one of these will be called. 
 ////////////////////////////////////////////////////////////////////////////////
-function updateNetwork(networkName) {
-    var networkSelect = document.getElementById('networkSelect');
+function changeNetwork(networkName) {
+    var networkSelect = document.getElementById('networkSelect-widget');
     networkSelect.value = networkName;
 
     display.networkName = networkName;
@@ -893,7 +891,7 @@ function changeCharge(c) {
         alert("Repulsion must be nonnegative.");
     }
 }
-function changer(r) {
+function changeR(r) {
     display.r = r;
     computeLegend();
     redrawNodes();
@@ -942,29 +940,35 @@ function toggleFreezeNodes(isFrozen) {
         simulation.alpha(1).restart();
     }
 
-    var freezeNodesToggle = document.getElementById('freezeNodesToggle');
+    var freezeNodesToggle = document.getElementById('freezeNodes-widget');
     freezeNodesToggle.checked = display.freezeNodeMovement ? true : false;
+
+    redisplayNodeNames();
 }
 function toggleShowNodeNames(show) {
     display.showNodeNames = show;
     redisplayNodeNames();
 
-    var showNodeNamesWidget = document.getElementById('showNodeNames');
+    var showNodeNamesWidget = document.getElementById('showNodeNames-widget');
     showNodeNamesWidget.checked = display.showNodeNames;
 }
-function toggleInvertBinary(setting, type) {
-    var widgetId = getBinaryInversionAttributeForType(type);
-
-    var widget = document.getElementById(widgetId);
+function toggleInvertBinaryColors(setting) {
+    var widget = document.getElementById('invertBinaryColors-widget');
     widget.checked = setting;
-    display[widgetId] = setting;
+    display.invertBinaryColors = setting;
 
-    if (type == 'color') {
-        computeColors();
-    }
-    else {
-        computeSizes();
-    }
+    computeColors();
+    computeSizes();
+    computeLegend();
+    redrawNodes();
+}
+function toggleInvertBinarySizes(setting) {
+    var widget = document.getElementById('invertBinarySizes-widget');
+    widget.checked = setting;
+    display.invertBinarySizes = setting;
+
+    computeColors();
+    computeSizes();
     computeLegend();
     redrawNodes();
 }
@@ -1026,7 +1030,7 @@ function toggleLinkWidthScaling(checked) {
     }
     redrawLinks();
 }
-function toggleLinkOpacity(checked) {
+function toggleLinkOpacityScaling(checked) {
     if (checked) {
         scales.links.opacity.range([0.4, 0.9])
     }
@@ -1090,44 +1094,48 @@ function computeLegend() {
         return;
     };
 
-    var colorLegend = makeColorLegend();
-    var sizeLegend = makeSizeLegend();
+    var sizeLegend = new Legend('size', sizeData.type, sizeData.rawValues);
+    var colorLegend = new Legend('color', colorData.type, colorData.rawValues);
 
-    var R = sizeData['R'];
+    var R = 0;
+
+    if (sizeLegend.values.length > 0) {
+        var R = display.r * d3.max(sizeLegend.values);;
+    }
 
     // if we have a color legend, use it for the size menu (if it's there)
-    var legendFillFunction;
+    var fillFunction = function(i) {
+        return d3.rgb(100, 100, 100);
+    };
+
     if (display.sizeBy == display.colorBy) {
-        legendFillFunction = function(i) {
-            return colorWheel(colorLegend['values'][i]);
+        fillFunction = function(i) {
+            return colorWheel(colorLegend.values[i]);
         }
     }
-    else {
-        legendFillFunction = function(i) {
-            return d3.rgb(100, 100, 100);
-        }
-    }
+
+    var datatypeTextPushdown = 15;
+
+    var textPushRight = 2 * (Math.max(R, 5) + 5);
+    var nodePushRight = 5 + Math.max(R, 5);
+    var pushdown = function(i) { return 0 };
 
     if (display.sizeBy != "none") {
-        sizeLegend['values'].forEach(function(d, i){
-            vis.append("circle")
-                .attr("id", "legend")
-                .attr("r", display.r * d)
-                .attr("cx", 5 + R)
-                .attr("cy", 5 + R + 2.3 * R * i)
-                .style("fill", legendFillFunction(i))
-                .style("stroke", d3.rgb(255, 255, 255));
-        });
+        pushdown = function (i) {
+            if (i !== undefined) {
+                return 5 + R + 2.3 * R * i + datatypeTextPushdown;
+            }
+            return datatypeTextPushdown;
+        };
 
-        sizeLegend['text'].forEach(function(d, i){
-            vis.append("text")
-                .attr("id", "legend")
-                .text(d)
-                .attr("x", 10 + 2 * R)
-                .attr("y", 5 + R + 2.3 * R * i + 4)
-                .attr("fill", "black")
-                .attr("font-size", 12);
-        });
+        sizeLegend.drawLegendLabel(display.sizeBy, pushdown);
+        sizeLegend.drawLegendText(pushdown, textPushRight);
+        sizeLegend.drawLegendValues(
+            pushdown,
+            nodePushRight,
+            function (d) { return display.r * d },
+            fillFunction
+        );
     }
 
     // if we've drawn the size legend and the color legend shows the same value,
@@ -1137,135 +1145,155 @@ function computeLegend() {
     }
 
     if (colorData.type != "none") {
-        // how far down should we "push" the color legend to accomodate for the
-        // size legend
-        pushDown = sizeLegend == undefined ? 0 : sizeLegend['values'].length;
+        var initialPushdown = datatypeTextPushdown;
 
-        colorLegend['values'].forEach(function(d, i){
-            vis.append("circle")
-                .attr("id", "legend")
-                .attr("r", 5)
-                .attr("cx", 5 + Math.max(R, 5))
-                .attr("cy", 5 + 5 + 2 * R + 2.3 * R * (pushDown - 1) + 5 + 2.3 * 5 * i)
-                .style("fill", colorWheel(colorLegend['values'][i]))
-                .style("stroke", d3.rgb(255, 255, 255));
-        });
-        colorLegend['text'].forEach(function(d, i) {
-            vis.append("text")
-                .attr("id", "legend")
-                .text(d)
-                .attr("x", 10 + Math.max(R, 5) + 5)
-                .attr("y", 5 + 5 + 2 * R + 2.3 * R * (pushDown - 1) + 5 + 2.3 * 5 * i + 4)
-                .attr("fill", "black")
-                .attr("font-size", 12);
-        });
-    }
-}
-function makeColorLegend() {
-    var legend = {};
-
-    if (colorData.type == "none") {
-        return
-    }
-
-    if (colorData.type == "categorical") {
-        legend['values'] = scales.colors.categorical.domain();
-        legend['text'] = d3.values(colorData['categoryNames']);
-    }
-    else if (colorData.type == "binary") {
-        legend['values'] = getBinaryValues('color');
-        legend['text'] = [false, true];
-    }
-    else if (colorData.type == "scalar" || colorData.type == "degree") {
-        legend = getScalarLegend(colorData['rawValues']);
-    }
-    else if (colorData.type == "scalarCategorical") {
-        legend['values'] = binnedLegend(colorData['rawValues'], 4);
-        legend['text'] = legend['values'].slice(0);
-    }
-
-    return legend;
-}
-function makeSizeLegend() {
-    var legend = {};
-    sizeData['R'] = 0;
-    
-    if (sizeData.type == 'none') {
-        return
-    }
-
-    if (sizeData.type == 'binary') {
-        legend['values'] = getBinaryValues('size');
-        legend['text'] = ["false", "true"];
-    }
-    else {
-        // otherwise, the size type is either 'degree' or 'scalar'
-        legend = getScalarLegend(sizeData['rawValues']);
-    }
-
-    var scaleFunction;
-    if (display.sizeBy == "degree") {
-        scaleFunction = function(x) { return Math.sqrt(x); };
-    }
-    else {
-        scaleFunction = function (x) { return x; };
-    }
-
-    for (var i in legend['values']) {
-        legend['values'][i] = scales.nodeSize(scaleFunction(legend['values'][i]));
-    }
-
-    sizeData['R'] = display.r * d3.max(legend['values']);
-
-    return legend;
-}
-////////////////////////////////////////////////////////////////////////////////
-// returns a legend for scalars, integer or non-integer
-////////////////////////////////////////////////////////////////////////////////
-function getScalarLegend(rawValues) {
-    var values = [];
-
-    // if it is integer scalars:
-    if (allInts(rawValues)) {
-        var max = d3.max(rawValues);
-        var min = d3.min(rawValues);
-
-        if (max - min <= 8) {
-            values = d3.range(min, max + 1);
+        if (display.sizeBy != "none") {
+            initialPushdown += pushdown(sizeLegend.values.length);
+            pushdown = function (i) {
+                if (i !== undefined) {
+                    return 2.3 * R * i + initialPushdown + datatypeTextPushdown;
+                }
+                return initialPushdown;
+            }
         }
         else {
-            values = binnedLegend(rawValues, 4);
+            pushdown = function (i) {
+                if (i !== undefined) {
+                    return 2.3 * display.r * i + initialPushdown + (3 + i) * display.r;
+                }
+                return initialPushdown;
+            }
         }
+
+        // show the variable being displayed
+        colorLegend.drawLegendLabel(display.colorBy, pushdown);
+        colorLegend.drawLegendText(pushdown, textPushRight);
+        colorLegend.drawLegendValues(
+            pushdown,
+            nodePushRight,
+            function (i) { return display.r },
+            function (i) { return colorWheel(colorLegend.values[i]); }
+        );
     }
-    // noninteger scalars
-    else {
-        values = binnedLegend(rawValues, 4);
+}
+function Legend(legendType, dataType, rawValues) {
+    this.legendType = legendType;
+    this.dataType = dataType;
+    this.rawValues = rawValues;
+    this.values = [];
+
+    legendTypeToLegendMaker = {
+        'size' : {
+            'binary' : 'makeBinaryLegend',
+            'scalar' : 'makeScalarLegend',
+            'degree' : 'makeDegreeLegend',
+        },
+        'color' : {
+            'binary' : 'makeBinaryLegend',
+            'scalar' : 'makeScalarLegend',
+            'degree' : 'makeDegreeLegend',
+            'categorical' : 'makeCategoricalLegend',
+            'scalarCategorical' : 'makeBinnedLegend',
+        },
     }
 
-    var text = values.slice(0);
+    var legendFunction = legendTypeToLegendMaker[this.legendType][this.dataType];
 
-    return {
-        'values' : values,
-        'text' : text,
+    if (legendFunction !== undefined) {
+        this[legendFunction]();
+
+        if (this.legendType == 'size') {
+            for (var i in this.values) {
+                this.values[i] = scales.nodeSize(this.values[i]);
+            }
+        }
     }
 }
 
-// 'bins' a set of values so that we can display a finite legend.
-function binnedLegend(vals, bins) {
-    var legend = [];
-    var min_val = d3.min(vals);
-    var max_val = d3.max(vals);
-    var step = (max_val - min_val) / bins;
+Legend.prototype.drawLegendLabel = function(label, pushDown) {
+    vis.append("text")
+        .attr("id", "legend")
+        .text(label)
+        .attr("x", 5)
+        .attr("y", pushDown())
+        .attr("fill", "black")
+        .attr("font-size", 12);
+}
 
-    legend.push(rounddown(min_val, 10));
+Legend.prototype.drawLegendText = function(pushDown, pushRight) {
+    this.text.forEach(function(d, i) {
+        vis.append("text")
+            .attr("id", "legend")
+            .text(d)
+            .attr("x", pushRight)
+            .attr("y", pushDown(i) + 3.5)
+            .attr("fill", "black")
+            .attr("font-size", 12);
+    });
+}
 
-    for (var i = 1; i < bins; i++) {
-        legend.push(round(min_val + i * step, 10));
+Legend.prototype.drawLegendValues = function(pushDown, pushRight, sizeFunction, colorFunction) {
+    this.values.forEach(function(d, i){
+        vis.append("circle")
+            .attr("id", "legend")
+            .attr("r", sizeFunction(d))
+            .attr("cx", pushRight)
+            .attr("cy", pushDown(i))
+            .style("fill", colorFunction(i))
+            .style("stroke", d3.rgb(255, 255, 255));
+    });
+}
+Legend.prototype.makeBinaryLegend = function() {
+    this.values = getBinaryValues(this.legendType);
+    this.text = ["false", "true"];
+}
+Legend.prototype.makeDegreeLegend = function () {
+    this.makeScalarLegend();
+    if (this.legendType == 'size') {
+        for (var i in this.values) {
+            this.values[i] = Math.sqrt(this.values[i]);
+        }
+    }
+}
+Legend.prototype.makeCategoricalLegend = function() {
+    this.values = scales.colors.categorical.domain();
+    this.text = d3.values(colorData['categoryNames']);
+}
+Legend.prototype.makeScalarLegend = function() {
+    // if it is integer scalars:
+    if (allInts(this.rawValues)) {
+        var max = d3.max(this.rawValues);
+        var min = d3.min(this.rawValues);
+
+        if (max - min <= 8) {
+            this.values = d3.range(min, max + 1);
+        }
     }
 
-    legend.push(roundup(max_val, 10));
+    if (this.values.length == 0) {
+        this.makeBinnedLegend(4);
+    }
 
-    return legend;
+    this.text = this.values.slice(0);
+}
+// 'bins' a set of values so that we can display a finite legend.
+Legend.prototype.makeBinnedLegend = function(bins) {
+    if (bins == undefined) {
+        bins = 4;
+    }
+    var min_val = d3.min(this.rawValues);
+    var max_val = d3.max(this.rawValues);
+    var step = (max_val - min_val) / bins;
+
+    this.values.push(rounddown(min_val, 10));
+
+    for (var i = 1; i < bins; i++) {
+        this.values.push(round(min_val + i * step, 10));
+    }
+
+    this.values.push(roundup(max_val, 10));
+
+    this.text = this.values.slice(0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1399,6 +1427,14 @@ function dragended(d) {
     // dragging
     redisplayNodeNames();
 }
+
+function redraw() {
+    computeColors();
+    computeSizes();
+    computeLegend();
+    redrawNodes();
+    redisplayNodeNames();
+}
 function redrawNodes() {
     nodes.forEach(function(d, i) {
         d3.select("#node_" + d.idx)
@@ -1489,203 +1525,64 @@ function hideAllNodeText() {
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-function writeScaleLinkWidthToggle(parent) {
-    var scaleLinkWidthToggle = parent.append("div")
-        .attr("id", "scaleLinkWidthToggle")
-        .text("Scale link width ");
-
-    var isChecked = "unchecked";
-    if (display.scaleLinkWidth) {
-        isChecked = "checked";
-        toggleLinkWidthScaling(true);
-    }
-
-    scaleLinkWidthToggle.append("input")
-        .attr("id", "linkWidthCheck")
-        .attr("type", "checkbox")
-        .attr(isChecked, "")
-        .attr("onchange", "toggleLinkWidthScaling(this.checked)");
-}
-function writeScaleLinkOpacityToggle(parent) {
-    var scaleLinkOpacityToggle = parent.append("div")
-        .attr("id", "scaleLinkOpacityToggle")
-        .text("Scale link opacity ");
-
-    var isChecked = "unchecked";
-    if (display.scaleLinkOpacity) {
-        isChecked = "checked";
-        toggleLinkOpacity(true);
-    }
-
-    scaleLinkOpacityToggle.append("input")
-        .attr("id", "linkOpacityCheck")
-        .attr("type", "checkbox")
-        .attr(isChecked, "")
-        .attr("onchange", "toggleLinkOpacity(this.checked)");
-}
-function writeFreezeNodesToggle(parent) {
-    var freezeNodesToggle = parent.append("div")
-        .attr("id", "nodesMoveToggle")
-        .text("Freeze nodes ");
-
-    freezeNodesToggle.append("input")
-        .attr("id", "freezeNodesToggle")
-        .attr("type", "checkbox")
-        .attr("onchange", "toggleFreezeNodes(this.checked)");
-}
-function writeSaveButtons(parent) {
-    var saveButtons = parent.append("div")
-        .attr("id", "saveButtons");
-
-    saveButtons.append("input")
-        .attr("id", "saveSVGButton")
-        .attr("type", "button")
-        .attr("value", "Save SVG")
-        .on("click", writeSVGDownloadLink);
-}
-function writeNetworkMenu(parent) {
-    var networkMenu = parent.append("div")
-        .attr("id", "networkMenu");
-
-    var networkSelectMenu = networkMenu.append("span")
-        .attr("id", "networkSelectMenu")
-        .text("Display data from ");
-
-    var networkSelect = networkSelectMenu.append("select")
-        .attr("id", "networkSelect")
-        .attr("onchange", "updateNetwork(this.value)")
-
-    networkSelect.selectAll("option")
-        .data(networkNames)
-        .enter()
-        .append("option")
-        .attr("value",function(d){return d;})
-        .text(function(d){return d;});
-
-    networkSelect = document.getElementById('networkSelect');
-    networkSelect.value = display.networkName;
-
-    writeNetworkLayerMenu(networkMenu);
-}
-function writeSizeMenu(parent) {
-    var sizeMenu = parent.append("div")
-        .attr("id", "sizeMenu")
-        .text("Scale node sizes by ");
-
-    sizeMenu.append("select")
-        .attr("id", "sizeSelect")
-        .attr("onchange", "changeSizes(this.value)");
-
-    writeBinaryInversionWidget(sizeMenu, 'size');
-}
-function setNetworkLayerMenuVisibility() {
-    var visible;
-    if (wwdata.networks[display.networkName].layers.length == 1) {
-        visible = false;
-    }
-    else {
-        visible = true;
-    }
-
-    var visibility = visible ? 'inline' : 'none';
-    var networkLayerMenu = d3.select('#networkLayerMenu')
-        .style('display', visibility);
-}
-function writeNetworkLayerMenu(parent) {
-    var networkLayerMenu = parent.append("span")
-        .attr("id", "networkLayerMenu")
-        .text(" layer: ");
-
-    var layers = [];
-    for (var i in wwdata.networks[display.networkName].layers) {
-        layers.push(i);
-    }
-
-    networkLayerMenu.append("select")
-        .attr("id", "networkLayerMenuSelect")
-        .attr("onchange", "displayNetworkLayer(this.value)")
-        .selectAll("option")
-        .data(layers)
-        .enter()
-        .append("option")
-        .attr("value", function(d) { return d; })
-        .text(function(d) { return d; });
-
-    updateNetworkLayerSelect();
-}
-function updateNetworkLayerSelect() {
-    networkLayerMenuSelect = document.getElementById('networkLayerMenuSelect');
-    networkLayerMenuSelect.value = display.networkLayer;
-}
-function displayNetworkLayer(layer) {
-    display.networkLayer = layer;
-    displayNetwork();
-}
 function updateSizeMenu() {
-    var sizeSelect = d3.select("#sizeSelect");
+    var sizeSelect = document.getElementById('sizeSelect-widget');
 
-    sizeSelect.selectAll("option").remove();
-
-    var sizeMetadataStrings = [];
+    var options = [];
     for (var metadatum in sizeData.metadata) {
-        sizeMetadataStrings.push(metadatum);
+        options.push(metadatum);
     }
 
-    sizeSelect.selectAll("option")
-        .data(sizeMetadataStrings)
-        .enter()
-        .append("option")
-        .attr("value", function(d) { return d; })
-        .text(function(d) { return d; });
+    resetSelectOptionsTo(sizeSelect, options);
 
     if (display.sizeBy == undefined || sizeData.metadata[display.sizeBy] == undefined) {
         display.sizeBy = "none";
     }
 
-    sizeSelect = document.getElementById('sizeSelect');
+    sizeSelect = document.getElementById('sizeSelect-widget');
     sizeSelect.value = display.sizeBy;
     changeSizes(display.sizeBy);
 }
-function writeColorMenu(parent) {
-    var colorMenu = parent.append("div")
-        .attr("id", "colorMenu");
+function updateColorMenu() {
+    var colorSelect = document.getElementById('colorSelect-widget');
 
-    var colorByMenu = colorMenu.append("span")
-        .attr('id', 'colorByMenu')
-        .text("Color nodes by ");
-
-    colorByMenu.append("select")
-        .attr("id", "colorSelect")
-        .attr("onchange","changeColors(this.value)");
-
-    writeColorPaletteMenu(colorMenu);
-    writeBinaryInversionWidget(colorMenu, 'color');
-}
-function writeBinaryInversionWidget(parent, type) {
-    var widgetId = getBinaryInversionAttributeForType(type);
-    var widgetContainerId = widgetId + "Widget";
-
-    var binaryInversionWidget = parent.append("span")
-        .attr("id", widgetContainerId)
-        .text(" invert ");
-
-    var checked = 'unchecked';
-    if (display[widgetId]) {
-        checked = 'checked';
+    var options = [];
+    for (var metadatum in colorData.metadata) {
+        options.push(metadatum);
     }
 
-    binaryInversionWidget.append("input")
-        .attr("id", widgetId)
-        .attr("type", "checkbox")
-        .attr(checked, "")
-        .attr("onchange", "toggleInvertBinary(this.checked, '" + type + "')")
-        .attr("size", 3);
+    resetSelectOptionsTo(colorSelect, options);
+
+    if (display.colorBy == undefined || colorData.metadata[display.colorBy] == undefined) {
+        display.colorBy = "none";
+    }
+
+    colorSelect.value = display.colorBy;
+    changeColors(display.colorBy);
+}
+function setNetworkLayerMenuVisibility() {
+    var visibility = 'inline';
+
+    if (wwdata.networks[display.networkName].layers.length == 1) {
+        visibility = 'none';
+    }
+
+    document.getElementById('layerSelect-widget').parentElement.style.display = visibility;
+}
+function changeLayer(layer) {
+    display.networkLayer = layer;
+
+    var layerSelect = document.getElementById('layerSelect-widget');
+    layerSelect.value = display.networkLayer;
+
+    displayNetwork();
 }
 function changeInvertBinaryWidgetVisibility(visible, type) {
     var visibility = visible ? 'inline' : 'none';
-    var widgetId = getBinaryInversionAttributeForType(type) + "Widget";
-    var colorBinaryInversionMenu = d3.select('#' + widgetId)
-        .style('display', visibility);
+    var widgetId = getBinaryInversionAttributeForType(type) + "-widget";
+
+    var widgetParent = document.getElementById(widgetId).parentElement;
+    widgetParent.style.display = visibility;
 }
 function getBinaryInversionAttributeForType(type) {
     if (type == 'color') {
@@ -1695,184 +1592,296 @@ function getBinaryInversionAttributeForType(type) {
         return 'invertBinarySizes';
     }
 }
-function updateColorMenu() {
-    var colorSelect = d3.select("#colorSelect");
-
-    colorSelect.selectAll("option").remove();
-
-    var colorMetadataStrings = [];
-    for (var metadatum in colorData.metadata) {
-        colorMetadataStrings.push(metadatum);
-    }
-
-    colorSelect.selectAll("option")
-        .data(colorMetadataStrings)
-        .enter()
-        .append("option")
-        .attr("value",function(d){return d;})
-        .text(function(d){return d;});
-
-    if (display.colorBy == undefined || colorData.metadata[display.colorBy] == undefined) {
-        display.colorBy = "none";
-    }
-
-    colorSelect = document.getElementById('colorSelect');
-    colorSelect.value = display.colorBy;
-    changeColors(display.colorBy);
-}
 function changeColorPaletteMenuVisibility(visible) {
     var visibility = visible ? 'inline' : 'none';
-    var colorPaletteMenu = d3.select('#colorPaletteMenu')
-        .style('display', visibility);
+    document.getElementById('colorPaletteSelect-widget').parentElement.style.display = visibility;
 }
-function writeColorPaletteMenu(parent) {
-    var colorPaletteMenu = parent.append("span")
-        .attr("id", "colorPaletteMenu")
-        .text(" with color palette ");
+function resetSelectOptionsTo(select, options) {
+    if (select.options !== undefined) {
+        select.options.length = 0;
+    }
+
+    for (var i in options) {
+        var option = document.createElement('option');
+        option.innerHTML = options[i];
+
+        select.add(option);
+    }
+
+    return select;
+}
+function writeSimpleWidget(name, _widget) {
+    var widget;
+
+    if (_widget.type !== undefined && _widget.type == 'select') {
+        widget = document.createElement('select');
+        widget = resetSelectOptionsTo(widget, _widget.options);
+    }
+    else {
+        widget = document.createElement('input');
+        widget.type = _widget.type || 'text';
+        widget.size = _widget.size || 3;
+    }
+
+    for (var eventName in _widget.functions) {
+        widget.addEventListener(eventName, function (event) {
+            var value = event.target.value;
+            if (_widget.type !== undefined && _widget.type == 'checkbox') {
+                value = event.target.checked;
+            }
+            _widget.functions[eventName](value);
+        });
+    }
+
+    widget.id = name + "-widget";
+
+    if (_widget.type !== undefined) {
+        if (_widget.type == 'checkbox') {
+            widget.checked = _widget.value ? true : false;
+        }
+        else if (_widget.type == 'select' && _widget.value !== undefined) {
+            for (var i in widget.options) {
+                if (widget.options[i].innerHTML == _widget.value) {
+                    widget.options[i].selected = true;
+                }
+            }
+        }
+        else if (_widget.type == 'button') {
+            widget.value = _widget.value;
+        }
+    }
+    else {
+        widget.value = _widget.value;
+    }
+
+    var widgetContainerType = _widget.inline ? 'span' : 'div';
+    var widgetContainer = document.createElement(widgetContainerType);
+
+    if (_widget.text !== undefined) {
+        widgetContainer.innerHTML = _widget.text;
+    }
+
+    widgetContainer.appendChild(widget);
+
+    return widgetContainer;
+}
+function writeMenus(container) {
+    var menu = document.createElement('div')
+    menu.id = 'webweb-menu';
+    menu.style.display = display.hideMenu == true ? 'none' : 'flex';
+    container.appendChild(menu);
+
+    var layers = [];
+    for (var i in wwdata.networks[display.networkName].layers) {
+        layers.push(i);
+    }
 
     var colorNames = [];
     for (colorName in colorbrewer) {
         colorNames.push(colorName);
     }
 
-    colorPaletteMenu.append("select")
-        .attr("id", "colorPaletteMenuSelect")
-        .attr("onchange", "setColorPalette(this.value)")
-        .selectAll("option")
-        .data(colorNames)
-        .enter()
-        .append("option")
-        .attr("value", function(d) { return d; })
-        .text(function(d) { return d; });
-
-    colorPaletteMenuSelect = document.getElementById('colorPaletteMenuSelect');
+    var colorPaletteSelectValue = 'Set1';
     if (display.colorPalette !== undefined) {
         if (colorbrewer[display.colorPalette] !== undefined) {
-            colorPaletteMenuSelect.value = display.colorPalette;
+            colorPaletteSelectValue = display.colorPalette;
         }
     }
-    else {
-        colorPaletteMenuSelect.value = 'Set1';
+
+    var widgetContainers = {
+        'webweb-menu-left' : {
+            'network' : {
+                'subWidgets' :{
+                    'networkSelect' : {
+                        'text' : "Display data from ",
+                        'type' : 'select',
+                        'functions' : {
+                            'change' : changeNetwork,
+                        },
+                        'options' : networkNames,
+                        'value' : display.networkName,
+                        'inline' : true,
+                    },
+                    'layerSelect' : {
+                        'text' : " layer ",
+                        'type' : 'select',
+                        'functions' : {
+                            'change' : changeLayer,
+                        },
+                        'options' : layers,
+                        'value' : display.networkLayer,
+                        'inline' : true,
+                    },
+                },
+            },
+            'size' : {
+                'subWidgets' : {
+                    'sizeSelect' : {
+                        'text' : "Scale node sizes by ",
+                        'type' : 'select',
+                        'functions' : {
+                            'change' : changeSizes,
+                        },
+                        'inline' : true,
+                    },
+                    'invertBinarySizes' : {
+                        'text' : 'invert ',
+                        'type' : 'checkbox',
+                        'functions' : {
+                            'change' : toggleInvertBinarySizes,
+                        },
+                        'value' : display.invertBinarySizes,
+                        'inline' : true,
+                    },
+                },
+            },
+            'colors' : {
+                'subWidgets' : {
+                    'colorSelect' : {
+                        'text' : "Color nodes by ",
+                        'type' : 'select',
+                        'functions' : {
+                            'change' : changeColors,
+                        },
+                        'inline' : true,
+                    },
+                    'colorPaletteSelect' : {
+                        'text' : " with color palette ",
+                        'type' : 'select',
+                        'functions' : {
+                            'change' : setColorPalette,
+                        },
+                        'options' : colorNames,
+                        'value' : colorPaletteSelectValue,
+                        'inline' : true,
+                    },
+                    'invertBinaryColors' : {
+                        'text' : 'invert ',
+                        'type' : 'checkbox',
+                        'functions' : {
+                            'change' : toggleInvertBinaryColors,
+                        },
+                        'value' : display.invertBinaryColors,
+                        'inline' : true,
+                    }
+                },
+            },
+            'scaleLinkWidth' : {
+                'text' : 'Scale link width ',
+                'type' : 'checkbox',
+                'functions' : {
+                    'change' : toggleLinkWidthScaling,
+                },
+                'value' : display.scaleLinkWidth,
+                'size' : 10,
+            },
+            'scaleLinkOpacity' : {
+                'text' : 'Scale link opacity ',
+                'type' : 'checkbox',
+                'functions' : {
+                    'change' : toggleLinkOpacityScaling,
+                },
+                'value' : display.scaleLinkOpacity,
+                'size' : 10,
+            },
+            'freezeNodes' : {
+                'text' : 'Freeze nodes ',
+                'type' : 'checkbox',
+                'functions' : {
+                    'change' : toggleFreezeNodes,
+                },
+                'value' : display.freezeNodes,
+                'size' : 10,
+            },
+            'saveSVG' : {
+                'type' : 'button',
+                'functions' : {
+                    'click' : writeSVGDownloadLink,
+                },
+                'value' : 'Save SVG',
+                'size' : 10,
+            },
+        },
+        'webweb-menu-right' : {
+            'charge' : {
+                'text' : 'Node charge: ',
+                'functions' : {
+                    'change' : changeCharge,
+                },
+                'value' : display.c,
+            },
+            'linkLength' : {
+                'text' : 'Link length: ',
+                'functions' : {
+                    'change' : changeDistance,
+                },
+                'value' : display.l,
+            },
+            'linkStrength' : {
+                'text' : 'Link strength: ',
+                'functions' : {
+                    'change' : changeLinkStrength,
+                },
+                'value' : display.linkStrength,
+            },
+            'gravity' : {
+                'text' : 'Gravity: ',
+                'functions' : {
+                    'change' : changeGravity,
+                },
+                'value' : display.g,
+            },
+            'radius' : {
+                'text' : 'Node radius: ',
+                'functions' : {
+                    'change' : changeR,
+                },
+                'value' : display.r,
+            },
+            'nameToMatch' : {
+                'text' : 'Highlight nodes named: ',
+                'functions' : {
+                    'input' : matchNodesNamed,
+                },
+                'value' : display.nameToMatch,
+                'size' : 10,
+            },
+            'showNodeNames' : {
+                'text' : 'Show node names ',
+                'type' : 'checkbox',
+                'functions' : {
+                    'input' : toggleShowNodeNames,
+                },
+                'value' : display.showNodeNames,
+                'size' : 10,
+            },
+        }
+    };
+
+    for (var side in widgetContainers) {
+        var sideWidgets = widgetContainers[side];
+
+        var sideMenu = document.createElement('div');
+        sideMenu.id = side;
+
+        for (var widgetName in sideWidgets) {
+            var widget;
+            var subWidgets = sideWidgets[widgetName].subWidgets;
+            if (subWidgets !== undefined) {
+                widget = document.createElement('div');
+                for (var subWidgetName in subWidgets) {
+                    widget.append(writeSimpleWidget(subWidgetName, subWidgets[subWidgetName]));
+                }
+            }
+            else {
+                widget = writeSimpleWidget(widgetName, sideWidgets[widgetName]);
+            }
+
+            sideMenu.appendChild(widget);
+        }
+
+        menu.appendChild(sideMenu);
     }
-}
-function writeChargeWidget(parent) {
-    var chargeWidget = parent.append("div")
-        .attr("id", "chargeWidget")
-        .text("Node charge: ");
-
-    chargeWidget.append("input")
-        .attr("id", "chargeText")
-        .attr("type", "text")
-        .attr("onchange", "changeCharge(this.value)")
-        .attr("value", display.c)
-        .attr("size", 3);
-}
-function writeLinkLengthWidget(parent) {
-    var linkLengthWidget = parent.append("div")
-        .attr("id", "linkLengthWidget")
-        .text("Link length: ");
-
-    linkLengthWidget.append("input")
-        .attr("id", "distanceText")
-        .attr("type", "text")
-        .attr("onchange", "changeDistance(this.value)")
-        .attr("value", display.l)
-        .attr("size", 3);
-}
-function writeLinkStrengthWidget(parent) {
-    var linkStrengthWidget = parent.append("div")
-        .attr("id", "linkStrengthWidget")
-        .text("Link strength: ");
-
-    linkStrengthWidget.append("input")
-        .attr("id","linkStrengthText")
-        .attr("type","text")
-        .attr("onchange","changeLinkStrength(this.value)")
-        .attr("value", display.linkStrength)
-        .attr("size", 3);
-}
-function writeGravityWidget(parent) {
-    var gravityWidget = parent.append("div")
-        .attr("id", "gravityWidget")
-        .text("Gravity: ");
-
-    gravityWidget.append("input")
-        .attr("id", "gravityText")
-        .attr("type", "text")
-        .attr("onchange", "changeGravity(this.value)")
-        .attr("value", display.g)
-        .attr("size", 3);
-}
-function writeRadiusWidget(parent) {
-    var radiusWidget = parent.append("div")
-        .attr("id", "radiusWidget")
-        .text("Node radius: ");
-
-    radiusWidget.append("input")
-        .attr("id","rText")
-        .attr("type", "text")
-        .attr("onchange","changer(this.value)")
-        .attr("value", display.r)
-        .attr("size", 3);
-}
-function writeMatchWidget(parent) {
-    var matchWidget = parent.append("div")
-        .attr("id", "matchWidget")
-        .text("Highlight nodes named ");
-
-    matchWidget.append("input")
-        .attr("id","matchText")
-        .attr("type", "text")
-        .attr("value", display.nameToMatch)
-        .attr("oninput", "matchNodesNamed(this.value)")
-        .attr("size", 10);
-}
-function writeShowNodeNamesWidget(parent) {
-    var showNodeNamesWidget = parent.append("div")
-        .attr("id", "showNodeNamesWidget")
-        .text("Show node names ");
-
-    var checked = 'unchecked';
-    if (display.showNodeNames) {
-        checked = 'checked';
-    }
-
-    showNodeNamesWidget.append("input")
-        .attr("id","showNodeNames")
-        .attr("type", "checkbox")
-        .attr(checked, "")
-        .attr("onchange", "toggleShowNodeNames(this.checked)")
-        .attr("size", 3);
-}
-function writeMenus(container) {
-    var menu = document.createElement('div')
-    menu.setAttribute('id', 'webweb-menu')
-    menu.style.display = display.hideMenu == true ? 'none' : 'flex';
-    container.appendChild(menu);
-
-    var menu = d3.select('#webweb-menu');
-
-    var leftMenu = menu.append("div")
-        .attr("id", "webweb-menu-left");
-
-    var rightMenu = menu.append("div")
-        .attr("id", "webweb-menu-right");
-
-    writeNetworkMenu(leftMenu);
-    writeSizeMenu(leftMenu);
-    writeColorMenu(leftMenu);
-    writeScaleLinkWidthToggle(leftMenu);
-    writeScaleLinkOpacityToggle(leftMenu);
-    writeFreezeNodesToggle(leftMenu);
-    writeSaveButtons(leftMenu);
-
-    writeChargeWidget(rightMenu);
-    writeLinkLengthWidget(rightMenu);
-    writeLinkStrengthWidget(rightMenu);
-    writeGravityWidget(rightMenu);
-    writeRadiusWidget(rightMenu);
-    writeMatchWidget(rightMenu);
-    writeShowNodeNamesWidget(rightMenu);
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1976,7 +1985,7 @@ function changeNetworkListener(event) {
     if (changeToNetworkIndex !== undefined) {
         if (0 <= changeToNetworkIndex && changeToNetworkIndex < networkNames.length) {
             var changeToNetworkName = networkNames[changeToNetworkIndex];
-            updateNetwork(changeToNetworkName);
+            changeNetwork(changeToNetworkName);
         }
     }
 }
@@ -1996,10 +2005,15 @@ function changeNetworkLayerListener(event) {
 
     if (changeToLayer !== undefined) {
         if (0 <= changeToLayer && changeToLayer < wwdata.networks[display.networkName].layers.length) {
-            displayNetworkLayer(changeToLayer);
-            updateNetworkLayerSelect();
+            changeLayer(changeToLayer);
         }
     }
+}
+function playNetworkLayers() {
+    window.setTimeout(function() {
+        changeNetworkLayerListener({'keyCode' : 39});
+        playNetworkLayers();
+    }, 1000);
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
