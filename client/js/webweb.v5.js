@@ -984,7 +984,6 @@ function showNodeNamesWhenStable() {
 }
 function toggleLinkWidthScaling(checked) {
     var range = checked ? [0.5, 4] : [1, 1];
-    console.log(range);
     webweb.scales.links.width.range(range);
     redrawLinks();
 }
@@ -1300,6 +1299,8 @@ function drawLinks() {
         .style("stroke-opacity", function(d) {
             return webweb.scales.links.opacity(d.w)
         });
+
+    webweb.linkSelector.exit().remove();
 }
 function redrawLinks() {
     webweb.links.forEach(function(d, i) {
