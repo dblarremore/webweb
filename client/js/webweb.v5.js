@@ -800,10 +800,10 @@ function writeVisualization(container) {
     var dpr = window.devicePixelRatio || 1;
     canvas = d3.select("#webweb-visualization-container")
         .append("canvas")
+        .style("width", webweb.display.w + "px")
+        .style("height", webweb.display.h + "px")
         .attr("width", webweb.display.w * dpr)
         .attr("height", webweb.display.h * dpr)
-        .style("width", webweb.display.w)
-        .style("height", webweb.display.h)
         .attr("id", "webweb-vis-canvas");
 
     d3.select("#webweb-visualization-container")
@@ -1715,7 +1715,7 @@ function writeMenus(container) {
                         'inline' : true,
                     },
                     'invertBinarySizes' : {
-                        'text' : 'invert ',
+                        'text' : ' invert ',
                         'type' : 'checkbox',
                         'functions' : {
                             'change' : toggleInvertBinarySizes,
@@ -1746,7 +1746,7 @@ function writeMenus(container) {
                         'inline' : true,
                     },
                     'invertBinaryColors' : {
-                        'text' : 'invert ',
+                        'text' : ' invert ',
                         'type' : 'checkbox',
                         'functions' : {
                             'change' : toggleInvertBinaryColors,
