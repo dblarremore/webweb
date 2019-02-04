@@ -1469,7 +1469,7 @@ Legend.prototype.makeScalarCategoricalLegend = function(bins) {
 ////////////////////////////////////////////////////////////////////////////////
 // tick attributes for links and nodes
 function tick() {
-    context.clearRect(0, 0, webweb.display.w, webweb.display.w);
+    context.clearRect(0, 0, webweb.display.w, webweb.display.h);
     webweb.links.forEach(function(link) {
         link.draw(context);
     });
