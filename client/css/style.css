@@ -54,3 +54,8 @@
     display: block;
     margin: 0 auto;
 }
+#webweb-visualization-container > canvas {
+    border: solid 3px #f5f6fa;
+    display: block;
+    margin: 0 auto;
+}

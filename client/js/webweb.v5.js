@@ -8,6 +8,7 @@
  *
  */
 var webweb;
+var context;
 
 function Webweb(wwdata) {
     this.networkNames = Object.keys(wwdata.networks);
@@ -235,12 +236,132 @@ Webweb.prototype.createNodes = function() {
 
     this.nodes = [];
     for (var i = 0; i < this.maxNodeCount; i++) {
-        this.nodes.push({
-            "idx" : i,
-        });
+        this.nodes.push(new Node(i));
     }
 
     this.nodesPersistence = [];
+}
+////////////////////////////////////////////////////////////////////////////////
+// 
+// Node
+// 
+////////////////////////////////////////////////////////////////////////////////
+function Node(idx) {
+    this.idx = idx;
+}
+
+Node.prototype.radius = function() {
+    if (this.fixedRadius) {
+        return this.fixedRadius;
+    }
+
+    var radius = this.__scaledSize * webweb.display.r;
+    if (this.matchesString() || this.containsMouse(radius)) {
+        radius *= 1.3;
+    }
+    return radius;
+}
+Node.prototype.outline = function() {
+    if (this.matchesString()) {
+        return "black";
+    }
+    else {
+        return "gray";
+    }
+}
+Node.prototype.draw = function(ctx) {
+    var radius = this.radius();
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, radius, 0, Math.PI * 2, false)
+    ctx.strokeStyle = this.outline();
+    ctx.stroke();
+    ctx.fillStyle = d3.rgb(this.__scaledColor);
+    ctx.fill();
+
+    if (! this.nonInteractive) {
+        if (this.matchesString() || webweb.display.showNodeNames || this.containsMouse(radius)) {
+            if (webweb.simulation.alpha() < .01) {
+                var text = this.name || this.idx;
+                var textX = this.x + 1.1 * radius;
+                var textY = this.y - 1.1 * radius;
+                var font = "12px";
+                this.text = new Text(text, textX, textY, font);
+                this.text.draw(ctx);
+            }
+        }
+    }
+}
+
+Node.prototype.containsMouse = function(radius) {
+    if (webweb.mouseState == undefined) {
+        return false;
+    }
+
+    // recursion...
+    if (radius == undefined) {
+        radius = 1.3 * this.radius();
+    }
+
+    if (
+        this.x + radius >= webweb.mouseState.x &&
+        this.x - radius <= webweb.mouseState.x &&
+        this.y + radius >= webweb.mouseState.y &&
+        this.y - radius <= webweb.mouseState.y
+    ) {
+        return true;
+    }
+
+    return false;
+}
+Node.prototype.matchesString = function() {
+    var matchString = webweb.display.nameToMatch;
+    if (matchString !== undefined && matchString.length > 0) {
+        if (this.name !== undefined && this.name.indexOf(matchString) >= 0) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+////////////////////////////////////////////////////////////////////////////////
+// 
+// Text
+// 
+////////////////////////////////////////////////////////////////////////////////
+function Text(value, x, y, font) {
+    this.value = value;
+    this.x = x;
+    this.y = y;
+    this.font = font;
+}
+
+Text.prototype.draw = function(ctx) {
+    ctx.save();
+    ctx.fillStyle = "black";
+    ctx.font = this.font;
+    ctx.fillText(this.value, this.x, this.y);
+    ctx.restore();
+}
+////////////////////////////////////////////////////////////////////////////////
+// 
+// Link
+// 
+////////////////////////////////////////////////////////////////////////////////
+function Link(source, target, weight) {
+    this.source = source;
+    this.target = target;
+    this.w = weight;
+}
+
+Link.prototype.draw = function(ctx) {
+    ctx.save();
+    ctx.globalAlpha = webweb.scales.links.opacity(this.w);
+    ctx.beginPath();
+    ctx.moveTo(this.source.x, this.source.y);
+    ctx.lineTo(this.target.x, this.target.y);
+    ctx.lineWidth = this.w == 0 ? 0 : webweb.scales.links.width(this.w);
+    ctx.stroke();
+    ctx.restore();
 }
 ////////////////////////////////////////////////////////////////////////////////
 // adds/removes nodes from the visualization
@@ -486,11 +607,11 @@ Webweb.prototype.createLinks = function() {
     for (var source in linkMatrix) {
         for (var target in linkMatrix[source]) {
             if (linkMatrix[source][target]) {
-                this.links.push({
-                    source: source,
-                    target: target,
-                    w: linkMatrix[source][target],
-                })
+                this.links.push(new Link(
+                    source,
+                    target,
+                    linkMatrix[source][target],
+                ));
             }
         }
     }
@@ -641,6 +762,60 @@ function writeVisualization(container) {
 
     d3.select("#webweb-visualization-container")
         .append("br");
+
+    var dpr = window.devicePixelRatio || 1;
+    canvas = d3.select("#webweb-visualization-container")
+        .append("canvas")
+        .attr("width", webweb.display.w * dpr)
+        .attr("height", webweb.display.h * dpr)
+        .style("width", webweb.display.w)
+        .style("height", webweb.display.h)
+        .attr("id", "webweb-vis-canvas");
+
+    getCanvasContext();
+}
+function getCanvasContext() {
+    var dpr = window.devicePixelRatio || 1;
+    var canvas = document.getElementById("webweb-vis-canvas");
+
+    canvas.addEventListener('mousemove', function(e) {
+        var rect = canvas.getBoundingClientRect();
+        
+        webweb.mouseState = {
+            x: e.clientX - rect.left - 3,
+            y: e.clientY - rect.top - 3,
+        }
+
+        if (webweb.dragging){
+            webweb.selectedNode.x = webweb.mouseState.x;
+            webweb.selectedNode.y = webweb.mouseState.y;
+        }
+    }, true);
+    canvas.addEventListener('mousedown', function(e) {
+        var rect = canvas.getBoundingClientRect();
+        
+        webweb.mouseState = {
+            x: e.clientX - rect.left - 3,
+            y: e.clientY - rect.top - 3,
+        }
+
+        webweb.dragging = false;
+        webweb.selectedNode = undefined;
+        for (var i in webweb.nodes) {
+            if (webweb.nodes[i].containsMouse()) {
+                webweb.dragging = true;
+                webweb.selectedNode = webweb.nodes[i];
+            }
+        }
+    }, true);
+
+    canvas.addEventListener('mouseup', function(e) {
+        webweb.dragging = false;
+        webweb.updateSimulation();
+    }, true);
+
+    context = canvas.getContext('2d');
+    context.scale(dpr, dpr);
 }
 ////////////////////////////////////////////////////////////////////////////////
 // - changes the number of visible nodes
@@ -671,6 +846,8 @@ function displayNetwork() {
     drawLinks();
     redrawNodes();
     redisplayNodeNames();
+
+    setInterval(tick, 50);
 }
 ////////////////////////////////////////////////////////////////////////////////
 // creates a map from observed nodes (nodes in the edge list, display.nodes, and
@@ -1010,24 +1187,12 @@ function matchNodesNamed(x) {
     webweb.nodes.forEach(function(d) {
         unHighlightNode(d);
 
-        if (nodeNameMatches(d)) {
+        if (d.matchesString()) {
             highlightNode(d);
         }
     });
 
     showAppropriateNodeText();
-}
-function nodeNameMatches(node) {
-    var name = node.name;
-    var nameToMatch = webweb.display.nameToMatch;
-    if (nameToMatch !== undefined && nameToMatch.length > 0) {
-        if (name !== undefined && name.indexOf(nameToMatch) >= 0) {
-            return true;
-        }
-    }
-    else {
-        return false;
-    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1056,6 +1221,8 @@ function computeLegend() {
     computeColors();
     computeSizes();
     vis.selectAll("#legend").remove();
+    webweb.legendNodes = [];
+    webweb.legendText = [];
 
     var sizeBy = webweb.display.sizeBy;
     var sizeType = webweb.getSizeByType();
@@ -1190,6 +1357,9 @@ Legend.prototype.drawLegendLabel = function(pushDown) {
         .attr("y", pushDown())
         .attr("fill", "black")
         .attr("font-size", 12);
+
+    var text = new Text(this.metadataName, 5, pushDown(), "12px");
+    webweb.legendText.push(text);
 }
 Legend.prototype.drawLegendText = function(pushDown, pushRight) {
     this.text.forEach(function(d, i) {
@@ -1200,6 +1370,9 @@ Legend.prototype.drawLegendText = function(pushDown, pushRight) {
             .attr("y", pushDown(i) + 3.5)
             .attr("fill", "black")
             .attr("font-size", 12);
+
+        var text = new Text(d, pushRight, pushDown(i) + 3.5, "12px");
+        webweb.legendText.push(text);
     });
 }
 Legend.prototype.drawLegendValues = function(pushDown, pushRight, sizeFunction, colorFunction) {
@@ -1211,6 +1384,15 @@ Legend.prototype.drawLegendValues = function(pushDown, pushRight, sizeFunction, 
             .attr("cy", pushDown(i))
             .style("fill", colorFunction(i))
             .style("stroke", d3.rgb(255, 255, 255));
+
+        var node = new Node(-1);
+        node.fixedRadius = sizeFunction(d);
+        node.x = pushRight;
+        node.y = pushDown(i);
+        node.__scaledColor = colorFunction(i);
+        node.nonInteractive = true;
+
+        webweb.legendNodes.push(node);
     });
 }
 Legend.prototype.makeBinaryLegend = function() {
@@ -1374,7 +1556,7 @@ function drawNodes() {
 
     webweb.nodeSelector.on("mouseout", function(d) {
         unHighlightNode(d);
-        if (! webweb.display.showNodeNames && ! nodeNameMatches(d)) {
+        if (! webweb.display.showNodeNames && ! d.matchesString()) {
             hideOneNodeText(d);
         }
     });
@@ -1436,6 +1618,21 @@ function tick() {
     webweb.nodeSelector = vis.selectAll(".webweb-node")
     webweb.nodeSelector.attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; })
+
+    context.clearRect(0, 0, webweb.display.w, webweb.display.w);
+    webweb.links.forEach(function(link) {
+        link.draw(context);
+    });
+    webweb.nodes.forEach(function(node) {
+        node.draw(context);
+    });
+
+    webweb.legendNodes.forEach(function(node) {
+        node.draw(context);
+    });
+    webweb.legendText.forEach(function(text) {
+        text.draw(context);
+    });
 }
 // Highlight a node by making it bigger and outlining it
 function highlightNode(d) {
@@ -1462,7 +1659,7 @@ function showAppropriateNodeText() {
     for (var i in webweb.nodes) {
         var node = webweb.nodes[i];
 
-        if (nodeNameMatches(node) || getTruthinessSafely(webweb.display.showNodeNames)) {
+        if (node.matchesString() || getTruthinessSafely(webweb.display.showNodeNames)) {
             showOneNodeText(node);
         }
         else {
