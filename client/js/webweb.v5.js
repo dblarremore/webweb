@@ -647,11 +647,6 @@ function displayNetwork() {
     toggleLinkWidthScaling(webweb.display.scaleLinkWidth);
     toggleLinkOpacityScaling(webweb.display.scaleLinkOpacity);
 
-    // if we've frozen node movement manually tick so new edges are evaluated.
-    if (webweb.display.freezeNodeMovement) {
-        tick();
-    }
-
     // change the display of the layers widget
     setNetworkLayerMenuVisibility();
 
@@ -1301,6 +1296,11 @@ function drawLinks() {
         });
 
     webweb.linkSelector.exit().remove();
+
+    // if we've frozen node movement manually tick so new edges are evaluated.
+    if (webweb.display.freezeNodeMovement) {
+        tick();
+    }
 }
 function redrawLinks() {
     webweb.links.forEach(function(d, i) {
