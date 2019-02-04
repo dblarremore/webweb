@@ -654,7 +654,6 @@ function displayNetwork() {
     redrawNodes();
     redisplayNodeNames();
 }
-
 ////////////////////////////////////////////////////////////////////////////////
 // creates a map from observed nodes (nodes in the edge list, display.nodes, and
 // the current layer's nodes) to an internal "id"
