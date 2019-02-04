@@ -984,6 +984,7 @@ function showNodeNamesWhenStable() {
 }
 function toggleLinkWidthScaling(checked) {
     var range = checked ? [0.5, 4] : [1, 1];
+    console.log(range);
     webweb.scales.links.width.range(range);
     redrawLinks();
 }
@@ -1287,9 +1288,18 @@ function drawLinks() {
         .attr("id", function(d, i) { 
             return "link_" + i; 
         })
-        .style("stroke", d3.rgb(150, 150, 150));
-
-    redrawLinks();
+        .style("stroke", d3.rgb(150, 150, 150))
+        .style("stroke-width", function(d){
+            if (d.w == 0) {
+                return 0;
+            }
+            else {
+                return webweb.scales.links.width(d.w);
+            }
+        })
+        .style("stroke-opacity", function(d) {
+            return webweb.scales.links.opacity(d.w)
+        });
 }
 function redrawLinks() {
     webweb.links.forEach(function(d, i) {
