@@ -1,97 +1,18 @@
 /*
  * webweb makes pretty interactive network diagrams in your browser
- * version 4
  *
  * Daniel Larremore + Contributors
- * August 29, 2018
  * daniel.larremore@colorado.edu
  * http://github.com/dblarremore/webweb
  * Comments and suggestions always welcome.
  *
  */
+var webweb;
 
-// Here are default values. 
-// If you don't put anything different in the JSON file, this is what you get!
-var displayDefaults = {
-    'c' : 60, // charge
-    'g' : 0.1, // gravity
-    'l' : 20, // edge length
-    'r' : 5, // node radius
-    'linkStrength' : 1,
-    'colorPalette' : 'Set1',
-    'networkLayer' : 0,
-    'metadata' : {},
-    'nameToMatch' : "",
-    'freezeNodeMovement' : false,
-    'hideMenu' : false,
-    'invertBinaryColors' : false,
-    'invertBinarySizes' : false,
-    'scaleLinkOpacity' : false,
-};
+function Webweb(wwdata) {
+    this.networkNames = Object.keys(wwdata.networks);
 
-var displayParameterSynonyms = [
-    ['c', 'charge'],
-    ['g', 'gravity'],
-    ['h', 'height'],
-    ['l', 'linkLength'],
-    ['r', 'radius'],
-    ['w', 'width'],
-];
-
-var display = {};
-var networkNames;
-
-var links = [];
-var nodes = [];
-var scales = {};
-var node, simulation, link;
-
-var nodePersistence = [];
-
-var colorData = {
-    'type' : 'none',
-    'scaledValues' : [],
-    'rawValues' : [],
-    'metadata' : {},
-    'categoryNames' : [],
-};
-
-var sizeData = {
-    'type' : 'none',
-    'scaledValues' : [],
-    'rawValues' : [],
-    'metadata' : {},
-    'R' : 0,
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// initializeWebweb
-//
-// run once on startup
-//
-// - loads webweb data
-// - standardizes its representation
-// - sets up the scales
-// - initializes the webweb html
-// - computes and draws nodes
-////////////////////////////////////////////////////////////////////////////////
-function initializeWebweb() {
-    networkNames = Object.keys(wwdata.networks);
-
-    // default the network to display to the first in networks list
-    displayDefaults['networkName'] = networkNames[0];
-
-    display = wwdata.display == undefined ? {} : wwdata.display;
-    display = standardizeDisplayParameterSynonyms(display);
-    for (var key in displayDefaults) {
-        if (display[key] == undefined) {
-            display[key] = displayDefaults[key];
-        }
-    }
-
-    standardizeRepresentation();
-
-    scales = {
+    this.scales = {
         'nodeSize' : d3.scaleLinear().range([1, 1]),
         'colors' : {
             'scalar' : d3.scaleLinear().range([1, 1]),
@@ -101,25 +22,69 @@ function initializeWebweb() {
             'width' : d3.scaleLinear().range([1, 1]),
             'opacity' : d3.scaleLinear().range([0.4, 0.9]),
         },
+    };
+
+    this.displayDefaults = {
+        'c' : 60, // charge
+        'g' : 0.1, // gravity
+        'l' : 20, // edge length
+        'r' : 5, // node radius
+        'linkStrength' : 1,
+        'colorPalette' : 'Set1',
+        'metadata' : {},
+        'nameToMatch' : "",
+        'freezeNodeMovement' : false,
+        'hideMenu' : false,
+        'invertBinaryColors' : false,
+        'invertBinarySizes' : false,
+        'colorBy' : 'none',
+        'sizeBy' : 'none',
+        'scaleLinkOpacity' : false,
+        'networkName' : this.networkNames[0],
+        'networkLayer' : 0,
+    };
+
+    this.displaySynonyms = [
+        ['c', 'charge'],
+        ['g', 'gravity'],
+        ['h', 'height'],
+        ['l', 'linkLength'],
+        ['r', 'radius'],
+        ['w', 'width'],
+    ];
+
+    this.nonMetadataKeys = [
+        'degree',
+        'fx',
+        'fy',
+        'idx',
+        'index',
+        'vx',
+        'vy',
+        'x',
+        'y',
+    ];
+
+    this.display = this.standardizeDisplayParameterSynonyms(wwdata.display);
+    this.standardizeNetworks(wwdata.networks);
+
+    this.createNodes();
+}
+Webweb.prototype.standardizeNetworks = function(networks) {
+    this.networks = {};
+    for (var networkName in networks) {
+        var network = networks[networkName];
+        this.networks[networkName] = this.standardizeNetwork(network);
+    }
+}
+Webweb.prototype.standardizeDisplayParameterSynonyms = function(display) {
+    if (display == undefined) {
+        display = {};
     }
 
-    initializeHTML();
-
-    computeNodes();
-    drawNodes();
-
-    simulation = d3.forceSimulation(nodes)
-        .force("center", d3.forceCenter(display.w / 2, display.h / 2))
-        .on('tick', tick);
-
-    simulation.alphaDecay = 0.001
-
-    displayNetwork();
-}
-function standardizeDisplayParameterSynonyms(display) {
-    for (var i in displayParameterSynonyms) {
-        var key1 = displayParameterSynonyms[i][0];
-        var key2 = displayParameterSynonyms[i][1];
+    for (var i in this.displaySynonyms) {
+        var key1 = this.displaySynonyms[i][0];
+        var key2 = this.displaySynonyms[i][1];
 
         if (display[key1] == undefined && display[key2] !== undefined) {
             display[key1] = display[key2];
@@ -127,64 +92,16 @@ function standardizeDisplayParameterSynonyms(display) {
 
         delete display[key2];
     }
+
+    for (var key in this.displayDefaults) {
+        if (display[key] == undefined) {
+            display[key] = this.displayDefaults[key];
+        }
+    }
+
     return display;
 }
-function initializeHTML() {
-    var container;
-
-    if (display.attachWebwebToElementWithId == undefined) {
-        var container = document.createElement('div')
-        container.setAttribute('id', 'webweb-center');
-
-        document.getElementsByTagName("body")[0].appendChild(container);
-
-        if (wwdata.title !== undefined) {
-            document.title = wwdata.title;
-        }
-    }
-    else {
-        container = document.getElementById(display.attachWebwebToElementWithId);
-    }
-
-    writeMenus(container);
-    writeVisualization(container);
-}
-function writeVisualization(container) {
-    var visualizationContainer = document.createElement("div");
-    visualizationContainer.setAttribute('id', 'webweb-visualization-container');
-
-    container.appendChild(visualizationContainer);
-
-    if (display.w == undefined) {
-        var heuristic = container.clientWidth - 3 * 20;
-
-        if (heuristic <= 0) {
-            heuristic = 1000;
-        }
-        display.w = Math.min.apply(null, [heuristic, 1000]);
-    }
-
-    if (display.h == undefined) {
-        display.h = Math.min.apply(null, [display.w, 600]);
-    }
-
-    vis = d3.select("#webweb-visualization-container")
-        .append("svg")
-        .attr("width", display.w)
-        .attr("height", display.h)
-        .attr("id", "webweb-vis");
-
-    d3.select("#webweb-visualization-container")
-        .append("br");
-}
-function standardizeRepresentation() {
-    for (var i in networkNames) {
-        standardizeNetworkRepresentation(networkNames[i]);
-    }
-}
-function standardizeNetworkRepresentation(networkName) {
-    var network = wwdata.networks[networkName];
-
+Webweb.prototype.standardizeNetwork = function(network) {
     if (network.layers == undefined) {
         network.layers = [
             {
@@ -196,153 +113,29 @@ function standardizeNetworkRepresentation(networkName) {
     }
 
     for (var i in network.layers) {
-        network.layers[i] = standardizeLayerRepresentation(network.layers[i]);
+        network.layers[i] = this.standardizeLayer(network.layers[i]);
+        network.layers[i].nodeIdMap = this.getNodeIdMap(network.layers[i]);
     }
 
-    wwdata.networks[networkName] = network;
+    return network;
 }
-function standardizeLayerRepresentation(layer) {
-    if (layer.metadata !== undefined) {
-        for (var metadatum in layer.metadata) {
-            if (display.metadata[metadatum] == undefined) {
-                display.metadata[metadatum] = {};
-            }
-
-            if (layer.metadata[metadatum].categories !== undefined) {
-                display.metadata[metadatum]['categories'] = layer.metadata[metadatum].categories;
-            }
-
-            if (layer.metadata[metadatum].type !== undefined) {
-                display.metadata[metadatum]['type'] = layer.metadata[metadatum].type;
-
-            }
-
-        }
-    }
-
-    return layer;
-}
-function addMetadataVectorsToNodes(metadata) {
-    for (var metadatum in metadata) {
-        for (var i in metadata[metadatum].values) {
-            nodes[i][metadatum] = metadata[metadatum].values[i];
-        }
-    }
-}
-////////////////////////////////////////////////////////////////////////////////
-// - changes the number of visible nodes
-// - adds metadata to nodes
-// - computes links
-// - draws links
-// - uses the force (luke)
-////////////////////////////////////////////////////////////////////////////////
-function displayNetwork() {
-    setVisibleNodes();
-    setNodeMetadata();
-
-    computeLinks();
-    drawLinks();
-
-    updateChargeForce();
-    updateLinkForce();
-    updateGravityForce();
-
-    toggleFreezeNodes(display.freezeNodeMovement);
-    toggleShowNodeNames(display.showNodeNames);
-    toggleInvertBinaryColors(display.invertBinaryColors);
-    toggleInvertBinarySizes(display.invertBinarySizes);
-    toggleLinkWidthScaling(display.scaleLinkWidth);
-    toggleLinkOpacityScaling(display.scaleLinkOpacity);
-
-    // if we've frozen node movement manually tick so new edges are evaluated.
-    if (display.freezeNodeMovement) {
-        tick();
-    }
-
-    // change the display of the layers widget
-    setNetworkLayerMenuVisibility();
-
-    redrawLinks();
-    redraw();
-
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// adds/removes nodes from the visualization
-//
-// it currently only handles removing from the end.
-// however, we would like to be able to do this by name (i.e. id).
-////////////////////////////////////////////////////////////////////////////////
-function setVisibleNodes() {
-    var nodeIdMap = getNodeIdMap(display.networkName, display.networkLayer);
-    var nodeCount = getObjetPropertyCount(nodeIdMap);
-
-    if (nodeCount) {
-        if (nodeCount < nodes.length) {
-            while (nodeCount != nodes.length) {
-                var toRemove = nodes.pop();
-                var drawnNode = document.getElementById("node_" + toRemove.idx)
-                document.getElementById("webweb-vis").removeChild(drawnNode);
-                nodePersistence.push({ 'node' : toRemove, 'toDraw' : drawnNode });
-            }
-        }
-        else if (nodeCount > nodes.length) {
-            while (nodeCount != nodes.length) {
-                var toAdd = nodePersistence.pop();
-                document.getElementById("webweb-vis").appendChild(toAdd.toDraw);
-                nodes.push(toAdd.node);
-            }
-        }
-    }
-    else if (display.N > nodes.length) {
-        // otherwise, if we don't have a set number of nodes, reset the number
-        // of nodes to the maximum
-        while (nodes.length != display.N) {
-            var toAdd = nodePersistence.pop();
-            document.getElementById("webweb-vis").appendChild(toAdd.toDraw);
-            nodes.push(toAdd.node);
-        }
-    }
-}
-function addNodeMetadata(source, nodeIdMap) {
-    addMetadataVectorsToNodes(source.metadata);
-
-    if (getObjetPropertyCount(source.nodes) == 0) {
-        return;
-    }
-
-    for (var i in source.nodes) {
-        for (var metadatum in source.nodes[i]) {
-            nodes[nodeIdMap[i]][metadatum] = source.nodes[i][metadatum];
-        }
-    }
-}
-function getNetworkData(networkName, networkLayer) {
-    return wwdata.networks[networkName].layers[networkLayer];
-}
-////////////////////////////////////////////////////////////////////////////////
-// creates a map from observed nodes (nodes in the edge list, display.nodes, and
-// the current layer's nodes) to an internal "id"
-////////////////////////////////////////////////////////////////////////////////
-function getNodeIdMap(networkName, networkLayer) {
-    var networkData = getNetworkData(networkName, networkLayer);
-
+Webweb.prototype.getNodeIdMap = function(network) {
     var nodeNames = [];
 
-    for (var i in networkData.edgeList) {
-        nodeNames.push(networkData.edgeList[i][0]);
-        nodeNames.push(networkData.edgeList[i][1]);
-    }
+    network.edgeList.forEach(function(edge) {
+        nodeNames.push(edge[0]);
+        nodeNames.push(edge[1]);
+    });
 
-    if (getObjetPropertyCount(display.nodes) > 0) {
-        for (var i in display.nodes) {
+    if (getObjetPropertyCount(this.display.nodes) > 0) {
+        for (var i in this.display.nodes) {
             var _id = isNaN(i) ? i : +i;
             nodeNames.push(_id);
         }
     }
 
-    if (getObjetPropertyCount(networkData.nodes) > 0) {
-        for (var i in networkData.nodes) {
+    if (getObjetPropertyCount(network.nodes) > 0) {
+        for (var i in network.nodes) {
             var _id = isNaN(i) ? i : +i;
             nodeNames.push(_id);
         }
@@ -354,22 +147,22 @@ function getNodeIdMap(networkName, networkLayer) {
 
     var unusedId = 0;
     var nodeIdMap = {};
-    for (var i in nodeNames) {
-        var name = nodeNames[i];
+    nodeNames.forEach(function(name) {
         if (nodeIdMap[name] == undefined) {
             nodeIdMap[name] = unusedId;
             unusedId += 1;
         }
-    }
-
-    var displayMetadataValuesCount = metadataValuesCount(display.metadata);
+    });
 
     var unusedName = 0;
-    for(var key in nodeIdMap){
+    for (var key in nodeIdMap){
+        key = +key;
         if (isInt(key) && key >= unusedName) {
             unusedName = key + 1;
         }
     }
+
+    var displayMetadataValuesCount = metadataValuesCount(this.display.metadata);
 
     if (displayMetadataValuesCount > unusedId) {
         while (displayMetadataValuesCount > unusedId) {
@@ -379,7 +172,7 @@ function getNodeIdMap(networkName, networkLayer) {
         }
     }
 
-    var networkMetadataValuesCount = metadataValuesCount(networkData.metadata);
+    var networkMetadataValuesCount = metadataValuesCount(network.metadata);
 
     if (networkMetadataValuesCount > unusedId) {
         while (networkMetadataValuesCount > unusedId) {
@@ -391,20 +184,122 @@ function getNodeIdMap(networkName, networkLayer) {
 
     return nodeIdMap;
 }
-function metadataValuesCount(metadata) {
-    var maxValuesCount = 0;
-    if (metadata !== undefined) {
-        for (var metadatum in metadata) {
-            var values = metadata[metadatum].values;
-            if (values !== undefined) {
-                var valuesCount = values.length;
-                if (valuesCount > maxValuesCount) {
-                    maxValuesCount = valuesCount;
-                }
+Webweb.prototype.standardizeLayer = function(layer) {
+    if (this.display.metadata == undefined) {
+        this.display.metadata = {};
+    }
+    if (layer.metadata !== undefined) {
+        for (var metadatum in layer.metadata) {
+            var layerMetadatum = layer.metadata[metadatum];
+
+            var displayMetadatum = {};
+            if (this.display.metadata[metadatum] !== undefined) {
+                displayMetadatum = this.display.metadata[metadatum];
+            }
+
+            if (layerMetadatum.categories !== undefined) {
+                displayMetadatum.categories = layerMetadatum.categories;
+            }
+
+            if (layerMetadatum.type !== undefined) {
+                displayMetadatum.type = layerMetadatum.type;
+            }
+
+            this.display.metadata[metadatum] = displayMetadatum;
+        }
+    }
+
+    return layer;
+}
+////////////////////////////////////////////////////////////////////////////////
+// Webweb:
+// nodes
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// initialize the nodes (attempting to be smart about the number of them)
+////////////////////////////////////////////////////////////////////////////////
+Webweb.prototype.createNodes = function() {
+    // iterate through the networks and get their node counts
+    this.maxNodeCount = 0;
+    for (var i in this.networks) {
+        var network = this.networks[i];
+        for (var i in network.layers) {
+            var nodeCount = getObjetPropertyCount(network.layers[i].nodeIdMap);
+
+            if (nodeCount > this.maxNodeCount) {
+                this.maxNodeCount = nodeCount;
             }
         }
     }
-    return maxValuesCount;
+
+    this.nodes = [];
+    for (var i = 0; i < this.maxNodeCount; i++) {
+        this.nodes.push({
+            "idx" : i,
+        });
+    }
+
+    this.nodesPersistence = [];
+}
+////////////////////////////////////////////////////////////////////////////////
+// adds/removes nodes from the visualization
+////////////////////////////////////////////////////////////////////////////////
+Webweb.prototype.setVisibleNodes = function() {
+    var count = getObjetPropertyCount(webweb.displayedNetworkData().nodeIdMap);
+
+    if (! count) {
+        count = this.maxNodeCount;
+    }
+
+    if (count < this.nodes.length) {
+        while (count != this.nodes.length) {
+            var toRemove = this.nodes.pop();
+            var drawnNode = document.getElementById("node_" + toRemove.idx)
+            document.getElementById("webweb-vis").removeChild(drawnNode);
+            this.nodesPersistence.push({ 'node' : toRemove, 'toDraw' : drawnNode });
+        }
+    }
+    else if (count > this.nodes.length) {
+        while (count != this.nodes.length) {
+            var toAdd = this.nodesPersistence.pop();
+            document.getElementById("webweb-vis").appendChild(toAdd.toDraw);
+            this.nodes.push(toAdd.node);
+        }
+    }
+}
+Webweb.prototype.resetNodeMetadata = function() {
+    // reset node data
+    for (var i in this.nodes) {
+        for (var key in this.nodes[i]) {
+            if (this.nonMetadataKeys.indexOf(key) < 0) {
+                delete this.nodes[i][key];
+            }
+            else if (key == 'degree' || key == 'strength') {
+                // reset the degree and strength (strength not yet supported)
+                this.nodes[i][key] = 0;
+            }
+        }
+    }
+}
+Webweb.prototype.standardizeSourceMetadata = function(source) {
+    var nodeIdMap = this.displayedNetworkData().nodeIdMap;
+
+    // add the vectorized node metadata to the nodes
+    for (var metadatum in source.metadata) {
+        for (var i in source.metadata[metadatum].values) {
+            this.nodes[i][metadatum] = source.metadata[metadatum].values[i];
+        }
+    }
+
+    if (getObjetPropertyCount(source.nodes) == 0) {
+        return;
+    }
+
+    for (var i in source.nodes) {
+        for (var metadatum in source.nodes[i]) {
+            this.nodes[nodeIdMap[i]][metadatum] = source.nodes[i][metadatum];
+        }
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 // loads the metadata up from the places they could come from:
@@ -414,8 +309,48 @@ function metadataValuesCount(metadata) {
 //
 // Priority is given to the network's metadata, then display, then defaults
 ////////////////////////////////////////////////////////////////////////////////
-function setNodeMetadata() {
-    var allMetadata = {
+Webweb.prototype.setNodeMetadata = function() {
+    this.setVisibleNodes();
+    this.resetNodeMetadata();
+
+    var networkData = this.displayedNetworkData();
+    var nodeIdMap = networkData.nodeIdMap;
+
+    this.standardizeSourceMetadata(this.display);
+    this.standardizeSourceMetadata(networkData);
+
+    var nodeNameMap = {};
+    for(var key in nodeIdMap){
+        nodeNameMap[nodeIdMap[key]] = key;
+    }
+
+    // now we need to define the set of metadata
+    for (var i in this.nodes) {
+        var node = this.nodes[i];
+        for (var key in node) {
+            if (this.nonMetadataKeys.indexOf(key) < 0) {
+                if (this.display.metadata !== undefined && this.display.metadata[key] !== undefined) {
+                    var metadatumInfo = this.display.metadata[key];
+
+                    // if we have categories, change the node values here
+                    if (metadatumInfo.categories !== undefined) {
+                        var nodeCategoryNumber = this.nodes[i][key];
+                        this.nodes[i][key] = metadatumInfo.categories[nodeCategoryNumber];
+                    }
+                    else if (metadatumInfo.type !== undefined && metadatumInfo.type == 'binary') {
+                        this.nodes[i][key] = this.nodes[i][key] ? true : false;
+                    }
+                }
+            }
+        }
+
+        // if we don't already have node names, use the mapping to assign them
+        if (this.nodes[i]['name'] == undefined && nodeNameMap !== undefined) {
+            this.nodes[i]['name'] = nodeNameMap[this.nodes[i].idx];
+        }
+    }
+
+    this.allMetadata = {
         'none' : {
             'type' : 'none',
         },
@@ -424,117 +359,49 @@ function setNodeMetadata() {
         },
     };
 
-    var nonMetadataKeys = [ 'idx', 'fx', 'fy', 'x', 'y', 'vx', 'vy', 'index', 'degree' ];
-
-    // reset node data
-    for (var i in nodes) {
-        for (var key in nodes[i]) {
-            if (nonMetadataKeys.indexOf(key) < 0) {
-                delete nodes[i][key];
-            }
-            else if (key == 'degree' || key == 'strength') {
-                // reset the degree and strength (strength not yet supported)
-                nodes[i][key] = 0;
-            }
-        }
-    }
-
-    var nodeIdMap = getNodeIdMap(display.networkName, display.networkLayer);
-
-    addNodeMetadata(display, nodeIdMap);
-
-    var networkData = wwdata.networks[display.networkName].layers[display.networkLayer];
-    addNodeMetadata(networkData, nodeIdMap);
-
-    var nodeNameMap = {};
-    for(var key in nodeIdMap){
-        nodeNameMap[nodeIdMap[key]] = key;
-    }
-
-    // now we need to define the set of metadata
-    for (var i in nodes) {
-        var node = nodes[i];
+    // identify the set of metadata keys
+    this.nodes.forEach(function(node) {
         for (var key in node) {
-            if (nonMetadataKeys.indexOf(key) < 0) {
-                allMetadata[key] = {};
-
-                if (display.metadata !== undefined && display.metadata[key] !== undefined) {
-                    var metadatumInfo = display.metadata[key];
-
-                    // if we have categories, change the node values here
-                    if (metadatumInfo.categories !== undefined) {
-                        var nodeCategoryNumber = nodes[i][key];
-                        nodes[i][key] = metadatumInfo.categories[nodeCategoryNumber];
-                    }
-                    else if (metadatumInfo.type !== undefined && metadatumInfo.type == 'binary') {
-                        nodes[i][key] = nodes[i][key] ? true : false;
-                    }
-                }
+            if (this.nonMetadataKeys.indexOf(key) < 0) {
+                this.allMetadata[key] = {};
             }
         }
+    }, this);
 
-        // if we don't already have node names, use the mapping to assign them
-        if (nodes[i]['name'] == undefined && nodeNameMap !== undefined) {
-            nodes[i]['name'] = nodeNameMap[nodes[i].idx]
-        }
-    }
-
-    sizeData.metadata = {};
-    colorData.metadata = {};
-    for (metadatum in allMetadata) {
-        if (metadatum == 'name') {
-            continue;
+    for (metadatum in this.allMetadata) {
+        if (this.allMetadata[metadatum].type == undefined) {
+            this.allMetadata[metadatum].type = this.getMetadatumType(metadatum);
         }
 
-        if (allMetadata[metadatum].type == undefined) {
-            allMetadata[metadatum].type = getMetadatumType(metadatum);
+        if (this.allMetadata[metadatum].type == "categorical") {
+            this.setCategoricalMetadataInfo(metadatum);
         }
-
-        if (allMetadata[metadatum].type !== "categorical") {
-            sizeData.metadata[metadatum] = allMetadata[metadatum];
-
-        }
-        colorData.metadata[metadatum] = allMetadata[metadatum];
     }
 
     // these below if statements are only here because of poor design (says
     // hunter, the designer of this bit)
     // really, computeSizes and computeColors should already have this
     // information.
-    if (display.colorBy !== undefined && display.colorBy !== 'none') {
-        if (allMetadata !== undefined && allMetadata[display.colorBy] == undefined) {
-            display.colorBy = 'none';
+    if (this.display.colorBy !== undefined && this.display.colorBy !== 'none') {
+        if (this.allMetadata !== undefined && this.allMetadata[this.display.colorBy] == undefined) {
+            this.display.colorBy = 'none';
         }
-
-        colorData.type = allMetadata[display.colorBy].type;
     }
-
-    if (display.sizeBy !== undefined && display.sizeBy !== 'none') {
-        if (allMetadata !== undefined && allMetadata[display.sizeBy] == undefined) {
-            display.sizeBy = 'none';
+    if (this.display.sizeBy !== undefined && this.display.sizeBy !== 'none') {
+        if (this.allMetadata !== undefined && this.allMetadata[this.display.sizeBy] == undefined) {
+            this.display.sizeBy = 'none';
         }
-
-        sizeData.type = allMetadata[display.sizeBy].type;
     }
-
-    // update the menus with these new metadata
-    updateSizeMenu();
-    updateColorMenu();
 }
 ////////////////////////////////////////////////////////////////////////////////
 // tries to figure out the metadatum type of a given metadatum.
 ////////////////////////////////////////////////////////////////////////////////
-function getMetadatumType(metadatum) {
+Webweb.prototype.getMetadatumType = function(metadatum) {
     if (metadatum == 'none') {
         return;
     }
 
-    var metadatumValues = [];
-    for (var i in nodes) {
-        metadatumValues.push(nodes[i][metadatum]);
-    }
-    
-    var q = d3.set(metadatumValues).values().sort();
+    var q = d3.set(getRawNodeValues(metadatum)).values().sort();
 
     // check if this is a binary relation
     if (q.length == 2 && q[0] == 'false' && q[1] == 'true') {
@@ -549,37 +416,19 @@ function getMetadatumType(metadatum) {
 
     return 'scalar';
 }
-////////////////////////////////////////////////////////////////////////////////
-// initialize the nodes (attempting to be smart about the number of them)
-////////////////////////////////////////////////////////////////////////////////
-function computeNodes() {
-    // iterate through the networks and get their node counts
-    var nodeCounts = [];
-    for (var i in networkNames) {
-        var networkName = networkNames[i];
-        var network = wwdata.networks[networkName];
-        for (var layer in network.layers) {
-            var nodeIdMap = getNodeIdMap(networkName, layer);
-            var count = getObjetPropertyCount(nodeIdMap);
-            nodeCounts.push(count);
-        }
+Webweb.prototype.setCategoricalMetadataInfo = function(metadatum) {
+    var metadata = this.allMetadata[metadatum];
+
+    if (metadata.categories == undefined) {
+        var rawValues = getRawNodeValues(metadatum);
+        metadata.categories = d3.set(rawValues).values().sort();
     }
 
-    var maxObservedNodeCount = d3.max(nodeCounts);
-
-    // if display.N is undefined, or if it is less than the max number of nodes
-    // we've observed, set it to the max observed
-    if (display.N == undefined || display.N < maxObservedNodeCount) {
-        display.N = maxObservedNodeCount;
+    if (metadata.categories.length >= 9) {
+        metadata.type = 'scalarCategorical';
     }
 
-    // Define nodes
-    nodes = [];
-    for (var i = 0; i < display.N; i++) {
-        nodes.push({
-            "idx" : i,
-        });
-    }
+    this.allMetadata[metadatum] = metadata;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // initialize links/edges
@@ -587,22 +436,21 @@ function computeNodes() {
 // - scale link width/opacity
 // - calculate node weights/degrees
 ////////////////////////////////////////////////////////////////////////////////
-function computeLinks() {
-    var nodeIdMap = getNodeIdMap(display.networkName, display.networkLayer);
+Webweb.prototype.createLinks = function() {
+    var networkData = this.displayedNetworkData();
+    var nodeIdMap = networkData.nodeIdMap;
 
-    var linkMatrix = {}
+    var linkMatrix = {};
 
     // reset the node degrees
-    for (var i in nodes) {
-        nodes[i].degree = 0;
+    for (var i in this.nodes) {
+        webweb.nodes[i].degree = 0;
 
         linkMatrix[i] = {};
-        for (var j in nodes) {
+        for (var j in this.nodes) {
             linkMatrix[i][j] = 0;
         }
     }
-
-    var networkData = getNetworkData(display.networkName, display.networkLayer);
 
     // push all the links to the list: links
     var weights = [];
@@ -623,15 +471,15 @@ function computeLinks() {
             linkMatrix[target][source] += weight;
         }
             
-        nodes[source].degree += weight;
-        nodes[target].degree += weight;
+        this.nodes[source].degree += weight;
+        this.nodes[target].degree += weight;
     }
 
-    links = [];
+    this.links = [];
     for (var source in linkMatrix) {
         for (var target in linkMatrix[source]) {
             if (linkMatrix[source][target]) {
-                links.push({
+                this.links.push({
                     source: source,
                     target: target,
                     w: linkMatrix[source][target],
@@ -640,10 +488,196 @@ function computeLinks() {
         }
     }
 
-    // scale the link weight and opacity by computing the range (extent) of the
-    // edgeList weights.
-    scales.links.width.domain(d3.extent(weights));
-    scales.links.opacity.domain(d3.extent(weights));
+    this.scales.links.width.domain(d3.extent(weights));
+    this.scales.links.opacity.domain(d3.extent(weights));
+}
+////////////////////////////////////////////////////////////////////////////////
+// Webweb:
+//
+// UTIL
+////////////////////////////////////////////////////////////////////////////////
+Webweb.prototype.displayedNetworkData = function() {
+    return this.networks[this.display.networkName].layers[this.display.networkLayer];
+}
+Webweb.prototype.getSizeByType = function() {
+    return this.allMetadata[this.display.sizeBy].type;
+}
+Webweb.prototype.getColorByType = function() {
+    return this.allMetadata[this.display.colorBy].type;
+}
+////////////////////////////////////////////////////////////////////////////////
+// Webweb:
+// simulation
+//////////////////////////////////////////////////////////////////////////////// 
+Webweb.prototype.createSimulation = function() {
+    this.simulation = d3.forceSimulation(this.nodes)
+        .on('tick', tick);
+
+    this.simulation.alphaDecay = 0.001
+
+    this.forces = {
+        "center" : function () {
+            return d3.forceCenter(this.display.w / 2, this.display.h / 2);
+        },
+        "charge" : function () {
+            return d3.forceManyBody().strength(-this.display.c);
+        },
+        "gravity-x" : function () {
+            return d3.forceX(this.display.w / 2).strength(this.display.g);
+        },
+        "gravity-y" : function () {
+            return d3.forceY(webweb.display.h / 2).strength(webweb.display.g);
+        },
+        "link" : function () {
+            return d3.forceLink()
+                .links(this.links)
+                .distance(this.display.l)
+                .strength(this.display.linkStrength);
+        },
+    }
+}
+Webweb.prototype.updateSimulation = function(force) { 
+    var forcesToUpdate = [];
+    if (force && this.forces[force] !== undefined) {
+        forcesToUpdate.push(force)
+    }
+    else {
+        for (var force in this.forces) {
+            forcesToUpdate.push(force);
+        }
+    }
+
+    for (var i in forcesToUpdate) {
+        var forceToUpdate = forcesToUpdate[i];
+        var updatedForce = this.forces[forceToUpdate].call(this);
+        this.simulation.force(forceToUpdate, updatedForce);
+    }
+    this.simulation.alpha(1).restart();
+}
+////////////////////////////////////////////////////////////////////////////////
+// initializeWebweb
+//
+// run once on startup
+//
+// - loads webweb data
+// - standardizes its representation
+// - sets up the scales
+// - initializes the webweb html
+// - computes and draws nodes
+////////////////////////////////////////////////////////////////////////////////
+function initializeWebweb() {
+    webweb = new Webweb(wwdata);
+
+    initializeHTML();
+
+    drawNodes();
+
+    webweb.createSimulation();
+
+    displayNetwork();
+}
+function initializeHTML() {
+    var container;
+
+    if (webweb.display.attachWebwebToElementWithId == undefined) {
+        var container = document.createElement('div')
+        container.setAttribute('id', 'webweb-center');
+
+        document.getElementsByTagName("body")[0].appendChild(container);
+
+        if (wwdata.title !== undefined) {
+            document.title = wwdata.title;
+        }
+    }
+    else {
+        container = document.getElementById(webweb.display.attachWebwebToElementWithId);
+    }
+
+    writeMenus(container);
+    writeVisualization(container);
+}
+function writeVisualization(container) {
+    var visualizationContainer = document.createElement("div");
+    visualizationContainer.setAttribute('id', 'webweb-visualization-container');
+
+    container.appendChild(visualizationContainer);
+
+    if (webweb.display.w == undefined) {
+        var heuristic = container.clientWidth - 3 * 20;
+
+        if (heuristic <= 0) {
+            heuristic = 1000;
+        }
+        webweb.display.w = Math.min.apply(null, [heuristic, 1000]);
+    }
+
+    if (webweb.display.h == undefined) {
+        webweb.display.h = Math.min.apply(null, [webweb.display.w, 600]);
+    }
+
+    vis = d3.select("#webweb-visualization-container")
+        .append("svg")
+        .attr("width", webweb.display.w)
+        .attr("height", webweb.display.h)
+        .attr("id", "webweb-vis");
+
+    d3.select("#webweb-visualization-container")
+        .append("br");
+}
+////////////////////////////////////////////////////////////////////////////////
+// - changes the number of visible nodes
+// - adds metadata to nodes
+// - computes links
+// - draws links
+// - uses the force (luke)
+////////////////////////////////////////////////////////////////////////////////
+function displayNetwork() {
+    webweb.setNodeMetadata();
+    webweb.createLinks();
+    webweb.updateSimulation();
+
+    // update the menus with these new metadata
+    updateSizeMenu();
+    updateColorMenu();
+
+    toggleFreezeNodes(webweb.display.freezeNodeMovement);
+    toggleShowNodeNames(webweb.display.showNodeNames);
+    toggleInvertBinaryColors(webweb.display.invertBinaryColors);
+    toggleInvertBinarySizes(webweb.display.invertBinarySizes);
+    toggleLinkWidthScaling(webweb.display.scaleLinkWidth);
+    toggleLinkOpacityScaling(webweb.display.scaleLinkOpacity);
+
+    // if we've frozen node movement manually tick so new edges are evaluated.
+    if (webweb.display.freezeNodeMovement) {
+        tick();
+    }
+
+    // change the display of the layers widget
+    setNetworkLayerMenuVisibility();
+
+    drawLinks();
+    redrawNodes();
+    redisplayNodeNames();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// creates a map from observed nodes (nodes in the edge list, display.nodes, and
+// the current layer's nodes) to an internal "id"
+////////////////////////////////////////////////////////////////////////////////
+function metadataValuesCount(metadata) {
+    var maxValuesCount = 0;
+    if (metadata !== undefined) {
+        for (var metadatum in metadata) {
+            var values = metadata[metadatum].values;
+            if (values !== undefined) {
+                var valuesCount = values.length;
+                if (valuesCount > maxValuesCount) {
+                    maxValuesCount = valuesCount;
+                }
+            }
+        }
+    }
+    return maxValuesCount;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Compute the radius multipliers of the nodes, given the data and chosen parameters
@@ -653,133 +687,89 @@ function computeLinks() {
 // Otherwise, the multiplier can be something else!
 ////////////////////////////////////////////////////////////////////////////////
 function computeSizes() {
-    rawValues = [];
-    scaledValues = [];
+    var rawValues = [];
+    var scaledValues = [];
 
-    sizeData.type = display.sizeBy;
-
-    // default to hiding the size binary inversion widget
-    changeInvertBinaryWidgetVisibility(false, 'size');
+    var sizeBy = webweb.display.sizeBy;
 
     // set all sizes to 1 if there's no scaling 
-    if (display.sizeBy == "none") {
-        for (var i in nodes) {
+    if (sizeBy == "none") {
+        for (var i in webweb.nodes) {
             scaledValues[i] = 1;
+            rawValues[i] = 1;
         }
     }
     else {
-        var metadatum = sizeData.metadata[display.sizeBy];
-        sizeData.type = metadatum.type;
+        var type = webweb.getSizeByType();
+        rawValues = getRawNodeValues(sizeBy, type, 'size');
 
-        rawValues = getRawNodeValues(display.sizeBy, metadatum.type, 'size');
-        for (var i in nodes) {
-            scaledValues[i] = rawValues[i];
-            // if we're sizing by degree, square root the value
-            if (display.sizeBy == "degree") {
-                scaledValues[i] = Math.sqrt(scaledValues[i]);
-            }
-        }
+        // if we're sizing by degree, square root the value
+        rawValues.forEach(function(val) {
+            var scaled = sizeBy == 'degree' ? Math.sqrt(val) : val;
+            scaledValues.push(scaled);
+        });
 
-        if (sizeData.type == 'binary') {
-            changeInvertBinaryWidgetVisibility(true, 'size');
-
-            // scale between true and false even if we only have one of
-            // the two values
-            scales.nodeSize.domain(d3.extent([true, false])).range([0.5, 1.5]);
-        }
-        else {
-            scales.nodeSize.domain(d3.extent(scaledValues), d3.max(scaledValues)).range([0.5, 1.5]);
-        }
+        // scale between true and false even if we only have one of
+        // the two values
+        var extent = type == 'binary' ? [true, false] : scaledValues;
+        webweb.scales.nodeSize.domain(d3.extent(extent)).range([0.5, 1.5]);
 
         for (var i in scaledValues) {
-            scaledValues[i] = scales.nodeSize(scaledValues[i]);
+            scaledValues[i] = webweb.scales.nodeSize(scaledValues[i]);
         }
     }
 
-    sizeData['scaledValues'] = scaledValues;
-    sizeData['rawValues'] = rawValues;
+    for (var i in webweb.nodes) {
+        webweb.nodes[i]['__scaledSize'] = scaledValues[i];
+        webweb.nodes[i]['__rawSize'] = rawValues[i];
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 // computes the colors for the nodes based on the preferences of the user chosen
 // in the dropdown menus.
 ////////////////////////////////////////////////////////////////////////////////
 function computeColors() {
-    colorData.type = display.colorBy;
-
-    // default to hiding the color palette menu
-    changeColorPaletteMenuVisibility(false);
-
-    // default to hiding the color binary inversion widget
-    changeInvertBinaryWidgetVisibility(false, 'color');
+    var rawValues = [];
+    var scaledValues = [];
 
     // no colors
-    if (display.colorBy == "none"){
-        // set all nodes to dark grey 100
-        for (var i in nodes) { 
-            colorData['scaledValues'][i] = d3.rgb(100, 100, 100);
+    if (webweb.display.colorBy == "none"){
+        for (var i in webweb.nodes) { 
+            rawValues[i] = d3.rgb(100, 100, 100);
+            scaledValues[i] = d3.rgb(100, 100, 100);
         }
-        return
     }
+    else {
+        var type = webweb.getColorByType();
+        var rawValues = getRawNodeValues(webweb.display.colorBy, type, 'color');
 
-    var metadatum = colorData.metadata[display.colorBy];
-    colorData.type = metadatum.type;
+        if (type == 'binary' || type == 'categorical') {
+            var categoryValues = [];
 
-    var rawValues = getRawNodeValues(display.colorBy, metadatum.type, 'color');
-
-    categoryValues = [];
-
-    if (colorData.type == 'binary') {
-        categoryValues = getBinaryValues('color');
-        changeInvertBinaryWidgetVisibility(true, 'color');
-    }
-    else if (colorData.type == "categorical") {
-        // get the category names if it's categorical
-        colorData['categoryNames'] = [];
-
-        // if we don't have categories, retrieve them as scalars from the
-        // values for the metadatum
-        if (metadatum.categories == undefined) {
-            colorData['categoryNames'] = d3.set(rawValues).values().sort();
-
-            categoryValues = colorData['categoryNames'];
-        }
-        else {
-            colorData['categoryNames'] = metadatum.categories;
-
-            // Check to see if our categories are numeric or not
-            if (isNaN(d3.quantile(rawValues, 0.25))) {
-                categoryValues = colorData['categoryNames'].sort();
+            if (type == 'binary') {
+                categoryValues = getBinaryValues('color');
             }
             else {
-                for (var i in colorData['categoryNames']) {
-                    categoryValues[i] = i;
-                }
+                categoryValues = d3.set(rawValues).values().sort();
             }
-        }
-    }
 
-    if (categoryValues.length) {
-        // if there are fewer than 9 categories, use the colorbrewer
-        // TODO:
-        // actually check how many colors there are in the user's selected
-        // colorbrewer
-        // update the list for this...
-        var categoryValuesCount = categoryValues.length;
-        if (categoryValuesCount <= 9) {
+            var categoryValuesCount = categoryValues.length;
+
             // make sure there's enough categories even if there aren't
             if (categoryValuesCount == 1) {
                 categoryValuesCount += 1;
             }
 
-            scales.colors.categorical.domain(categoryValues)
-                .range(colorbrewer[display.colorPalette][categoryValuesCount]);
-
-            changeColorPaletteMenuVisibility(true);
+            // if there are fewer than 9 categories, use the colorbrewer
+            // TODO:
+            // actually check how many colors there are in the user's selected
+            // colorbrewer
+            // update the list for this...
+            webweb.scales.colors.categorical.domain(categoryValues)
+                .range(colorbrewer[webweb.display.colorPalette][categoryValuesCount]);
         }
-        else {
-            // otherwise, treat like scalars
-            colorData.type = "scalarCategorical";
-
+        else if (type == 'scalarCategorical') {
+            var categoryValues = d3.set(rawValues).values().sort();
             var unusedNumber = 1;
             var categoriesMap = {};
             for (var i in categoryValues) {
@@ -791,21 +781,17 @@ function computeColors() {
                 rawValues[i] = categoriesMap[rawValues[i]];
             }
         }
+
+        if (type != 'categorical') {
+            webweb.scales.colors.scalar.domain(d3.extent(rawValues)).range([0,1]);
+        }
     }
 
-    if (colorData.type != 'categorical') {
-        scales.colors.scalar.domain(d3.extent(rawValues)).range([0,1]);
-    }
-
-    var scaledValues = [];
-
-    // get colors by passing scaled value to colorWheel
-    for (var i in nodes) {
+    for (var i in webweb.nodes) {
         scaledValues[i] = colorWheel(rawValues[i]);
+        webweb.nodes[i]['__scaledColor'] = scaledValues[i];
+        webweb.nodes[i]['__rawColor'] = rawValues[i];
     }
-
-    colorData['rawValues'] = rawValues;
-    colorData['scaledValues'] = scaledValues;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // returns raw values for:
@@ -815,8 +801,8 @@ function computeColors() {
 ////////////////////////////////////////////////////////////////////////////////
 function getRawNodeValues(metadatumName, metadatumType, displayType) {
     var rawValues = [];
-    for (var i in nodes){
-        var val = nodes[i][metadatumName];
+    for (var i in webweb.nodes){
+        var val = webweb.nodes[i][metadatumName];
 
         if (metadatumType == 'binary') {
             val = getBinaryValue(val, displayType);
@@ -829,17 +815,18 @@ function getRawNodeValues(metadatumName, metadatumType, displayType) {
 }
 // ColorWheel is a function that takes a node metadatum, like a category or scalar
 // and just gets the damn color. But it has to take into account what the 
-// current colorData.type is. Basically, this is trying to apply our prefs to colors
+// current colorType is. Basically, this is trying to apply our prefs to colors
 function colorWheel(x) {
-    if (colorData.type == "categorical") {
-        return scales.colors.categorical(x);
+    var type = webweb.getColorByType();
+
+    if (type == "categorical") {
+        return webweb.scales.colors.categorical(x);
     }
-    else if (colorData.type == 'binary') {
-        return scales.colors.categorical(getBinaryValue(x, 'color'));
+    else if (type == 'binary') {
+        return webweb.scales.colors.categorical(getBinaryValue(x, 'color'));
     }
     else {
-        // Rainbow HSL
-        return d3.hsl(210 * (1 - scales.colors.scalar(x)), 0.7, 0.5);
+        return d3.hsl(210 * (1 - webweb.scales.colors.scalar(x)), 0.7, 0.5);
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -848,58 +835,56 @@ function colorWheel(x) {
 // Menu Interaction
 //
 //
-// These functions are bound to the various menus that we create in the GUI.
-// On menu change, one of these will be called. 
 ////////////////////////////////////////////////////////////////////////////////
 function changeNetwork(networkName) {
     var networkSelect = document.getElementById('networkSelect-widget');
     networkSelect.value = networkName;
 
-    display.networkName = networkName;
+    webweb.display.networkName = networkName;
     displayNetwork();
 }
 function changeSizes(sizeBy) {
-    display.sizeBy = sizeBy;
-    computeSizes();
-    computeLegend();
+    webweb.display.sizeBy = sizeBy;
+
     redrawNodes();
-    if (display.nameToMatch != "") {
-        matchNodesNamed(display.nameToMatch);
-    };
+
+    var showInvertWidget = webweb.getSizeByType() == 'binary' ? true : false;
+    setInvertBinaryWidgetVisibility(showInvertWidget, 'size');
 }
 function changeColors(colorBy) {
-    display.colorBy = colorBy;
-    computeColors();
-    computeLegend();
+    webweb.display.colorBy = colorBy;
     redrawNodes();
-    if (display.nameToMatch != "") {
-        matchNodesNamed(display.nameToMatch);
-    };
+    var showColorPaletteWidget = webweb.getColorByType() == 'categorical' ? true : false;
+    var showInvertWidget = false;
+
+    if (webweb.getColorByType() == 'binary') {
+        showColorPaletteWidget = true;
+        showInvertWidget = true;
+    }
+    setColorPaletteMenuVisibility(showColorPaletteWidget);
+    setInvertBinaryWidgetVisibility(showInvertWidget, 'color');
 }
 function setColorPalette(colorPalette) {
-    display.colorPalette = colorPalette;
-    computeColors();
-    computeLegend();
+    webweb.display.colorPalette = colorPalette;
     redrawNodes();
 }
 function changeCharge(c) {
     if (c >= 0) {
-        display.c = c;
-        updateChargeForce();
+        webweb.display.c = c;
+        webweb.updateSimulation("charge");
     }
     else {
         alert("Repulsion must be nonnegative.");
     }
 }
 function changeR(r) {
-    display.r = r;
-    computeLegend();
+    webweb.display.r = r;
     redrawNodes();
 }
 function changeDistance(l) {
     if (l >= 0) {
-        display.l = l;
-        updateLinkForce();
+        webweb.display.l = l;
+        webweb.updateSimulation("link");
     }
     else {
         alert("Distance must be nonnegative.");
@@ -907,8 +892,8 @@ function changeDistance(l) {
 }
 function changeLinkStrength(linkStrength) {
     if (linkStrength >= 0) {
-        display.linkStrength = linkStrength;
-        updateLinkForce();
+        webweb.display.linkStrength = linkStrength;
+        webweb.updateSimulation("link");
     }
     else {
         alert("Distance must be nonnegative.");
@@ -916,66 +901,61 @@ function changeLinkStrength(linkStrength) {
 }
 function changeGravity(g) {
     if (parseFloat(g) >= 0) {
-        display.g = parseFloat(g);
-        updateGravityForce();
+        webweb.display.g = parseFloat(g);
+        webweb.updateSimulation("gravity-x");
+        webweb.updateSimulation("gravity-y");
     }
     else {
         alert("Gravity must be nonnegative.");
     }
 }
 function toggleFreezeNodes(isFrozen) {
-    display.freezeNodeMovement = isFrozen;
+    webweb.display.freezeNodeMovement = isFrozen;
     if (isFrozen) {
-        simulation.stop();
-        for (var i = 0; i < simulation.nodes().length; i++) {
-            simulation.nodes()[i].fx = simulation.nodes()[i].x;
-            simulation.nodes()[i].fy = simulation.nodes()[i].y;
+        webweb.simulation.stop();
+        for (var i = 0; i < webweb.simulation.nodes().length; i++) {
+            webweb.simulation.nodes()[i].fx = webweb.simulation.nodes()[i].x;
+            webweb.simulation.nodes()[i].fy = webweb.simulation.nodes()[i].y;
         }
     }
     else {
-        for (var i = 0; i < simulation.nodes().length; i++) {
-            simulation.nodes()[i].fx = undefined;
-            simulation.nodes()[i].fy = undefined;
+        for (var i = 0; i < webweb.simulation.nodes().length; i++) {
+            webweb.simulation.nodes()[i].fx = undefined;
+            webweb.simulation.nodes()[i].fy = undefined;
         }
-        simulation.alpha(1).restart();
+        webweb.updateSimulation("__");
     }
 
     var freezeNodesToggle = document.getElementById('freezeNodes-widget');
-    freezeNodesToggle.checked = display.freezeNodeMovement ? true : false;
+    freezeNodesToggle.checked = webweb.display.freezeNodeMovement ? true : false;
 
     redisplayNodeNames();
 }
 function toggleShowNodeNames(show) {
-    display.showNodeNames = show;
+    webweb.display.showNodeNames = show;
     redisplayNodeNames();
 
     var showNodeNamesWidget = document.getElementById('showNodeNames-widget');
-    showNodeNamesWidget.checked = display.showNodeNames;
+    showNodeNamesWidget.checked = webweb.display.showNodeNames;
 }
 function toggleInvertBinaryColors(setting) {
     var widget = document.getElementById('invertBinaryColors-widget');
     widget.checked = setting;
-    display.invertBinaryColors = setting;
+    webweb.display.invertBinaryColors = setting;
 
-    computeColors();
-    computeSizes();
-    computeLegend();
     redrawNodes();
 }
 function toggleInvertBinarySizes(setting) {
     var widget = document.getElementById('invertBinarySizes-widget');
     widget.checked = setting;
-    display.invertBinarySizes = setting;
+    webweb.display.invertBinarySizes = setting;
 
-    computeColors();
-    computeSizes();
-    computeLegend();
     redrawNodes();
 }
 function getBinaryValue(value, type) {
     var attribute = getBinaryInversionAttributeForType(type);
 
-    if (display[attribute]) {
+    if (webweb.display[attribute]) {
         return value ? false : true;
     }
     else {
@@ -988,13 +968,13 @@ function getBinaryValues(type) {
 function redisplayNodeNames() {
     hideAllNodeText();
 
-    if (display.showNodeNames || display.nameToMatch) {
+    if (webweb.display.showNodeNames || webweb.display.nameToMatch) {
         showNodeNamesWhenStable();
     }
 }
 function showNodeNamesWhenStable() {
     window.setTimeout(function() {
-        if (simulation.alpha() < .01) {
+        if (webweb.simulation.alpha() < .01) {
             showAppropriateNodeText();
         }
         else {
@@ -1002,47 +982,20 @@ function showNodeNamesWhenStable() {
         }
     }, 100);
 }
-function updateChargeForce() {
-    simulation.force("charge", d3.forceManyBody().strength(-display.c))
-    simulation.alpha(1).restart();
-}
-function updateGravityForce() {
-    simulation.force("x", d3.forceX(display.w / 2).strength(display.g));
-    simulation.force("y", d3.forceY(display.h / 2).strength(display.g));
-    simulation.alpha(1).restart();
-}
-function updateLinkForce() {
-    simulation.force(
-        'link',
-        d3.forceLink()
-            .links(links)
-            .distance(display.l)
-            .strength(display.linkStrength)
-    )
-    simulation.alpha(1).restart();
-}
 function toggleLinkWidthScaling(checked) {
-    if (checked) {
-        scales.links.width.range([0.5, 4]);
-    }
-    else {
-        scales.links.width.range([1, 1]);
-    }
+    var range = checked ? [0.5, 4] : [1, 1];
+    webweb.scales.links.width.range(range);
     redrawLinks();
 }
 function toggleLinkOpacityScaling(checked) {
-    if (checked) {
-        scales.links.opacity.range([0.4, 0.9])
-    }
-    else {
-        scales.links.opacity.range([1, 1]);
-    }
+    var range = checked ? [0.4, 0.9] : [1, 1];
+    webweb.scales.links.opacity.range(range);
     redrawLinks();
 }
 function matchNodesNamed(x) {
-    display.nameToMatch = x;
+    webweb.display.nameToMatch = x;
 
-    nodes.forEach(function(d) {
+    webweb.nodes.forEach(function(d) {
         unHighlightNode(d);
 
         if (nodeNameMatches(d)) {
@@ -1054,7 +1007,7 @@ function matchNodesNamed(x) {
 }
 function nodeNameMatches(node) {
     var name = node.name;
-    var nameToMatch = display.nameToMatch;
+    var nameToMatch = webweb.display.nameToMatch;
     if (nameToMatch !== undefined && nameToMatch.length > 0) {
         if (name !== undefined && name.indexOf(nameToMatch) >= 0) {
             return true;
@@ -1088,19 +1041,26 @@ function nodeNameMatches(node) {
 // steps through what we think of as standard human preference.
 ////////////////////////////////////////////////////////////////////////////////
 function computeLegend() {
+    computeColors();
+    computeSizes();
     vis.selectAll("#legend").remove();
 
-    if (sizeData.type == "none" && colorData.type == "none") {
+    var sizeBy = webweb.display.sizeBy;
+    var sizeType = webweb.getSizeByType();
+    var colorBy = webweb.display.colorBy;
+    var colorType = webweb.getColorByType();
+
+    if (sizeType == "none" && colorType == "none") {
         return;
     };
 
-    var sizeLegend = new Legend('size', sizeData.type, sizeData.rawValues);
-    var colorLegend = new Legend('color', colorData.type, colorData.rawValues);
+    var sizeLegend = new Legend(sizeBy, 'size', sizeType, getRawNodeValues('__rawSize'));
+    var colorLegend = new Legend(colorBy, 'color', colorType, getRawNodeValues('__rawColor'));
 
     var R = 0;
 
     if (sizeLegend.values.length > 0) {
-        var R = display.r * d3.max(sizeLegend.values);;
+        R = webweb.display.r * d3.max(sizeLegend.values);;
     }
 
     // if we have a color legend, use it for the size menu (if it's there)
@@ -1108,7 +1068,7 @@ function computeLegend() {
         return d3.rgb(100, 100, 100);
     };
 
-    if (display.sizeBy == display.colorBy) {
+    if (sizeBy == colorBy) {
         fillFunction = function(i) {
             return colorWheel(colorLegend.values[i]);
         }
@@ -1120,7 +1080,7 @@ function computeLegend() {
     var nodePushRight = 5 + Math.max(R, 5);
     var pushdown = function(i) { return 0 };
 
-    if (display.sizeBy != "none") {
+    if (sizeBy != "none") {
         pushdown = function (i) {
             if (i !== undefined) {
                 return 5 + R + 2.3 * R * i + datatypeTextPushdown;
@@ -1128,26 +1088,26 @@ function computeLegend() {
             return datatypeTextPushdown;
         };
 
-        sizeLegend.drawLegendLabel(display.sizeBy, pushdown);
+        sizeLegend.drawLegendLabel(pushdown);
         sizeLegend.drawLegendText(pushdown, textPushRight);
         sizeLegend.drawLegendValues(
             pushdown,
             nodePushRight,
-            function (d) { return display.r * d },
-            fillFunction
+            function (d) { return webweb.display.r * d },
+            fillFunction,
         );
     }
 
     // if we've drawn the size legend and the color legend shows the same value,
     // return
-    if (display.sizeBy == display.colorBy) {
+    if (sizeBy == colorBy) {
         return;
     }
 
-    if (colorData.type != "none") {
+    if (colorType != "none") {
         var initialPushdown = datatypeTextPushdown;
 
-        if (display.sizeBy != "none") {
+        if (webweb.display.sizeBy != "none") {
             initialPushdown += pushdown(sizeLegend.values.length);
             pushdown = function (i) {
                 if (i !== undefined) {
@@ -1159,24 +1119,25 @@ function computeLegend() {
         else {
             pushdown = function (i) {
                 if (i !== undefined) {
-                    return 2.3 * display.r * i + initialPushdown + (3 + i) * display.r;
+                    return 2.3 * webweb.display.r * i + initialPushdown + (3 + i) * webweb.display.r;
                 }
                 return initialPushdown;
             }
         }
 
         // show the variable being displayed
-        colorLegend.drawLegendLabel(display.colorBy, pushdown);
+        colorLegend.drawLegendLabel(pushdown);
         colorLegend.drawLegendText(pushdown, textPushRight);
         colorLegend.drawLegendValues(
             pushdown,
             nodePushRight,
-            function (i) { return display.r },
+            function (i) { return webweb.display.r },
             function (i) { return colorWheel(colorLegend.values[i]); }
         );
     }
 }
-function Legend(legendType, dataType, rawValues) {
+function Legend(metadataName, legendType, dataType, rawValues) {
+    this.metadataName = metadataName;
     this.legendType = legendType;
     this.dataType = dataType;
     this.rawValues = rawValues;
@@ -1193,7 +1154,7 @@ function Legend(legendType, dataType, rawValues) {
             'scalar' : 'makeScalarLegend',
             'degree' : 'makeDegreeLegend',
             'categorical' : 'makeCategoricalLegend',
-            'scalarCategorical' : 'makeBinnedLegend',
+            'scalarCategorical' : 'makeScalarCategoricalLegend',
         },
     }
 
@@ -1204,22 +1165,20 @@ function Legend(legendType, dataType, rawValues) {
 
         if (this.legendType == 'size') {
             for (var i in this.values) {
-                this.values[i] = scales.nodeSize(this.values[i]);
+                this.values[i] = webweb.scales.nodeSize(this.values[i]);
             }
         }
     }
 }
-
-Legend.prototype.drawLegendLabel = function(label, pushDown) {
+Legend.prototype.drawLegendLabel = function(pushDown) {
     vis.append("text")
         .attr("id", "legend")
-        .text(label)
+        .text(this.metadataName)
         .attr("x", 5)
         .attr("y", pushDown())
         .attr("fill", "black")
         .attr("font-size", 12);
 }
-
 Legend.prototype.drawLegendText = function(pushDown, pushRight) {
     this.text.forEach(function(d, i) {
         vis.append("text")
@@ -1231,7 +1190,6 @@ Legend.prototype.drawLegendText = function(pushDown, pushRight) {
             .attr("font-size", 12);
     });
 }
-
 Legend.prototype.drawLegendValues = function(pushDown, pushRight, sizeFunction, colorFunction) {
     this.values.forEach(function(d, i){
         vis.append("circle")
@@ -1256,8 +1214,8 @@ Legend.prototype.makeDegreeLegend = function () {
     }
 }
 Legend.prototype.makeCategoricalLegend = function() {
-    this.values = scales.colors.categorical.domain();
-    this.text = d3.values(colorData['categoryNames']);
+    this.values = webweb.scales.colors.categorical.domain();
+    this.text = d3.values(webweb.allMetadata[webweb.display.colorBy].categories);
 }
 Legend.prototype.makeScalarLegend = function() {
     // if it is integer scalars:
@@ -1295,6 +1253,18 @@ Legend.prototype.makeBinnedLegend = function(bins) {
 
     this.text = this.values.slice(0);
 }
+Legend.prototype.makeScalarCategoricalLegend = function(bins) {
+    this.makeBinnedLegend();
+
+    // this logic is sorta weird; we have converted the categorical information
+    // to indexes, but we want the legend to display the actual category values
+    // at those indexes
+    var categoryValues = d3.set(getRawNodeValues(this.metadataName)).values().sort();
+
+    for (var i in this.text) {
+        this.text[i] = categoryValues[parseInt(this.text[i])];
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1308,32 +1278,21 @@ Legend.prototype.makeBinnedLegend = function(bins) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 function drawLinks() {
-    link = vis.selectAll(".webweb-link")
-        .data(links);
+    webweb.linkSelector = vis.selectAll(".webweb-link")
+        .data(webweb.links);
 
-    link.enter()
+    webweb.linkSelector.enter()
         .insert("line", ".webweb-node")
         .attr("class", "webweb-link")
         .attr("id", function(d, i) { 
             return "link_" + i; 
         })
-        .style("stroke", d3.rgb(150, 150, 150))
-        .style("stroke-width", function(d) {
-            if (d.w == 0) {
-                return 0;
-            }
-            else {
-                return scales.links.width(d.w)
-            }
-        })
-        .style("stroke-opacity", function(d) {
-            return scales.links.opacity(d.w)
-        });
+        .style("stroke", d3.rgb(150, 150, 150));
 
-    link.exit().remove();
+    redrawLinks();
 }
 function redrawLinks() {
-    links.forEach(function(d, i) {
+    webweb.links.forEach(function(d, i) {
         d3.select("#link_" + i)
             .transition()
             .style("stroke-width", function(d){
@@ -1341,21 +1300,21 @@ function redrawLinks() {
                     return 0;
                 }
                 else {
-                    return scales.links.width(d.w);
+                    return webweb.scales.links.width(d.w);
                 }
             })
             .style("stroke-opacity", function(d) {
-                return scales.links.opacity(d.w)
+                return webweb.scales.links.opacity(d.w)
             });
     })
 }
 function drawNodes() {
     vis.selectAll(".webweb-node")
-        .data(nodes)
+        .data(webweb.nodes)
         .enter()
         .insert("circle")
         .attr("class", "webweb-node")
-        .attr("r", display.r)
+        .attr("r", webweb.display.r)
         .attr("cx", function(d) {
             return d.x;
         })
@@ -1369,30 +1328,30 @@ function drawNodes() {
         .style("stroke", d3.rgb(255, 255, 255))
         .exit().remove();
 
-    node = vis.selectAll(".webweb-node");
+    webweb.nodeSelector = vis.selectAll(".webweb-node");
 
-    node.on("mousedown", function(d) {
-        if (! display.showNodeNames) {
+    webweb.nodeSelector.on("mousedown", function(d) {
+        if (! webweb.display.showNodeNames) {
             hideOneNodeText(d);
         }
     });
 
-    node.on("mouseover", function (d) {
+    webweb.nodeSelector.on("mouseover", function (d) {
         highlightNode(d); 
 
-        if (! display.showNodeNames) {
+        if (! webweb.display.showNodeNames) {
             showOneNodeText(d);
         }
     });
 
-    node.on("mouseout", function(d) {
+    webweb.nodeSelector.on("mouseout", function(d) {
         unHighlightNode(d);
-        if (! display.showNodeNames && ! nodeNameMatches(d)) {
+        if (! webweb.display.showNodeNames && ! nodeNameMatches(d)) {
             hideOneNodeText(d);
         }
     });
 
-    node.call(d3.drag()
+    webweb.nodeSelector.call(d3.drag()
         .on("start", dragstarted)
         .on("drag", dragged)
         .on("end", dragended)
@@ -1404,7 +1363,7 @@ function dragstarted(d) {
 
     d3.event.sourceEvent.stopPropagation();
     if (!d3.event.active) {
-        simulation.alphaTarget(0.3).restart();
+        webweb.simulation.alphaTarget(0.3).restart();
     }
     d.fx = d.x;
     d.fy = d.y;
@@ -1415,59 +1374,54 @@ function dragged(d) {
 }
 function dragended(d) {
     if (!d3.event.active) {
-        simulation.alphaTarget(0);
+        webweb.simulation.alphaTarget(0);
     }
 
-    if (! display.freezeNodeMovement) {
+    if (! webweb.display.freezeNodeMovement) {
         d.fx = null;
         d.fy = null;
     }
 
-    // evaluate whether we should show highlight text now that we're done
-    // dragging
-    redisplayNodeNames();
-}
-
-function redraw() {
-    computeColors();
-    computeSizes();
-    computeLegend();
-    redrawNodes();
     redisplayNodeNames();
 }
 function redrawNodes() {
-    nodes.forEach(function(d, i) {
-        d3.select("#node_" + d.idx)
-            .attr("r", sizeData['scaledValues'][i] * display.r)
-            .style("fill", d3.rgb(colorData['scaledValues'][i]));
-    });
-}
+    computeLegend();
 
+    webweb.nodes.forEach(function(d, i) {
+        d3.select("#node_" + d.idx)
+            .attr("r", webweb.nodes[i]['__scaledSize'] * webweb.display.r)
+            .style("fill", d3.rgb(webweb.nodes[i]['__scaledColor']));
+    });
+
+    if (webweb.display.nameToMatch != "") {
+        matchNodesNamed(webweb.display.nameToMatch);
+    };
+}
 // tick attributes for links and nodes
 function tick() {
-    link = vis.selectAll(".webweb-link")
-    link.attr("x1", function(d) { return d.source.x; })
+    webweb.linkSelector = vis.selectAll(".webweb-link")
+    webweb.linkSelector.attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
 
-    node = vis.selectAll(".webweb-node")
-    node.attr("cx", function(d) { return d.x; })
+    webweb.nodeSelector = vis.selectAll(".webweb-node")
+    webweb.nodeSelector.attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; })
 }
 // Highlight a node by making it bigger and outlining it
 function highlightNode(d) {
     d3.select("#node_" + d.idx)
         .transition().duration(100)
-        .attr("r", sizeData['scaledValues'][d.idx] * display.r * 1.3)
+        .attr("r", webweb.nodes[d.idx]['__scaledSize'] * webweb.display.r * 1.3)
         .style("stroke", d3.rgb(0,0,0));
 }
 // Returns a node's highlighted size and stroke to normal
 function unHighlightNode(d) {
-    if (display.nameToMatch == "" || d.name.indexOf(display.nameToMatch) < 0) {
+    if (webweb.display.nameToMatch == "" || d.name.indexOf(webweb.display.nameToMatch) < 0) {
         d3.select("#node_" + d.idx)
             .transition()
-            .attr("r", sizeData['scaledValues'][d.idx] * display.r)
+            .attr("r", webweb.nodes[d.idx]['__scaledSize'] * webweb.display.r)
             .style("stroke", d3.rgb(255, 255, 255));
     }
 }
@@ -1477,11 +1431,10 @@ function unHighlightNode(d) {
 // hides 'em when they should be hidden
 ////////////////////////////////////////////////////////////////////////////////
 function showAppropriateNodeText() {
-    for (var i in nodes) {
-        var node = nodes[i];
-        var text = node.name == undefined ? node.idx : node.name;
+    for (var i in webweb.nodes) {
+        var node = webweb.nodes[i];
 
-        if (nodeNameMatches(node) || getTruthinessSafely(display.showNodeNames)) {
+        if (nodeNameMatches(node) || getTruthinessSafely(webweb.display.showNodeNames)) {
             showOneNodeText(node);
         }
         else {
@@ -1490,23 +1443,19 @@ function showAppropriateNodeText() {
     }
 }
 function showOneNodeText(node) {
-    var name = node.name;
-    var text = name == undefined ? node.idx : name;
-
-    var classes;
-
+    var text = node.name || node.idx;
     var nodeTextElement = document.getElementById("nodeTextId-" + node.idx);
 
     if (nodeTextElement == undefined) {
-        vis.append("text").text(text)
-            .attr("x", node.x + 1.5 * display.r)
-            .attr("y", node.y - 1.5 * display.r)
+        vis.append("text")
+            .text(text)
+            .attr("x", node.x + 1.5 * webweb.display.r)
+            .attr("y", node.y - 1.5 * webweb.display.r)
             .attr("fill", "black")
             .attr("font-size", 12)
             .attr("class", "nodeText")
             .attr("id",  "nodeTextId-" + node.idx);
     }
-
 }
 function hideOneNodeText(node) {
     vis.selectAll("#nodeTextId-" + node.idx).remove();
@@ -1529,55 +1478,70 @@ function updateSizeMenu() {
     var sizeSelect = document.getElementById('sizeSelect-widget');
 
     var options = [];
-    for (var metadatum in sizeData.metadata) {
-        options.push(metadatum);
+    for (var metadatum in webweb.allMetadata) {
+        if (metadatum == 'name') {
+            continue;
+        }
+        if (webweb.allMetadata[metadatum].categories == undefined) {
+            options.push(metadatum);
+        }
     }
 
     resetSelectOptionsTo(sizeSelect, options);
 
-    if (display.sizeBy == undefined || sizeData.metadata[display.sizeBy] == undefined) {
-        display.sizeBy = "none";
+    if (webweb.display.sizeBy == undefined) {
+        webweb.display.sizeBy = 'none';
+    }
+    else if (webweb.allMetadata[webweb.display.sizeBy] == undefined) {
+        webweb.display.sizeBy = 'none';
     }
 
     sizeSelect = document.getElementById('sizeSelect-widget');
-    sizeSelect.value = display.sizeBy;
-    changeSizes(display.sizeBy);
+    sizeSelect.value = webweb.display.sizeBy;
+    changeSizes(webweb.display.sizeBy);
 }
 function updateColorMenu() {
     var colorSelect = document.getElementById('colorSelect-widget');
 
     var options = [];
-    for (var metadatum in colorData.metadata) {
+    for (var metadatum in webweb.allMetadata) {
+        if (metadatum == 'name') {
+            continue;
+        }
+
         options.push(metadatum);
     }
 
     resetSelectOptionsTo(colorSelect, options);
 
-    if (display.colorBy == undefined || colorData.metadata[display.colorBy] == undefined) {
-        display.colorBy = "none";
+    if (webweb.display.colorBy == undefined) {
+        webweb.display.colorBy = 'none';
+    }
+    else if (webweb.allMetadata[webweb.display.colorBy] == undefined) {
+        webweb.display.colorBy = 'none';
     }
 
-    colorSelect.value = display.colorBy;
-    changeColors(display.colorBy);
+    colorSelect.value = webweb.display.colorBy;
+    changeColors(webweb.display.colorBy);
 }
 function setNetworkLayerMenuVisibility() {
     var visibility = 'inline';
 
-    if (wwdata.networks[display.networkName].layers.length == 1) {
+    if (wwdata.networks[webweb.display.networkName].layers.length == 1) {
         visibility = 'none';
     }
 
     document.getElementById('layerSelect-widget').parentElement.style.display = visibility;
 }
 function changeLayer(layer) {
-    display.networkLayer = layer;
+    webweb.display.networkLayer = layer;
 
     var layerSelect = document.getElementById('layerSelect-widget');
-    layerSelect.value = display.networkLayer;
+    layerSelect.value = webweb.display.networkLayer;
 
     displayNetwork();
 }
-function changeInvertBinaryWidgetVisibility(visible, type) {
+function setInvertBinaryWidgetVisibility(visible, type) {
     var visibility = visible ? 'inline' : 'none';
     var widgetId = getBinaryInversionAttributeForType(type) + "-widget";
 
@@ -1592,7 +1556,7 @@ function getBinaryInversionAttributeForType(type) {
         return 'invertBinarySizes';
     }
 }
-function changeColorPaletteMenuVisibility(visible) {
+function setColorPaletteMenuVisibility(visible) {
     var visibility = visible ? 'inline' : 'none';
     document.getElementById('colorPaletteSelect-widget').parentElement.style.display = visibility;
 }
@@ -1668,11 +1632,11 @@ function writeSimpleWidget(name, _widget) {
 function writeMenus(container) {
     var menu = document.createElement('div')
     menu.id = 'webweb-menu';
-    menu.style.display = display.hideMenu == true ? 'none' : 'flex';
+    menu.style.display = webweb.display.hideMenu == true ? 'none' : 'flex';
     container.appendChild(menu);
 
     var layers = [];
-    for (var i in wwdata.networks[display.networkName].layers) {
+    for (var i in wwdata.networks[webweb.display.networkName].layers) {
         layers.push(i);
     }
 
@@ -1682,9 +1646,9 @@ function writeMenus(container) {
     }
 
     var colorPaletteSelectValue = 'Set1';
-    if (display.colorPalette !== undefined) {
-        if (colorbrewer[display.colorPalette] !== undefined) {
-            colorPaletteSelectValue = display.colorPalette;
+    if (webweb.display.colorPalette !== undefined) {
+        if (colorbrewer[webweb.display.colorPalette] !== undefined) {
+            colorPaletteSelectValue = webweb.display.colorPalette;
         }
     }
 
@@ -1698,8 +1662,8 @@ function writeMenus(container) {
                         'functions' : {
                             'change' : changeNetwork,
                         },
-                        'options' : networkNames,
-                        'value' : display.networkName,
+                        'options' : webweb.networkNames,
+                        'value' : webweb.display.networkName,
                         'inline' : true,
                     },
                     'layerSelect' : {
@@ -1709,7 +1673,7 @@ function writeMenus(container) {
                             'change' : changeLayer,
                         },
                         'options' : layers,
-                        'value' : display.networkLayer,
+                        'value' : webweb.display.networkLayer,
                         'inline' : true,
                     },
                 },
@@ -1730,7 +1694,7 @@ function writeMenus(container) {
                         'functions' : {
                             'change' : toggleInvertBinarySizes,
                         },
-                        'value' : display.invertBinarySizes,
+                        'value' : webweb.display.invertBinarySizes,
                         'inline' : true,
                     },
                 },
@@ -1761,7 +1725,7 @@ function writeMenus(container) {
                         'functions' : {
                             'change' : toggleInvertBinaryColors,
                         },
-                        'value' : display.invertBinaryColors,
+                        'value' : webweb.display.invertBinaryColors,
                         'inline' : true,
                     }
                 },
@@ -1772,7 +1736,7 @@ function writeMenus(container) {
                 'functions' : {
                     'change' : toggleLinkWidthScaling,
                 },
-                'value' : display.scaleLinkWidth,
+                'value' : webweb.display.scaleLinkWidth,
                 'size' : 10,
             },
             'scaleLinkOpacity' : {
@@ -1781,7 +1745,7 @@ function writeMenus(container) {
                 'functions' : {
                     'change' : toggleLinkOpacityScaling,
                 },
-                'value' : display.scaleLinkOpacity,
+                'value' : webweb.display.scaleLinkOpacity,
                 'size' : 10,
             },
             'freezeNodes' : {
@@ -1790,7 +1754,7 @@ function writeMenus(container) {
                 'functions' : {
                     'change' : toggleFreezeNodes,
                 },
-                'value' : display.freezeNodes,
+                'value' : webweb.display.freezeNodes,
                 'size' : 10,
             },
             'saveSVG' : {
@@ -1808,42 +1772,42 @@ function writeMenus(container) {
                 'functions' : {
                     'change' : changeCharge,
                 },
-                'value' : display.c,
+                'value' : webweb.display.c,
             },
             'linkLength' : {
                 'text' : 'Link length: ',
                 'functions' : {
                     'change' : changeDistance,
                 },
-                'value' : display.l,
+                'value' : webweb.display.l,
             },
             'linkStrength' : {
                 'text' : 'Link strength: ',
                 'functions' : {
                     'change' : changeLinkStrength,
                 },
-                'value' : display.linkStrength,
+                'value' : webweb.display.linkStrength,
             },
             'gravity' : {
                 'text' : 'Gravity: ',
                 'functions' : {
                     'change' : changeGravity,
                 },
-                'value' : display.g,
+                'value' : webweb.display.g,
             },
             'radius' : {
                 'text' : 'Node radius: ',
                 'functions' : {
                     'change' : changeR,
                 },
-                'value' : display.r,
+                'value' : webweb.display.r,
             },
             'nameToMatch' : {
                 'text' : 'Highlight nodes named: ',
                 'functions' : {
                     'input' : matchNodesNamed,
                 },
-                'value' : display.nameToMatch,
+                'value' : webweb.display.nameToMatch,
                 'size' : 10,
             },
             'showNodeNames' : {
@@ -1852,7 +1816,7 @@ function writeMenus(container) {
                 'functions' : {
                     'input' : toggleShowNodeNames,
                 },
-                'value' : display.showNodeNames,
+                'value' : webweb.display.showNodeNames,
                 'size' : 10,
             },
         }
@@ -1904,11 +1868,11 @@ function saveIt(fileName, fileType, content) {
 }
 function writeSVGDownloadLink() {
     var svg = document.getElementById('webweb-vis');
-    svg.setAttribute("title", display.networkName);
+    svg.setAttribute("title", webweb.display.networkName);
     svg.setAttribute("version", 1.1)
     svg.setAttribute("xmlns", "http://www.w3.org/2000/svg")
 
-    saveIt(display.networkName, "image/svg+xml", svg.outerHTML);
+    saveIt(webweb.display.networkName, "image/svg+xml", svg.outerHTML);
 };
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1970,7 +1934,7 @@ function getTruthinessSafely(variable) {
 ////////////////////////////////////////////////////////////////////////////////
 // binds the up/down arrow keys to change networks
 function changeNetworkListener(event) {
-    var currentNetworkIndex = networkNames.indexOf(display.networkName);
+    var currentNetworkIndex = webweb.networkNames.indexOf(webweb.display.networkName);
     var changeToNetworkIndex;
 
     if (event.keyCode == 38) {
@@ -1983,15 +1947,15 @@ function changeNetworkListener(event) {
     }
 
     if (changeToNetworkIndex !== undefined) {
-        if (0 <= changeToNetworkIndex && changeToNetworkIndex < networkNames.length) {
-            var changeToNetworkName = networkNames[changeToNetworkIndex];
+        if (0 <= changeToNetworkIndex && changeToNetworkIndex < webweb.networkNames.length) {
+            var changeToNetworkName = webweb.networkNames[changeToNetworkIndex];
             changeNetwork(changeToNetworkName);
         }
     }
 }
 // binds the left/right arrow keys to change layers
 function changeNetworkLayerListener(event) {
-    var currentLayer = display.networkLayer;
+    var currentLayer = webweb.display.networkLayer;
     var changeToLayer;
 
     if (event.keyCode == 39) {
@@ -2004,7 +1968,7 @@ function changeNetworkLayerListener(event) {
     }
 
     if (changeToLayer !== undefined) {
-        if (0 <= changeToLayer && changeToLayer < wwdata.networks[display.networkName].layers.length) {
+        if (0 <= changeToLayer && changeToLayer < wwdata.networks[webweb.display.networkName].layers.length) {
             changeLayer(changeToLayer);
         }
     }
