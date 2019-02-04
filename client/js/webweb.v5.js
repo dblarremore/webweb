@@ -55,6 +55,7 @@ function Webweb(wwdata) {
 
     this.nonMetadataKeys = [
         'degree',
+        'strength',
         'fx',
         'fy',
         'idx',
@@ -357,6 +358,9 @@ Webweb.prototype.setNodeMetadata = function() {
         'degree' : {
             'type' : 'degree',
         },
+        'strength' : {
+            'type' : 'degree',
+        },
     };
 
     // identify the set of metadata keys
@@ -445,6 +449,7 @@ Webweb.prototype.createLinks = function() {
     // reset the node degrees
     for (var i in this.nodes) {
         webweb.nodes[i].degree = 0;
+        webweb.nodes[i].strength = 0;
 
         linkMatrix[i] = {};
         for (var j in this.nodes) {
@@ -471,8 +476,10 @@ Webweb.prototype.createLinks = function() {
             linkMatrix[target][source] += weight;
         }
             
-        this.nodes[source].degree += weight;
-        this.nodes[target].degree += weight;
+        this.nodes[source].degree += 1;
+        this.nodes[target].degree += 1;
+        this.nodes[source].strength += weight;
+        this.nodes[target].strength += weight;
     }
 
     this.links = [];
@@ -486,6 +493,17 @@ Webweb.prototype.createLinks = function() {
                 })
             }
         }
+    }
+
+    var networkIsUnweighted = true;
+    this.nodes.forEach(function(node) {
+        if (node.strength !== node.degree) {
+            networkIsUnweighted = false;
+        }
+    });
+
+    if (networkIsUnweighted) {
+        delete this.allMetadata.strength;
     }
 
     this.scales.links.width.domain(d3.extent(weights));
@@ -697,9 +715,9 @@ function computeSizes() {
         var type = webweb.getSizeByType();
         rawValues = getRawNodeValues(sizeBy, type, 'size');
 
-        // if we're sizing by degree, square root the value
+        // if we're sizing by degree (or strength), square root the value
         rawValues.forEach(function(val) {
-            var scaled = sizeBy == 'degree' ? Math.sqrt(val) : val;
+            var scaled = type == 'degree' ? Math.sqrt(val) : val;
             scaledValues.push(scaled);
         });
 
