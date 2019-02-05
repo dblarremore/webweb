@@ -826,6 +826,8 @@ function getCanvasContext() {
         if (webweb.dragging){
             webweb.selectedNode.x = webweb.mouseState.x;
             webweb.selectedNode.y = webweb.mouseState.y;
+            webweb.selectedNode.fx = webweb.mouseState.x;
+            webweb.selectedNode.fy = webweb.mouseState.y;
         }
         tick();
     }, true);
@@ -843,14 +845,25 @@ function getCanvasContext() {
             if (webweb.nodes[i].containsMouse()) {
                 webweb.dragging = true;
                 webweb.selectedNode = webweb.nodes[i];
+
+                webweb.simulation.alphaTarget(0.3).restart();
+
+                webweb.nodes[i].fx = webweb.nodes[i].x;
+                webweb.nodes[i].fy = webweb.nodes[i].y;
             }
         }
     }, true);
 
     canvas.addEventListener('mouseup', function(e) {
         if (webweb.dragging) {
-            webweb.updateSimulation();
+            webweb.simulation.alphaTarget(0);
+
+            if (! webweb.display.freezeNodeMovement) {
+                webweb.selectedNode.fx = null;
+                webweb.selectedNode.fy = null;
+            }
         }
+        webweb.selectedNode = undefined;
         webweb.dragging = false;
     }, true);
 
