@@ -8,7 +8,6 @@
  *
  */
 var webweb;
-var context;
 
 function Webweb(wwdata) {
     this.networkNames = Object.keys(wwdata.networks);
@@ -58,6 +57,10 @@ function Webweb(wwdata) {
     this.standardizeNetworks(wwdata.networks);
 
     this.createNodes();
+    this.createSimulation();
+
+    this.legendNodes = [];
+    this.legendText = [];
 }
 Webweb.prototype.standardizeNetworks = function(networks) {
     this.networks = {};
@@ -246,10 +249,11 @@ Node.prototype.radius = function() {
     if (this.matchesString() || this.containsMouse(radius)) {
         radius *= 1.3;
     }
+
     return radius;
 }
 Node.prototype.outline = function() {
-    if (this.matchesString()) {
+    if (this.matchesString() || this.containsMouse()) {
         return "black";
     }
     else {
@@ -316,7 +320,7 @@ Node.prototype.drawSVG = function() {
     return circle;
 }
 Node.prototype.containsMouse = function(radius) {
-    if (webweb.mouseState == undefined) {
+    if (webweb.canvas.mouseState == undefined) {
         return false;
     }
 
@@ -326,10 +330,10 @@ Node.prototype.containsMouse = function(radius) {
     }
 
     if (
-        this.x + radius >= webweb.mouseState.x &&
-        this.x - radius <= webweb.mouseState.x &&
-        this.y + radius >= webweb.mouseState.y &&
-        this.y - radius <= webweb.mouseState.y
+        this.x + radius >= webweb.canvas.mouseState.x &&
+        this.x - radius <= webweb.canvas.mouseState.x &&
+        this.y + radius >= webweb.canvas.mouseState.y &&
+        this.y - radius <= webweb.canvas.mouseState.y
     ) {
         return true;
     }
@@ -693,9 +697,12 @@ Webweb.prototype.getColorByType = function() {
 // Webweb:
 // simulation
 //////////////////////////////////////////////////////////////////////////////// 
+Webweb.prototype.tick = function() {
+    webweb.canvas.redraw.call(webweb.canvas);
+}
 Webweb.prototype.createSimulation = function() {
     this.simulation = d3.forceSimulation(this.nodes)
-        .on('tick', tick);
+        .on('tick', this.tick);
 
     this.simulation.alphaDecay = 0.001
 
@@ -753,9 +760,6 @@ function initializeWebweb() {
     webweb = new Webweb(wwdata);
 
     initializeHTML();
-
-    webweb.createSimulation();
-
     displayNetwork();
 }
 function initializeHTML() {
@@ -797,79 +801,10 @@ function writeVisualization(container) {
         webweb.display.h = Math.min.apply(null, [webweb.display.w, 600]);
     }
 
-    var dpr = window.devicePixelRatio || 1;
-    canvas = d3.select("#webweb-visualization-container")
-        .append("canvas")
-        .style("width", webweb.display.w + "px")
-        .style("height", webweb.display.h + "px")
-        .attr("width", webweb.display.w * dpr)
-        .attr("height", webweb.display.h * dpr)
-        .attr("id", "webweb-vis-canvas");
-
-    d3.select("#webweb-visualization-container")
-        .append("br");
-
-    getCanvasContext();
+    webweb.canvas = new CanvasState(webweb);
+    document.getElementById('webweb-visualization-container').appendChild(webweb.canvas.canvas);
 }
-function getCanvasContext() {
-    var dpr = window.devicePixelRatio || 1;
-    var canvas = document.getElementById("webweb-vis-canvas");
 
-    canvas.addEventListener('mousemove', function(e) {
-        var rect = canvas.getBoundingClientRect();
-        
-        webweb.mouseState = {
-            x: e.clientX - rect.left - 3,
-            y: e.clientY - rect.top - 3,
-        }
-
-        if (webweb.dragging){
-            webweb.selectedNode.x = webweb.mouseState.x;
-            webweb.selectedNode.y = webweb.mouseState.y;
-            webweb.selectedNode.fx = webweb.mouseState.x;
-            webweb.selectedNode.fy = webweb.mouseState.y;
-        }
-        tick();
-    }, true);
-    canvas.addEventListener('mousedown', function(e) {
-        var rect = canvas.getBoundingClientRect();
-        
-        webweb.mouseState = {
-            x: e.clientX - rect.left - 3,
-            y: e.clientY - rect.top - 3,
-        }
-
-        webweb.dragging = false;
-        webweb.selectedNode = undefined;
-        for (var i in webweb.nodes) {
-            if (webweb.nodes[i].containsMouse()) {
-                webweb.dragging = true;
-                webweb.selectedNode = webweb.nodes[i];
-
-                webweb.simulation.alphaTarget(0.3).restart();
-
-                webweb.nodes[i].fx = webweb.nodes[i].x;
-                webweb.nodes[i].fy = webweb.nodes[i].y;
-            }
-        }
-    }, true);
-
-    canvas.addEventListener('mouseup', function(e) {
-        if (webweb.dragging) {
-            webweb.simulation.alphaTarget(0);
-
-            if (! webweb.display.freezeNodeMovement) {
-                webweb.selectedNode.fx = null;
-                webweb.selectedNode.fy = null;
-            }
-        }
-        webweb.selectedNode = undefined;
-        webweb.dragging = false;
-    }, true);
-
-    context = canvas.getContext('2d');
-    context.scale(dpr, dpr);
-}
 ////////////////////////////////////////////////////////////////////////////////
 // - changes the number of visible nodes
 // - adds metadata to nodes
@@ -898,8 +833,9 @@ function displayNetwork() {
 
     // if we've frozen node movement manually tick so new edges are evaluated.
     if (webweb.display.freezeNodeMovement) {
-        tick();
+        webweb.canvas.redraw();
     }
+
     computeLegend();
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -1091,7 +1027,7 @@ function changeSizes(sizeBy) {
     webweb.display.sizeBy = sizeBy;
 
     computeLegend();
-    tick();
+    webweb.canvas.redraw();
 
     var showInvertWidget = webweb.getSizeByType() == 'binary' ? true : false;
     setInvertBinaryWidgetVisibility(showInvertWidget, 'size');
@@ -1099,7 +1035,7 @@ function changeSizes(sizeBy) {
 function changeColors(colorBy) {
     webweb.display.colorBy = colorBy;
     computeLegend();
-    tick();
+    webweb.canvas.redraw();
     var showColorPaletteWidget = webweb.getColorByType() == 'categorical' ? true : false;
     var showInvertWidget = false;
 
@@ -1113,7 +1049,7 @@ function changeColors(colorBy) {
 function setColorPalette(colorPalette) {
     webweb.display.colorPalette = colorPalette;
     computeLegend();
-    tick();
+    webweb.canvas.redraw();
 }
 function changeCharge(c) {
     if (c >= 0) {
@@ -1127,13 +1063,13 @@ function changeCharge(c) {
 function changeR(r) {
     webweb.display.r = r;
     computeLegend();
-    tick();
+    webweb.canvas.redraw();
 }
 function changeDistance(l) {
     if (l >= 0) {
         webweb.display.l = l;
         webweb.updateSimulation("link");
-        tick();
+        webweb.canvas.redraw();
     }
     else {
         alert("Distance must be nonnegative.");
@@ -1177,13 +1113,13 @@ function toggleFreezeNodes(isFrozen) {
 
     var freezeNodesToggle = document.getElementById('freezeNodes-widget');
     freezeNodesToggle.checked = webweb.display.freezeNodeMovement ? true : false;
-    tick();
+    webweb.canvas.redraw();
 }
 function toggleShowNodeNames(show) {
     webweb.display.showNodeNames = show;
     var showNodeNamesWidget = document.getElementById('showNodeNames-widget');
     showNodeNamesWidget.checked = webweb.display.showNodeNames;
-    tick();
+    webweb.canvas.redraw();
 }
 function toggleInvertBinaryColors(setting) {
     var widget = document.getElementById('invertBinaryColors-widget');
@@ -1191,7 +1127,7 @@ function toggleInvertBinaryColors(setting) {
     webweb.display.invertBinaryColors = setting;
 
     computeLegend();
-    tick();
+    webweb.canvas.redraw();
 }
 function toggleInvertBinarySizes(setting) {
     var widget = document.getElementById('invertBinarySizes-widget');
@@ -1199,7 +1135,7 @@ function toggleInvertBinarySizes(setting) {
     webweb.display.invertBinarySizes = setting;
 
     computeLegend();
-    tick();
+    webweb.canvas.redraw();
 }
 function getBinaryValue(value, type) {
     var attribute = getBinaryInversionAttributeForType(type);
@@ -1217,16 +1153,16 @@ function getBinaryValues(type) {
 function toggleLinkWidthScaling(checked) {
     var range = checked ? [0.5, 4] : [1, 1];
     webweb.scales.links.width.range(range);
-    tick();
+    webweb.canvas.redraw();
 }
 function toggleLinkOpacityScaling(checked) {
     var range = checked ? [0.4, 0.9] : [1, 1];
     webweb.scales.links.opacity.range(range);
-    tick();
+    webweb.canvas.redraw();
 }
 function matchNodesNamed(x) {
     webweb.display.nameToMatch = x;
-    tick();
+    webweb.canvas.redraw();
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -1480,27 +1416,141 @@ Legend.prototype.makeScalarCategoricalLegend = function(bins) {
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-// tick attributes for links and nodes
-function tick() {
-    context.clearRect(0, 0, webweb.display.w, webweb.display.h);
-    webweb.links.forEach(function(link) {
-        link.draw(context);
-    });
+function CanvasState(webweb) {
+    this.webweb = webweb;
+    this.dpr = window.devicePixelRatio || 1;
+    this.canvas = document.createElement("canvas");
+    this.canvas.id = "webweb-vis-canvas";
 
-    webweb.nodeText = [];
-    webweb.nodes.forEach(function(node) {
-        node.draw(context);
-    });
-    webweb.nodeText.forEach(function(text) {
-        text.draw(context);
-    });
+    this.canvas.style.width = webweb.display.w + "px";
+    this.canvas.style.height = webweb.display.h + "px";
 
-    webweb.legendNodes.forEach(function(node) {
-        node.draw(context);
+    this.canvas.width = webweb.display.w * this.dpr;
+    this.canvas.height = webweb.display.h * this.dpr;
+
+    this.context = this.canvas.getContext('2d');
+    this.context.scale(this.dpr, this.dpr);
+
+    this.padding = 3;
+    this.dragBoundary = 15;
+
+    this.dragging = false;
+    this.draggedNode = undefined;
+
+    this.canvas.addEventListener("mousedown", function(event) {
+        webweb.canvas.mouseDownListener(event);
     });
-    webweb.legendText.forEach(function(text) {
-        text.draw(context);
+    this.canvas.addEventListener("mousemove", function(event) {
+        webweb.canvas.mouseMoveListener(event);
     });
+    this.canvas.addEventListener("mouseup", function(event) {
+        webweb.canvas.mouseUpListener(event);
+    });
+}
+
+CanvasState.prototype.getContext = function() {
+    if (this.context == undefined) {
+        this.context = this.canvas.getContext('2d');
+        this.context.scale(this.dpr, this.dpr);
+    }
+}
+
+CanvasState.prototype.clear = function() {
+    this.context.clearRect(0, 0, webweb.display.w, webweb.display.h);
+}
+
+CanvasState.prototype.redraw = function() {
+    this.clear();
+    this.webweb.links.forEach(function(link) {
+        link.draw(this.context);
+    }, this);
+
+    this.webweb.nodeText = [];
+    this.webweb.nodes.forEach(function(node) {
+        node.draw(this.context);
+    }, this);
+    this.webweb.nodeText.forEach(function(text) {
+        text.draw(this.context);
+    }, this);
+
+    this.webweb.legendNodes.forEach(function(node) {
+        node.draw(this.context);
+    }, this);
+    this.webweb.legendText.forEach(function(text) {
+        text.draw(this.context);
+    }, this);
+}
+
+CanvasState.prototype.getMouseState = function(event) {
+    var container = this.canvas.getBoundingClientRect();
+    this.mouseState = {
+        x: event.clientX - container.left - this.padding,
+        y: event.clientY - container.top - this.padding,
+    };
+}
+
+CanvasState.prototype.mouseIsWithinDragBoundary = function() {
+    if (
+        this.mouseState.x < this.dragBoundary ||
+        this.mouseState.y < this.dragBoundary ||
+        this.mouseState.x > this.webweb.display.w - this.dragBoundary ||
+        this.mouseState.y > this.webweb.display.h - this.dragBoundary
+    ) {
+        return true;
+    }
+    return false;
+}
+
+CanvasState.prototype.endDragging = function() {
+    webweb.simulation.alphaTarget(0);
+
+    if (! webweb.display.freezeNodeMovement && this.draggedNode !== undefined) {
+        this.draggedNode.fx = null;
+        this.draggedNode.fy = null;
+    }
+    this.draggedNode = undefined;
+    this.dragging = false;
+}
+
+CanvasState.prototype.updateDraggedNode = function() {
+    this.draggedNode.x = this.mouseState.x;
+    this.draggedNode.y = this.mouseState.y;
+    this.draggedNode.fx = this.mouseState.x;
+    this.draggedNode.fy = this.mouseState.y;
+}
+CanvasState.prototype.mouseMoveListener = function(event) {
+    this.getMouseState(event);
+
+    if (this.dragging) {
+        if (this.mouseIsWithinDragBoundary()) {
+            this.endDragging();
+        }
+        else {
+            this.updateDraggedNode();
+        }
+    }
+
+    this.redraw();
+}
+CanvasState.prototype.mouseDownListener = function(event) {
+    this.getMouseState(event);
+    this.endDragging();
+
+    for (var i in webweb.nodes) {
+        if (webweb.nodes[i].containsMouse()) {
+            this.dragging = true;
+            this.draggedNode = webweb.nodes[i];
+
+            webweb.simulation.alphaTarget(0.3).restart();
+
+            this.updateDraggedNode();
+        }
+    }
+}
+CanvasState.prototype.mouseUpListener = function() {
+    if (this.dragging) {
+        this.endDragging();
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
