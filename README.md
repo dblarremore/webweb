@@ -49,7 +49,7 @@ If you want to implement an interface for webweb in another language, go ahead! 
 
 If you repurpose or hack this code to do something else, we'd love to hear about it! 
 
-If you use webweb to make figures for an academic paper, no citation is needed, but if you let us know and we'll will post a link to your publication [here](https://webwebpage.github.io/in-the-wild/)
+If you use webweb to make figures for an academic paper, no citation is needed, but if you let us know and we'll will post a link to your publication [here](https://webwebpage.github.io/in-the-wild/).
 
 ## License
 
