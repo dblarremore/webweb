@@ -537,7 +537,18 @@ Webweb.prototype.setNodeMetadata = function() {
     this.nodes.forEach(function(node) {
         for (var key in node) {
             if (node.isMetadataKey(key)) {
-                this.allMetadata[key] = {};
+                if (this.allMetadata[key] == undefined) {
+                    var networkMetadata = networkData.metadata;
+                    if (networkMetadata !== undefined && networkMetadata !== null && networkMetadata[key] !== undefined) {
+                        this.allMetadata[key] = networkMetadata[key];
+                    }
+                    else if (this.display.metadata[key] !== undefined) {
+                        this.allMetadata[key] = this.display.metadata[key];
+                    }
+                    else {
+                        this.allMetadata[key] = {};
+                    }
+                }
             }
         }
     }, this);

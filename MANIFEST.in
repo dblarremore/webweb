@@ -1,2 +1,3 @@
 recursive-include webweb/client *
 include requirements.txt
+include pygmlion.py

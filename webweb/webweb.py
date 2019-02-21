@@ -13,6 +13,7 @@ import copy
 import json
 import webbrowser
 import tempfile
+from .pygmlion import get_gml
 from collections import defaultdict
 
 class Web(dict):
@@ -30,7 +31,7 @@ class Web(dict):
         self.networks = Networks()
 
         # if we have an adjacency, add it into the networks object
-        if len(adjacency) or kwargs.get('nx_G'):
+        if len(adjacency) or kwargs.get('nx_G') or kwargs.get('gml_file'):
             kwargs['adjacency'] = adjacency
             getattr(self.networks, self.title)(**kwargs)
 
@@ -141,16 +142,22 @@ class Network(dict):
         self.layers = []
         self.__call__(**kwargs)
 
+    def get_gml_graphs(self, gml_file):
+        return get_gml(gml_file).pop('graph', [])
+
     def __call__(self, **kwargs):
-        # if we have an adjacency, add it into the networks object
-        if len(kwargs.get('adjacency', [])):
-            self.layers = []
-            self.add_layer(**kwargs)
-        elif kwargs.get('nx_G'):
-            self.layers = []
+        # treat calling the object as resetting it
+        self.layers = []
+
+        gml_file = kwargs.pop('gml_file', '')
+        if gml_file:
+            for graph in self.get_gml_graphs(gml_file):
+                kwargs['adjacency'], kwargs['nodes'] = self.read_graph_from_gml(graph)
+                self.add_layer(**kwargs)
+        else:
             self.add_layer(**kwargs)
 
-    def add_layer(self, adjacency=[], adjacency_type=None, nodes=None,  metadata=None, nx_G=None):
+    def add_layer(self, adjacency=[], adjacency_type=None, nodes={},  metadata=None, nx_G=None, gml_file=None):
         """adds a layer to the network.
 
         parameters:
@@ -185,6 +192,7 @@ class Network(dict):
         }
         ```
         - nx_G: a networkx graph.
+        - gml_file: path to a gml file
 
         ---
 
@@ -200,6 +208,7 @@ class Network(dict):
         - nodes
         - metadata
         - nx_G
+        - gml_file
         """
         if len(adjacency):
             try:
@@ -211,31 +220,37 @@ class Network(dict):
 
         if nx_G:
             adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(nx_G)
+        elif gml_file:
+            graphs = self.get_gml_graphs(gml_file)
+
+            if graphs:
+                adjacency, nodes = self.read_graph_from_gml(graphs[0])
         else:
             if not adjacency_type:
-                if len(adjacency) and len(adjacency) > 3:
-                    # we use a dumb heuristic here:
-                    # if the length of the list is the same as the length of the first
-                    # element in the list, it's a matrix
-                    if len(adjacency) == len(adjacency[0]):
-                        adjacency_type = "matrix"
+                adjacency_type = self.get_adjacency_type(adjacency)
 
             if adjacency_type == 'matrix':
-                adjacency_length = len(adjacency)
+                for i in range(len(adjacency)):
+                    nodes[i] = nodes.get(i, {})
+
                 adjacency = self.convert_adjacency_matrix_to_list(adjacency)
 
-                if not nodes:
-                    nodes = {}
+        if adjacency or nodes or metadata:
+            self.layers.append({
+                'edgeList' : copy.deepcopy(adjacency),
+                'nodes' : nodes,
+                'metadata' : metadata,
+            })
 
-                for i in range(adjacency_length):
-                    if not nodes.get(i, None):
-                        nodes[i] = {}
+    def get_adjacency_type(self, adjacency):
+        if len(adjacency) and len(adjacency) > 3:
+            # we use a dumb heuristic here:
+            # if the length of the list is the same as the length of the first
+            # element in the list, it's a matrix
+            if len(adjacency) == len(adjacency[0]):
+                return "matrix"
 
-        self.layers.append({
-            'edgeList' : copy.deepcopy(adjacency),
-            'nodes' : nodes,
-            'metadata' : metadata,
-        })
+        return 'list'
 
     def convert_adjacency_matrix_to_list(self, matrix):
         edge_list = []
@@ -282,3 +297,61 @@ class Network(dict):
             nodes[node]['name'] = metadata.get('name', node)
 
         return adj, nodes
+
+    def get_name_from_gml_object(self, attribute, default=0):
+        name_priorities = ['id', 'label', 'name']
+        name = default
+        for key in name_priorities:
+            value = attribute.get(key)
+
+            if value:
+                name = value
+
+        return str(name)
+
+    def read_graph_from_gml(self, gml):
+        gml_nodes = gml.get('node', [])
+        node_ids = { n.get('id') for n in gml_nodes }
+
+        unused_node_id = max(list(node_ids)) + 1
+        nodes = {}
+        for node in gml_nodes:
+            # try to find a name
+            _id = node.get('id', None)
+
+            if _id == None:
+                _id = unused_node_id
+                unused_node_id += 1
+
+            nodes[_id] = {
+                'name' : self.get_name_from_gml_object(node, default=_id)
+            }
+
+            for key, value in node.items():
+                # this currently doesn't do graphical attributes like `x` and `y`
+                if type(value) in [str, float, int]:
+                    if key not in ['id', 'label']:
+                        nodes[_id][key] = value
+                elif key == 'graphics':
+                    for subvalue in value:
+                        if type(subvalue) == dict:
+                            for subkey, subsubvalue in subvalue.items():
+                                if subkey in ['x', 'y']:
+                                    nodes[_id][subkey] = subsubvalue
+
+        adjacency = []
+        for edge in gml.get('edge', []):
+            source = edge.get('source')
+            target = edge.get('target')
+
+            if source and target:
+                _edge = [source, target]
+
+                weight = edge.get('weight')
+
+                if weight:
+                    _edge.append(weight)
+
+                adjacency.append(_edge)
+
+        return adjacency, nodes
