@@ -8,12 +8,12 @@
 # daniel.larremore@colorado.edu
 # http://github.com/dblarremore/webweb Comments and suggestions always welcome.
 
+import sys
 import os
 import copy
 import json
 import webbrowser
 import tempfile
-from .pygmlion import get_gml
 from collections import defaultdict
 
 class Web(dict):
@@ -143,7 +143,9 @@ class Network(dict):
         self.__call__(**kwargs)
 
     def get_gml_graphs(self, gml_file):
-        return get_gml(gml_file).pop('graph', [])
+        sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+        import pygmlion
+        return pygmlion.get_gml(gml_file).pop('graph', [])
 
     def __call__(self, **kwargs):
         # treat calling the object as resetting it
