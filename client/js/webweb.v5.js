@@ -457,8 +457,9 @@ Webweb.prototype.standardizeSourceMetadata = function(source) {
 
     // add the vectorized node metadata to the nodes
     for (var metadatum in source.metadata) {
-        for (var i in source.metadata[metadatum].values) {
-            this.nodes[i][metadatum] = source.metadata[metadatum].values[i];
+        var values = source.metadata[metadatum].values;
+        for (var i in values) {
+            this.nodes[i][metadatum] = values[i];
         }
     }
 
@@ -503,13 +504,17 @@ Webweb.prototype.setNodeMetadata = function() {
                 if (this.display.metadata !== undefined && this.display.metadata[key] !== undefined) {
                     var metadatumInfo = this.display.metadata[key];
 
+                    var value = this.nodes[i][key];
+
                     // if we have categories, change the node values here
                     if (metadatumInfo.categories !== undefined) {
-                        var nodeCategoryNumber = this.nodes[i][key];
-                        this.nodes[i][key] = metadatumInfo.categories[nodeCategoryNumber];
+                        if (isInt(value)) {
+                            var nodeCategoryNumber = this.nodes[i][key];
+                            this.nodes[i][key] = metadatumInfo.categories[nodeCategoryNumber];
+                        }
                     }
                     else if (metadatumInfo.type !== undefined && metadatumInfo.type == 'binary') {
-                        this.nodes[i][key] = this.nodes[i][key] ? true : false;
+                        this.nodes[i][key] = value ? true : false;
                     }
                 }
             }
@@ -1032,6 +1037,7 @@ function changeNetwork(networkName) {
     networkSelect.value = networkName;
 
     webweb.display.networkName = networkName;
+    webweb.display.networkLayer = 0;
     displayNetwork();
 }
 function changeSizes(sizeBy) {
