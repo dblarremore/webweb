@@ -140,7 +140,9 @@ class Network(dict):
         see `add_layer` for parameter information
         """
         self.layers = []
-        self.__call__(**kwargs)
+
+        if len(kwargs.keys()):
+            self.__call__(**kwargs)
 
     def get_gml_graphs(self, gml_file):
         sys.path.append(os.path.dirname(os.path.realpath(__file__)))
@@ -156,7 +158,7 @@ class Network(dict):
             for graph in self.get_gml_graphs(gml_file):
                 kwargs['adjacency'], kwargs['nodes'] = self.read_graph_from_gml(graph)
                 self.add_layer(**kwargs)
-        else:
+        elif len(kwargs.keys()):
             self.add_layer(**kwargs)
 
     def add_layer(self, adjacency=[], adjacency_type=None, nodes={},  metadata=None, nx_G=None, gml_file=None):
@@ -227,14 +229,11 @@ class Network(dict):
 
             if graphs:
                 adjacency, nodes = self.read_graph_from_gml(graphs[0])
-        else:
+        elif adjacency:
             if not adjacency_type:
                 adjacency_type = self.get_adjacency_type(adjacency)
 
             if adjacency_type == 'matrix':
-                for i in range(len(adjacency)):
-                    nodes[i] = nodes.get(i, {})
-
                 adjacency = self.convert_adjacency_matrix_to_list(adjacency)
 
         if adjacency or nodes or metadata:
