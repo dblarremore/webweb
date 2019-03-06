@@ -240,8 +240,8 @@ class Network(dict):
         if adjacency or nodes or metadata:
             self.layers.append({
                 'edgeList' : copy.deepcopy(adjacency),
-                'nodes' : nodes,
-                'metadata' : metadata,
+                'nodes' : copy.deepcopy(nodes),
+                'metadata' : copy.deepcopy(metadata),
             })
 
     def get_adjacency_type(self, adjacency):

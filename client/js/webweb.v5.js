@@ -134,8 +134,9 @@ Webweb.prototype.getNodeIdMap = function(network) {
     }
 
     if (allInts(nodeNames)) {
-        nodeNames.sort();
+        nodeNames.sort(function(a, b){return a-b});
     }
+
 
     var unusedId = 0;
     var nodeIdMap = {};
@@ -1037,8 +1038,7 @@ function changeNetwork(networkName) {
     networkSelect.value = networkName;
 
     webweb.display.networkName = networkName;
-    webweb.display.networkLayer = 0;
-    displayNetwork();
+    changeLayer(0);
 }
 function changeSizes(sizeBy) {
     webweb.display.sizeBy = sizeBy;
@@ -1340,21 +1340,29 @@ Legend.prototype.drawLegendLabel = function(pushDown) {
     webweb.legendText.push(text);
 }
 Legend.prototype.drawLegendText = function(pushDown, pushRight) {
+    var valuesCount = this.values.length;
     this.text.forEach(function(d, i) {
-        var text = new Text(d, pushRight, pushDown(i) + 3.5, "12px");
-        webweb.legendText.push(text);
+        // only draw text for as many values as there are
+        if (i < valuesCount) {
+            var text = new Text(d, pushRight, pushDown(i) + 3.5, "12px");
+            webweb.legendText.push(text);
+        }
     });
 }
 Legend.prototype.drawLegendValues = function(pushDown, pushRight, sizeFunction, colorFunction) {
+    var textCount = this.text.length;
     this.values.forEach(function(d, i){
-        var node = new Node(-1);
-        node.fixedRadius = sizeFunction(d);
-        node.x = pushRight;
-        node.y = pushDown(i);
-        node.__scaledColor = colorFunction(i);
-        node.nonInteractive = true;
+        // only draw text for as many values as there are
+        if (i < textCount) {
+            var node = new Node(-1);
+            node.fixedRadius = sizeFunction(d);
+            node.x = pushRight;
+            node.y = pushDown(i);
+            node.__scaledColor = colorFunction(i);
+            node.nonInteractive = true;
 
-        webweb.legendNodes.push(node);
+            webweb.legendNodes.push(node);
+        }
     });
 }
 Legend.prototype.makeBinaryLegend = function() {
