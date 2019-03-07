@@ -72,6 +72,9 @@ for ring=1:tree_layers
         end
         nodes_queue(end) = [];
     end
+    if ring==1
+        branching_factor = branching_factor-1;
+    end
     nodes_queue = new_nodes_queue;
     % Create a temporary variable called netObj, and put in an edgelist...
     netObj.edgeList = edgeList;
