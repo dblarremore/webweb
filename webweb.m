@@ -167,7 +167,17 @@ end
 end
 %%%%%
 
-
+%%%%%
+function rcv = zero_index(rcv)
+% take an edgelist, and if the minimum node id is 1, subtract to 0
+minIndex = min(min(rcv(:,1:2)));
+if minIndex==1
+    rcv(:,1:2) = rcv(:,1:2)-1;
+    return
+else
+    return
+end
+end
 
 %%%%%
 function rcv = adj_to_edgeList(A)
@@ -218,11 +228,11 @@ if size(myEdges,1)==0
 end
 % if the edges are sizeways (3xM instead of Mx3 for instance) flip them
 if size(myEdges,1) < size(myEdges,2)
-    myEdges = myEdges';
+    myEdges = zero_index(myEdges');
 end
 % if there are no edge weights, return
 if size(myEdges,2)==2
-    rcv = myEdges;
+    rcv = zero_index(myEdges);
     return
 end
 % if there are edge weights...
@@ -230,11 +240,11 @@ if size(myEdges,2)==3
     % are they all ones, and can be discarded?
     if sum(myEdges(:,3)==1)==size(myEdges,1)
         % yes
-        rcv = myEdges(:,1:2);
+        rcv = zero_index(myEdges(:,1:2));
         return
     else
         % no
-        rcv = myEdges;
+        rcv = zero_index(myEdges);
         return
     end
 end
