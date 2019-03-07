@@ -1169,11 +1169,13 @@ function getBinaryValues(type) {
 }
 function toggleLinkWidthScaling(checked) {
     var range = checked ? [0.5, 4] : [1, 1];
+    webweb.display.scaleLinkWidth = checked;
     webweb.scales.links.width.range(range);
     webweb.canvas.redraw();
 }
 function toggleLinkOpacityScaling(checked) {
     var range = checked ? [0.4, 0.9] : [1, 1];
+    webweb.display.scaleLinkOpacity = checked;
     webweb.scales.links.opacity.range(range);
     webweb.canvas.redraw();
 }
