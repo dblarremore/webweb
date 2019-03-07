@@ -91,7 +91,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ww.display.networkName = 'tree';
-ww.display.networkLayer = 3;
+ww.display.networkLayer = 2;
 ww.display.colorBy = 'ring';
 ww.display.sizeBy = 'degree';
 ww.display.gravity = 0.3;

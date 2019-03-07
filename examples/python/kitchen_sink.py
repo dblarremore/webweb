@@ -104,7 +104,7 @@ web.display.metadata = {
 ################################################################################
 
 web.display.networkName = 'tree'
-web.display.networkLayer = 3
+web.display.networkLayer = 2
 web.display.colorBy = 'ring'
 web.display.sizeBy = 'degree'
 web.display.gravity = .3
