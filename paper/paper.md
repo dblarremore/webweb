@@ -8,7 +8,7 @@ authors:
  - name: K. Hunter Wapman
    orcid: 0000-0003-2518-841X
    affiliation: 1
- - name: Daniel Larremore
+ - name: Daniel B. Larremore
    orcid: 0000-0001-5273-5234
    affiliation: "1, 2"
 affiliations:
