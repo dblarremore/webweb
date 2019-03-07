@@ -9,15 +9,15 @@ web = Web(title='kitchen_sink')
 # let's generate a graph using the Stochastic Block Model
 
 # choose sizes of communities
-c1, c2, c3 = 20, 40, 70
+c1, c2, c3 = 15, 20, 25
 
 # group memberships, z
 z = [0 for _ in range(c1)] + [1 for _ in range(c2)] + [2 for _ in range(c3)]
 
 # group affinity matrix
-M = [[ 0.3,  0.01, 0     ],
-     [ 0.01, 0.25, 0.02  ],
-     [ 0,    0.02, 0.15  ]]
+M = [[ 0.25, 0.02, 0    ],
+     [ 0.02, 0.2,  0.02 ],
+     [ 0,    0.02, 0.15 ]]
 
 # SBM
 edge_list = []
@@ -76,7 +76,7 @@ web.display.networkName = 'tree'
 web.display.networkLayer = 3
 web.display.colorBy = 'ring'
 web.display.sizeBy = 'degree'
-web.display.gravity = .5
+web.display.gravity = .3
 web.display.charge = 30
 web.display.linkLength = 15
 web.display.colorPalette = 'Greens'
