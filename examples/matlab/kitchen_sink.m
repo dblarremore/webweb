@@ -32,7 +32,7 @@ ww.networks.sbm.metadata.community.type = 'categorical';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Network 2 of 3: the Zachary Karate Club                                 %
-% Feature: a network w/ node names and additional metadata for 2 nodes    %
+% Feature: a network w/ node names and additional (binary ) metadata      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Directly specify an edge list.
@@ -87,7 +87,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Display parameters choices and defaults                                   %
-% Demonstrates: how to fix default behavior for webweb on opening the html  %
+% Demonstrates: how to set default behavior for webweb on opening the html  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ww.display.networkName = 'tree';
