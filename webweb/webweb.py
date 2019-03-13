@@ -83,11 +83,29 @@ class Web(dict):
 
     @property
     def json(self, title=None):
-        return json.dumps({
+        data = {
             "display" : vars(self.display),
             'networks' : { name : vars(data) for name, data in vars(self.networks).items()},
             "title" : self.title,
-        })
+        }
+
+        return json.dumps(self.safe_serialize(data))
+
+    def safe_serialize(self, data):
+        """try to handle numpy datatypes gracefully"""
+        if type(data) == list:
+            return [self.safe_serialize(x) for x in data]
+        elif type(data) == dict:
+            return {self.safe_serialize(key) : self.safe_serialize(val) for key, val in data.items()}
+        else:
+            if type(data) in [str, int, float]:
+                return data
+            else:
+                try:
+                    import numpy as np
+                    return data.item()
+                except:
+                    return data
 
     @property
     def html(self):
