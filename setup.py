@@ -20,7 +20,7 @@ def read_requirements(filename):
 
 setup(
     name="webweb",
-    version="0.0.29",
+    version="0.0.30",
     author="Dan Larremore; Hunter Wapman",
     author_email="hunter.wapman@gmail.com",
     description="webweb: an easy-to-use network visualization tool",
