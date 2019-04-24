@@ -107,6 +107,15 @@ Webweb.prototype.standardizeNetwork = function(network) {
     for (var i in network.layers) {
         network.layers[i] = this.standardizeLayer(network.layers[i]);
         network.layers[i].nodeIdMap = this.getNodeIdMap(network.layers[i]);
+
+        for (var j in network.layers[i].edgeList) {
+            var edge = network.layers[i].edgeList[j];
+            var source = edge[0];
+            var target = edge[1];
+
+            network.layers[i].edgeList[j][0] = isNaN(source) ? source : +source;
+            network.layers[i].edgeList[j][1] = isNaN(target) ? target : +target;
+        }
     }
 
     return network;
@@ -143,6 +152,7 @@ Webweb.prototype.getNodeIdMap = function(network) {
     nodeNames.forEach(function(name) {
         if (nodeIdMap[name] == undefined) {
             nodeIdMap[name] = unusedId;
+            nodeIdMap[+name] = unusedId;
             unusedId += 1;
         }
     });
@@ -153,6 +163,11 @@ Webweb.prototype.getNodeIdMap = function(network) {
         if (isInt(key) && key >= unusedName) {
             unusedName = key + 1;
         }
+    }
+
+    var count = 0;
+    for (var i in nodeIdMap) {
+        count += 1;
     }
 
     var displayMetadataValuesCount = metadataValuesCount(this.display.metadata);
@@ -176,6 +191,20 @@ Webweb.prototype.getNodeIdMap = function(network) {
     }
 
     return nodeIdMap;
+}
+Webweb.prototype.getNodeCount = function(network) {
+    var nodeIdMap = this.getNodeIdMap(network);
+
+    var count = 0;
+    for (var node in nodeIdMap) {
+        var nodeId = nodeIdMap[node];
+        if (nodeId > count) {
+            count = nodeId
+        }
+    }
+    // those were indexes; add one
+    count += 1;
+    return count;
 }
 Webweb.prototype.standardizeLayer = function(layer) {
     if (this.display.metadata == undefined) {
@@ -217,7 +246,7 @@ Webweb.prototype.createNodes = function() {
     for (var i in this.networks) {
         var network = this.networks[i];
         for (var i in network.layers) {
-            var nodeCount = getObjetPropertyCount(network.layers[i].nodeIdMap);
+            var nodeCount = this.getNodeCount(network.layers[i]);
 
             if (nodeCount > this.maxNodeCount) {
                 this.maxNodeCount = nodeCount;
@@ -420,7 +449,7 @@ Link.prototype.drawSVG = function() {
 // adds/removes nodes from the visualization
 ////////////////////////////////////////////////////////////////////////////////
 Webweb.prototype.setVisibleNodes = function() {
-    var count = getObjetPropertyCount(webweb.displayedNetworkData().nodeIdMap);
+    var count = this.getNodeCount(webweb.displayedNetworkData());
 
     if (! count) {
         count = this.maxNodeCount;
