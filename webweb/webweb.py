@@ -14,10 +14,10 @@ import copy
 import json
 import webbrowser
 import tempfile
-from collections import defaultdict
+
 
 class Web(dict):
-    """a webweb object. 
+    """a webweb object.
     a collection of named webweb Network objects, a set of display parameters, and a title
     """
     def __init__(self, adjacency=[], title="webweb", display={}, **kwargs):
@@ -71,7 +71,7 @@ class Web(dict):
     def save(self, path):
         """saves the webweb visualization to the specified path
 
-        parameters: 
+        parameters:
         - path: the path to save to.
         """
         with open(path, 'w') as f:
@@ -84,9 +84,9 @@ class Web(dict):
     @property
     def json(self, title=None):
         data = {
-            "display" : vars(self.display),
-            'networks' : { name : vars(data) for name, data in vars(self.networks).items()},
-            "title" : self.title,
+            "display": vars(self.display),
+            'networks': {name: vars(data) for name, data in vars(self.networks).items()},
+            "title": self.title,
         }
 
         return json.dumps(self.safe_serialize(data))
@@ -96,7 +96,7 @@ class Web(dict):
         if type(data) == list:
             return [self.safe_serialize(x) for x in data]
         elif type(data) == dict:
-            return {self.safe_serialize(key) : self.safe_serialize(val) for key, val in data.items()}
+            return {self.safe_serialize(key): self.safe_serialize(val) for key, val in data.items()}
         else:
             if type(data) in [str, int, float]:
                 return data
@@ -135,10 +135,12 @@ class Web(dict):
             webwebjs=self.get_client_content('js', 'webweb.v5.js'),
         )
 
+
 class Display(dict):
     def __init__(self, kwargs):
         for key, val in kwargs.items():
             setattr(self, key, val)
+
 
 class Networks(dict):
     def __getattr__(self, name, **kwargs):
@@ -146,6 +148,7 @@ class Networks(dict):
             self.__dict__[name] = Network(**kwargs)
 
         return self.__dict__[name]
+
 
 class Network(dict):
     """a webweb Network object"""
@@ -188,28 +191,28 @@ class Network(dict):
         - nodes: dict of node attribute dicts
         ```json
         {
-            'key1' : {
-                'attribute1' : 'value1',
+            'key1': {
+                'attribute1': 'value1',
                 ...
             },
             ...
         }
         ```
-        - metadata: dict of vectorized metadata and display information. 
+        - metadata: dict of vectorized metadata and display information.
         ```python
         {
-            'attribute' : {
-                'values' : [ "attribute_value", ...],
+            'attribute': {
+                'values': [ "attribute_value", ...],
 
                 # `categories` only needs to be supplied if `values` holds
                 # categorical data that is represented by numbers.
                 # the values in the `values` array will be used as indexes to
                 # this array.
-                'categories' : ["category1", "category2", ...]
+                'categories': ["category1", "category2", ...]
 
                 # `type` only needs to be set if you're displaying binary
-                # information with 0/1 instead of True/False 
-                'type' : 'binary',
+                # information with 0/1 instead of True/False
+                'type': 'binary',
             }
         }
         ```
@@ -256,9 +259,9 @@ class Network(dict):
 
         if adjacency or nodes or metadata:
             self.layers.append({
-                'edgeList' : copy.deepcopy(adjacency),
-                'nodes' : copy.deepcopy(nodes),
-                'metadata' : copy.deepcopy(metadata),
+                'edgeList': copy.deepcopy(adjacency),
+                'nodes': copy.deepcopy(nodes),
+                'metadata': copy.deepcopy(metadata),
             })
 
     def get_adjacency_type(self, adjacency):
@@ -289,7 +292,7 @@ class Network(dict):
 
                 if weight:
                     edge_list.append([i, j, weight])
-        
+
         return edge_list
 
     def adjacency_matrix_is_symmetric(self, matrix):
@@ -301,7 +304,6 @@ class Network(dict):
 
     def get_adjacency_and_nodes_from_networkx_graph(self, G):
         """loads the edges and attributes from a networkx graph"""
-        import networkx as nx
         adj = []
 
         for u, v, d in G.edges(data=True):
@@ -310,7 +312,7 @@ class Network(dict):
                 edge.append(d['weight'])
             adj.append(edge)
 
-        nodes = { node : G.nodes[node] for node in G.nodes }
+        nodes = {node: G.nodes[node] for node in G.nodes}
 
         for node, metadata in nodes.items():
             nodes[node]['name'] = metadata.get('name', node)
@@ -330,7 +332,7 @@ class Network(dict):
 
     def read_graph_from_gml(self, gml):
         gml_nodes = gml.get('node', [])
-        node_ids = { n.get('id') for n in gml_nodes }
+        node_ids = {n.get('id') for n in gml_nodes}
 
         unused_node_id = max(list(node_ids)) + 1
         nodes = {}
@@ -338,12 +340,12 @@ class Network(dict):
             # try to find a name
             _id = node.get('id', None)
 
-            if _id == None:
+            if _id is None:
                 _id = unused_node_id
                 unused_node_id += 1
 
             nodes[_id] = {
-                'name' : self.get_name_from_gml_object(node, default=_id)
+                'name': self.get_name_from_gml_object(node, default=_id)
             }
 
             for key, value in node.items():

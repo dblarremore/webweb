@@ -39,6 +39,7 @@ function Webweb(wwdata) {
         'invertBinarySizes' : false,
         'colorBy' : 'none',
         'sizeBy' : 'none',
+        'showLegend': true,
         'scaleLinkOpacity' : false,
         'networkName' : this.networkNames[0],
         'networkLayer' : 0,
@@ -1529,12 +1530,14 @@ CanvasState.prototype.redraw = function() {
         text.draw(this.context);
     }, this);
 
-    this.webweb.legendNodes.forEach(function(node) {
-        node.draw(this.context);
-    }, this);
-    this.webweb.legendText.forEach(function(text) {
-        text.draw(this.context);
-    }, this);
+    if (this.webweb.display.showLegend) {
+        this.webweb.legendNodes.forEach(function(node) {
+            node.draw(this.context);
+        }, this);
+        this.webweb.legendText.forEach(function(text) {
+            text.draw(this.context);
+        }, this);
+    }
 }
 
 CanvasState.prototype.getMouseState = function(event) {
@@ -2011,13 +2014,16 @@ function saveIt(fileName, fileType, content) {
         alert("can't save :(");
     }
 }
-function writeSVGDownloadLink() {
+function getSVGHTML(){
     var svg = drawSVG();
     svg.setAttribute("title", webweb.display.networkName);
-    svg.setAttribute("version", 1.1)
-    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg")
-
-    saveIt(webweb.display.networkName, "image/svg+xml", svg.outerHTML);
+    svg.setAttribute("version", 1.1);
+    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    return svg.outerHTML;
+}
+function writeSVGDownloadLink() {
+    html = getSVGHTML();
+    saveIt(webweb.display.networkName, "image/svg+xml", html);
 };
 function drawSVG() {
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -2033,12 +2039,14 @@ function drawSVG() {
         svg.appendChild(text.drawSVG());
     });
 
-    webweb.legendNodes.forEach(function(node) {
-        svg.appendChild(node.drawSVG());
-    });
-    webweb.legendText.forEach(function(text) {
-        svg.appendChild(text.drawSVG());
-    });
+    if (webweb.display.showLegend) {
+        webweb.legendNodes.forEach(function(node) {
+            svg.appendChild(node.drawSVG());
+        });
+        webweb.legendText.forEach(function(text) {
+            svg.appendChild(text.drawSVG());
+        });
+    }
 
     return svg;
 }
