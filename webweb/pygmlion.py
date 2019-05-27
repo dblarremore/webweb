@@ -57,6 +57,7 @@ def get_gml(filename, validate=True):
     formatted = format_gml_dict(content)
     return formatted
 
+
 def get_raw_gml(filename, validate=True):
     with open(filename, 'r') as f:
         lines = [l.strip() for l in f.readlines()]
@@ -71,14 +72,17 @@ def get_raw_gml(filename, validate=True):
 
     return formatted
 
+
 def write_gml(content, filename):
     if type(content) == dict:
         content = convert_gml_dict_to_tuple_list(content)
-    
+
     to_write = [create_element(k, v).write() for k, v in content]
 
     with open(filename, 'w') as f:
         f.write("\n".join(to_write) + "\n")
+
+
 ################################################################################
 #
 #
@@ -100,7 +104,7 @@ def format_gml_dict(value):
         for key, subvalue in value:
             if key == 'comment':
                 continue
-            
+
             if type(subvalue) != list:
                 formatted[key] = subvalue
             else:
@@ -109,8 +113,8 @@ def format_gml_dict(value):
 
                 formatted[key].append(format_gml_dict(subvalue))
 
-
     return formatted
+
 
 def convert_gml_dict_to_tuple_list(content):
     graph_data = content.pop('graph', None)
@@ -131,6 +135,7 @@ def convert_gml_dict_to_tuple_list(content):
 
     return converted
 
+
 def to_tuple_list(item):
     converted = []
     for key, value in item.items():
@@ -143,6 +148,7 @@ def to_tuple_list(item):
             converted.append((key, value))
 
     return converted
+
 
 def create_element(key, value):
     if type(value) is str:
@@ -157,8 +163,9 @@ def create_element(key, value):
     elif type(value) is list:
         return ListAttribute(
             key=key,
-            value=[ create_element(k, v) for k, v in value]
+            value=[create_element(k, v) for k, v in value]
         )
+
 
 ################################################################################
 #
@@ -186,6 +193,7 @@ class GenericAttribute(object):
     def __repr__(self):
         return self.__str__()
 
+
 class LineComment(GenericAttribute):
     def __init__(self, lines=[], key='comment', value=''):
         super().__init__(lines=lines, key=key, value=value)
@@ -193,7 +201,8 @@ class LineComment(GenericAttribute):
     def read(self):
         self.value = self.line
 
-    def is_type(self, lines):
+    @staticmethod
+    def is_type(lines):
         return lines[0].startswith('#')
 
     def __str__(self):
@@ -218,7 +227,8 @@ class KeyValueAttribute(GenericAttribute):
         >>> str(KeyValueAttribute(key='test', value='passes'))
         'test passes (Generic)'
         """
-        return "{content} ({kind})".format(kind=self.kind, content=self.write())
+        return "{content} ({kind})".format(kind=self.kind,
+                                           content=self.write())
 
     def write(self):
         """
@@ -286,6 +296,7 @@ class KeyValueAttribute(GenericAttribute):
         if unconsumed:
             self.unconsumed = [unconsumed.strip()] + self.unconsumed
 
+
 class StringAttribute(KeyValueAttribute):
     """A key/value pair where the value is a quoted string."""
     kind = 'String'
@@ -318,7 +329,7 @@ class StringAttribute(KeyValueAttribute):
 
         if value[0] != '"':
             return False
-        
+
         try:
             self.get_value_and_unconsumed(value)
             return True
@@ -343,7 +354,9 @@ class StringAttribute(KeyValueAttribute):
         >>> StringAttribute(key='test', value='passes').write()
         'test "passes"'
         """
-        return '{key} "{value}"'.format(key=self.key, value=self.value).rstrip()
+        return '{key} "{value}"'.format(key=self.key,
+                                        value=self.value).rstrip()
+
 
 class IntegerAttribute(KeyValueAttribute):
     """A key/value pair where the value is an unquoted signed integer."""
@@ -383,12 +396,13 @@ class IntegerAttribute(KeyValueAttribute):
 
         return True
 
+
 class FloatAttribute(KeyValueAttribute):
     """A key/value pair where the value is an unquoted signed real number in
     double precision."""
     kind = 'Float'
 
-    def typecast_value(self,value):
+    def typecast_value(self, value):
         """
         >>> FloatAttribute().typecast_value(1)
         1.0
@@ -429,10 +443,12 @@ class FloatAttribute(KeyValueAttribute):
 
         return True
 
+
 class ListAttribute(GenericAttribute):
     kind = 'List'
 
-    def __init__(self, lines=[], key='', value='', open_delimiter='[', close_delimiter=']'):
+    def __init__(self, lines=[], key='', value='', open_delimiter='[',
+                 close_delimiter=']'):
         super().__init__(lines=lines, key=key, value=value)
         self.open_delimiter = open_delimiter
         self.close_delimiter = close_delimiter
@@ -484,11 +500,11 @@ class ListAttribute(GenericAttribute):
 
             self.close_context(unconsumed)
 
-
         self.value = value
         self.unconsumed = unconsumed
 
-    def get_key(self, line):
+    @staticmethod
+    def get_key(line):
         """
         >>> ListAttribute().get_key('key')
         'key'
@@ -520,7 +536,7 @@ class ListAttribute(GenericAttribute):
                 line = lines.pop(0)
             else:
                 raise ListParseError
-        
+
         _, remaining = line.split(self.open_delimiter, 1)
 
         remaining = remaining.strip()
@@ -530,7 +546,7 @@ class ListAttribute(GenericAttribute):
 
         return lines
 
-    def should_close_context(self, lines, delimiter=']'):
+    def should_close_context(self, lines):
         """
         >>> ListAttribute(close_delimiter='|').should_close_context(['| hello'])
         True
@@ -542,7 +558,8 @@ class ListAttribute(GenericAttribute):
         else:
             return False
 
-    def close_context(self, lines):
+    @staticmethod
+    def close_context(lines):
         """
         >>> ListAttribute().close_context(['| hello', 'yes'])
         ['hello', 'yes']
@@ -556,7 +573,8 @@ class ListAttribute(GenericAttribute):
 
         return lines
 
-    def is_type(self, lines, delimiter='['):
+    @staticmethod
+    def is_type(lines, delimiter='['):
         """
         >>> ListAttribute().is_type(['1'])
         False
@@ -579,28 +597,14 @@ class ListAttribute(GenericAttribute):
 
         return False
 
-    def parse_attribute(self, lines):
+    @staticmethod
+    def parse_attribute(lines):
         subattribute = parse_line(lines)
 
         if subattribute:
             return subattribute, subattribute.unconsumed
         else:
             return None, []
-
-        # subattributes = []
-        # unconsumed = []
-        # if subattribute:
-        #     subattributes.append(subattribute)
-        #     unconsumed = subattribute.unconsumed
-
-        # if unconsumed:
-        #     if self.should_close_context(unconsumed):
-        #         unconsumed = self.close_context(unconsumed)
-        #     else:
-        #         other_subattributes, unconsumed = self.parse_attribute(unconsumed)
-        #         subattributes += other_subattributes
-
-        # return subattributes, unconsumed
 
     def value_string(self, to_write=False):
         value_strings = []
@@ -618,7 +622,6 @@ class ListAttribute(GenericAttribute):
 
         return value_string
 
-
     def __str__(self):
         return "{key} ({kind}): [{value}]".format(
             kind=self.kind,
@@ -631,6 +634,7 @@ class ListAttribute(GenericAttribute):
             key=self.key,
             value=self.value_string(to_write=True),
         )
+
 
 ################################################################################
 #
@@ -664,6 +668,7 @@ def parse_line(lines):
             attribute.read()
             return attribute
 
+
 def parse_lines(lines):
     attribute = parse_line(lines)
 
@@ -672,6 +677,7 @@ def parse_lines(lines):
     else:
         # if we couldn't parse the line, move on
         return None, lines[1:]
+
 
 def format_parsed_content(parsed, validate=True):
     all_attributes = []
@@ -685,7 +691,7 @@ def format_parsed_content(parsed, validate=True):
                 if sub.key == 'edge':
                     if validate and not edge_is_valid(value):
                         raise EdgeError
-                
+
                 graph_attributes.append((sub.key, value))
 
             all_attributes.append(('graph', graph_attributes))
@@ -697,11 +703,13 @@ def format_parsed_content(parsed, validate=True):
 
     return all_attributes
 
+
 def format_value(attribute):
     if type(attribute) == ListAttribute:
-        return [( sub.key, format_value(sub) ) for sub in attribute.value ]
+        return [(sub.key, format_value(sub)) for sub in attribute.value]
     else:
         return attribute.value
+
 
 def ids_are_valid(content):
     ids_dict = {}
@@ -710,6 +718,7 @@ def ids_are_valid(content):
             ids_dict[_id] = True
         else:
             raise DuplicateIdsError(message="duplicate id: {}".format(_id))
+
 
 def get_ids(_object):
     ids = []
@@ -730,6 +739,7 @@ def get_ids(_object):
 
     return ids
 
+
 def edge_is_valid(edge):
     """
     >>> edge_is_valid([('source', 1), ('target', 1)])
@@ -747,8 +757,9 @@ def edge_is_valid(edge):
             has_source = True
         if key == 'target':
             has_target = True
-    
+
     return has_source and has_target
+
 
 ################################################################################
 #
@@ -769,19 +780,25 @@ class ListParseError(Exception):
     """raised when a list is poorly formatted"""
     pass
 
+
 class BooleanParseError(Exception):
     """raised when a boolean is poorly formatted"""
     pass
+
 
 class EdgeError(Exception):
     """raised when an edge is missing `source` or `target`"""
     pass
 
+
 class DuplicateIdsError(Exception):
     """raised when we've found duplicate ids"""
+
     def __init__(self, message):
         super().__init__(message)
 
+
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod()

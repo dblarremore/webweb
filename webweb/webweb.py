@@ -14,12 +14,16 @@ import copy
 import json
 import webbrowser
 import tempfile
+import numpy as np
+
+from webweb import pygmlion
 
 
 class Web(dict):
     """a webweb object.
     a collection of named webweb Network objects, a set of display parameters, and a title
     """
+
     def __init__(self, adjacency=[], title="webweb", display={}, **kwargs):
         """parameters:
         - adjacency: adjacency to make a visulization from. see `Network.add_layer`
@@ -82,10 +86,11 @@ class Web(dict):
         return os.path.join(tempfile.gettempdir(), "webweb.html")
 
     @property
-    def json(self, title=None):
+    def json(self):
         data = {
             "display": vars(self.display),
-            'networks': {name: vars(data) for name, data in vars(self.networks).items()},
+            'networks': {name: vars(data) for name, data in
+                         vars(self.networks).items()},
             "title": self.title,
         }
 
@@ -96,13 +101,13 @@ class Web(dict):
         if type(data) == list:
             return [self.safe_serialize(x) for x in data]
         elif type(data) == dict:
-            return {self.safe_serialize(key): self.safe_serialize(val) for key, val in data.items()}
+            return {self.safe_serialize(key): self.safe_serialize(val) for
+                    key, val in data.items()}
         else:
             if type(data) in [str, int, float]:
                 return data
             else:
                 try:
-                    import numpy as np
                     return data.item()
                 except:
                     return data
@@ -152,6 +157,7 @@ class Networks(dict):
 
 class Network(dict):
     """a webweb Network object"""
+
     def __init__(self, **kwargs):
         """calling a `webweb.Network` object sets the first layer of that
         `webweb.Network` object using the parameters passed.
@@ -165,9 +171,9 @@ class Network(dict):
         if len(kwargs.keys()):
             self.__call__(**kwargs)
 
-    def get_gml_graphs(self, gml_file):
+    @staticmethod
+    def get_gml_graphs(gml_file):
         sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-        import pygmlion
         return pygmlion.get_gml(gml_file).pop('graph', [])
 
     def __call__(self, **kwargs):
@@ -177,12 +183,14 @@ class Network(dict):
         gml_file = kwargs.pop('gml_file', '')
         if gml_file:
             for graph in self.get_gml_graphs(gml_file):
-                kwargs['adjacency'], kwargs['nodes'] = self.read_graph_from_gml(graph)
+                kwargs['adjacency'], kwargs[
+                    'nodes'] = self.read_graph_from_gml(graph)
                 self.add_layer(**kwargs)
         elif len(kwargs.keys()):
             self.add_layer(**kwargs)
 
-    def add_layer(self, adjacency=[], adjacency_type=None, nodes={},  metadata=None, nx_G=None, gml_file=None):
+    def add_layer(self, adjacency=[], adjacency_type=None, nodes={},
+                  metadata=None, nx_G=None, gml_file=None):
         """adds a layer to the network.
 
         parameters:
@@ -237,14 +245,14 @@ class Network(dict):
         """
         if len(adjacency):
             try:
-                import numpy as np
                 if type(adjacency) is np.ndarray:
                     adjacency = adjacency.tolist()
             except:
                 pass
 
         if nx_G:
-            adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(nx_G)
+            adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(
+                nx_G)
         elif gml_file:
             graphs = self.get_gml_graphs(gml_file)
 
@@ -264,7 +272,8 @@ class Network(dict):
                 'metadata': copy.deepcopy(metadata),
             })
 
-    def get_adjacency_type(self, adjacency):
+    @staticmethod
+    def get_adjacency_type(adjacency):
         if len(adjacency) and len(adjacency) > 3:
             # we use a dumb heuristic here:
             # if the length of the list is the same as the length of the first
@@ -295,14 +304,16 @@ class Network(dict):
 
         return edge_list
 
-    def adjacency_matrix_is_symmetric(self, matrix):
+    @staticmethod
+    def adjacency_matrix_is_symmetric(matrix):
         for i in range(len(matrix)):
             for j in range(len(matrix)):
                 if matrix[i][j] != matrix[j][i]:
                     return False
         return True
 
-    def get_adjacency_and_nodes_from_networkx_graph(self, G):
+    @staticmethod
+    def get_adjacency_and_nodes_from_networkx_graph(G):
         """loads the edges and attributes from a networkx graph"""
         adj = []
 
@@ -319,7 +330,8 @@ class Network(dict):
 
         return adj, nodes
 
-    def get_name_from_gml_object(self, attribute, default=0):
+    @staticmethod
+    def get_name_from_gml_object(attribute, default=0):
         name_priorities = ['id', 'label', 'name']
         name = default
         for key in name_priorities:
