@@ -7,17 +7,18 @@ with open('test_data.json', 'r') as f:
 layers = test_content['layers']
 display = test_content['display']
 
-web = Web(title='test_visualization', display=display, adjacency=[[0, 1, 2], [1, 2, 3]])
+web = Web(title='test_visualization', display=display,
+          adjacency=[[0, 1, 2], [1, 2, 3]])
 
 web.networks.test_visualization.layers[0]['nodes'] = {
-    0 : {
-        'name' : 'Dan',
+    0: {
+        'name': 'Dan',
     },
-    1 : {
-        'name' : 'Hunter',
+    1: {
+        'name': 'Hunter',
     },
-    2 : {
-        'name' : 'Steve',
+    2: {
+        'name': 'Steve',
     },
 }
 
