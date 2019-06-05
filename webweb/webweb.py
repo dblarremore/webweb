@@ -8,15 +8,14 @@
 # daniel.larremore@colorado.edu
 # http://github.com/dblarremore/webweb Comments and suggestions always welcome.
 
-import sys
-import os
 import copy
 import json
 import webbrowser
 import tempfile
 import numpy as np
+from pathlib import Path
 
-from webweb import pygmlion
+from . import pygmlion
 
 
 class Web(dict):
@@ -39,38 +38,51 @@ class Web(dict):
             kwargs['adjacency'] = adjacency
             getattr(self.networks, self.title)(**kwargs)
 
-    @property
-    def base_path(self):
-        return os.path.dirname(os.path.realpath(__file__))
+    @staticmethod
+    def base_path():
+        return Path(__file__).resolve().parent
 
-    @property
-    def client_path(self):
-        par_dir = os.path.join(self.base_path, os.pardir)
+    @classmethod
+    def development_client_path(cls):
+        return cls.base_path().joinpath('client')
 
-        par_dir_client = os.path.join(par_dir, 'client')
+    @classmethod
+    def client_path(cls):
+        """
+        there are two cases:
+        1. where the client directory is local to this file's directory (when
+           we distribute via pip)
+        2. where the client directory is in the parent directory (local development)
+        """
+        development_client_path = cls.development_client_path()
 
-        if os.path.exists(par_dir_client):
-            return par_dir_client
+        if development_client_path.exists():
+            client_path = development_client_path
         else:
-            return os.path.abspath(os.path.join(self.base_path, 'client'))
+            client_path = cls.base_path().joinpath('client')
 
-    def get_client_content(self, dir_name, file_name):
-        content_path = os.path.join(self.client_path, dir_name, file_name)
+        return client_path
 
-        with open(content_path, 'r') as f:
-            content = f.read()
+    @classmethod
+    def client_file_path(cls, dir_name, file_name):
+        return cls.client_path().joinpath(dir_name, file_name)
 
-        return content
+    @classmethod
+    def get_client_file_content(cls, dir_name, file_name):
+        return cls.client_file_path(dir_name, file_name).read_text()
+
+    @staticmethod
+    def html_path():
+        return Path(tempfile.gettempdir()).joinpath('webweb.html')
 
     def show(self):
         """display the webweb visualization.
         - creates the html file
         - opens the web browser
         """
-        with open(self.html_file, 'w') as f:
-            f.write(self.html)
-
-        webbrowser.open_new("file://" + self.html_file)
+        path = self.html_path()
+        path.write_text(self.html)
+        webbrowser.open_new("file:/" + str(path.resolve()))
 
     def save(self, path):
         """saves the webweb visualization to the specified path
@@ -80,10 +92,6 @@ class Web(dict):
         """
         with open(path, 'w') as f:
             f.write(self.html)
-
-    @property
-    def html_file(self):
-        return os.path.join(tempfile.gettempdir(), "webweb.html")
 
     @property
     def json(self):
@@ -131,13 +139,13 @@ class Web(dict):
             </html>
         """.format(
             title=self.title,
-            d3js=self.get_client_content('js', 'd3.v5.min.js'),
-            style=self.get_client_content('css', 'style.css'),
-            colorsjs=self.get_client_content('js', 'colors.js'),
-            blobjs=self.get_client_content('js', 'Blob.js'),
-            filesaverjs=self.get_client_content('js', 'FileSaver.min.js'),
+            d3js=self.get_client_file_content('js', 'd3.v5.min.js'),
+            style=self.get_client_file_content('css', 'style.css'),
+            colorsjs=self.get_client_file_content('js', 'colors.js'),
+            blobjs=self.get_client_file_content('js', 'Blob.js'),
+            filesaverjs=self.get_client_file_content('js', 'FileSaver.min.js'),
             json=self.json,
-            webwebjs=self.get_client_content('js', 'webweb.v5.js'),
+            webwebjs=self.get_client_file_content('js', 'webweb.v5.js'),
         )
 
 
@@ -173,7 +181,6 @@ class Network(dict):
 
     @staticmethod
     def get_gml_graphs(gml_file):
-        sys.path.append(os.path.dirname(os.path.realpath(__file__)))
         return pygmlion.get_gml(gml_file).pop('graph', [])
 
     def __call__(self, **kwargs):
@@ -243,12 +250,8 @@ class Network(dict):
         - nx_G
         - gml_file
         """
-        if len(adjacency):
-            try:
-                if type(adjacency) is np.ndarray:
-                    adjacency = adjacency.tolist()
-            except:
-                pass
+        if len(adjacency) and isinstance(adjacency, np.ndarray):
+            adjacency = adjacency.tolist()
 
         if nx_G:
             adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(

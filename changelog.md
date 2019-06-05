@@ -1,3 +1,8 @@
+## 20190605 - 0.0.33
+
+- automated testing for python
+- node names will be displayed at a slightly higher simulation temperature
+
 ## 20190526 - 0.0.32
 
 - added `display.showLegend` which defaults to = `True`. If `True`, will draw the legend.

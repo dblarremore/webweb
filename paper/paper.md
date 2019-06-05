@@ -38,6 +38,6 @@ For scientific publications, ``webweb`` features a _Save to SVG_ button, allowin
 
 # Acknowledgements
 
-The authors acknowledge contributions from Michael Iuzzulino and Tzu-Chi Yen, and the feedback of Allison C. Morgan and Samuel F. Way.
+The authors acknowledge contributions from Michael Iuzzulino and Tzu-Chi Yen, and the feedback of Allison C. Morgan and Samuel F. Way, all while at the University of Colorado, Boulder.
 
 # References

@@ -1,10 +1,12 @@
 # webweb
 
-**webweb** is a tool for creating, displaying, and sharing interactive network visualizations on the web, designed for simplicity and ease of use. It's made for users of Python, NetworkX, and MATLAB. (If you're an R user, and want to write an interface for R, get in touch!)
+**webweb** is a tool for creating, displaying, and sharing interactive network
+visualizations on the web, designed for simplicity and ease of use. It's made
+for users of Python, NetworkX, and MATLAB. (If you're an R user, and want to
+write an interface for R, get in touch!)
 
-Head to the [webweb documentation page](https://webwebpage.github.io) for complete instructions, examples, and documentation!
-
-[//]: # (![Infinite Jest webweb](infinite_jest.png)
+Head to the [webweb documentation page](https://webwebpage.github.io) for
+complete instructions, examples, and documentation!
 
 ## Installing
 
@@ -13,6 +15,13 @@ python and networkx:
 
 matlab: 
 `git clone https://github.com/dblarremore/webweb`
+
+### Requirements
+
+- numpy
+- networkx (for networkx functionality)
+
+Python 2 is not supported, but might work.
 
 ## The simplest example
 python: 

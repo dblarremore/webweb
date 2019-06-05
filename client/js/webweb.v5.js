@@ -330,7 +330,7 @@ Node.prototype.pushNodeText = function() {
     var radius = this.radius();
     if (! this.nonInteractive) {
         if (this.matchesString() || webweb.display.showNodeNames || this.containsMouse(radius)) {
-            if (webweb.simulation.alpha() < .01) {
+            if (webweb.simulation.alpha() < .05 || webweb.display.freezeNodeMovement) {
                 var text = this.name || this.idx;
                 var textX = this.x + 1.1 * radius;
                 var textY = this.y - 1.1 * radius;
