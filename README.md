@@ -56,6 +56,10 @@ If you find a bug, create an issue! We want webweb to be as great as possible.
 
 If you want to implement an interface for webweb in another language, go ahead! We'll happily help.
 
+The easiest way for us to handle this is if you fork the repository and work on a branch named for the feature or bug you're working on.
+
+## Using webweb
+
 If you repurpose or hack this code to do something else, we'd love to hear about it! 
 
 If you use webweb to make figures for an academic paper, no citation is needed, but if you let us know and we'll will post a link to your publication [here](https://webwebpage.github.io/in-the-wild/).
