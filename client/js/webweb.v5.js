@@ -675,7 +675,6 @@ Webweb.prototype.createLinks = function() {
     }
 
     // push all the links to the list: links
-    var weights = [];
     for (var i in networkData.edgeList) {
         var edge = networkData.edgeList[i];
         var source = nodeIdMap[edge[0]];
@@ -683,8 +682,6 @@ Webweb.prototype.createLinks = function() {
 
         // if there's no edge weight, default it to 1
         var weight = edge.length == 3 ? parseFloat(edge[2]) : 1;
-
-        weights.push(weight);
 
         if (source <= target) {
             linkMatrix[source][target] += weight;
@@ -699,6 +696,7 @@ Webweb.prototype.createLinks = function() {
         this.nodes[target].strength += weight;
     }
 
+    var edgeWeights = [];
     this.links = [];
     for (var source in linkMatrix) {
         for (var target in linkMatrix[source]) {
@@ -709,6 +707,7 @@ Webweb.prototype.createLinks = function() {
                     linkMatrix[source][target],
                 ));
             }
+            edgeWeights.push(linkMatrix[source][target]);
         }
     }
 
@@ -723,8 +722,8 @@ Webweb.prototype.createLinks = function() {
         delete this.allMetadata.strength;
     }
 
-    this.scales.links.width.domain(d3.extent(weights));
-    this.scales.links.opacity.domain(d3.extent(weights));
+    this.scales.links.width.domain(d3.extent(edgeWeights));
+    this.scales.links.opacity.domain(d3.extent(edgeWeights));
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Webweb:
@@ -1204,7 +1203,7 @@ function toggleLinkWidthScaling(checked) {
     webweb.canvas.redraw();
 }
 function toggleLinkOpacityScaling(checked) {
-    var range = checked ? [0.4, 0.9] : [1, 1];
+    var range = checked ? [0.3, 0.9] : [1, 1];
     webweb.display.scaleLinkOpacity = checked;
     webweb.scales.links.opacity.range(range);
     webweb.canvas.redraw();

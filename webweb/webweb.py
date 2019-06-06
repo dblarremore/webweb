@@ -43,8 +43,12 @@ class Web(dict):
         return Path(__file__).resolve().parent
 
     @classmethod
-    def development_client_path(cls):
+    def production_client_path(cls):
         return cls.base_path().joinpath('client')
+
+    @classmethod
+    def development_client_path(cls):
+        return cls.base_path().parent.joinpath('client')
 
     @classmethod
     def client_path(cls):
@@ -54,12 +58,13 @@ class Web(dict):
            we distribute via pip)
         2. where the client directory is in the parent directory (local development)
         """
+        production_client_path = cls.production_client_path()
         development_client_path = cls.development_client_path()
 
         if development_client_path.exists():
             client_path = development_client_path
         else:
-            client_path = cls.base_path().joinpath('client')
+            client_path = production_client_path
 
         return client_path
 

@@ -1,3 +1,8 @@
+## 20190606 - 0.0.34
+
+- fixed bug where links opacity and width were scaled without taking into account repeated edges. [issue](https://github.com/dblarremore/webweb/issues/43)
+- fixed loading of development client resources (non-user facing issue)
+
 ## 20190605 - 0.0.33
 
 - automated testing for python

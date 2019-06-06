@@ -19,20 +19,26 @@ def test_base_path():
     assert actual_path == expected_path
 
 
-def test_development_client_path():
+def test_production_client_path():
     expected_path = webweb_path().joinpath('client')
+    actual_path = Web().production_client_path()
+    assert actual_path == expected_path
+
+
+def test_development_client_path():
+    expected_path = webweb_path().parent.joinpath('client')
     actual_path = Web().development_client_path()
     assert actual_path == expected_path
 
 
 def test_client_path():
-    expected_path = webweb_path().joinpath('client')
+    expected_path = webweb_path().parent.joinpath('client')
     actual_path = Web().client_path()
     assert actual_path == expected_path
 
 
 def test_client_file_path():
-    expected_path = webweb_path().joinpath('client', 'css', 'style.css')
+    expected_path = webweb_path().parent.joinpath('client', 'css', 'style.css')
     actual_path = Web().client_file_path('css', 'style.css')
     assert actual_path == expected_path
 
