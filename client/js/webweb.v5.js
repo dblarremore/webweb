@@ -1949,14 +1949,6 @@ function writeMenus(container) {
                 },
                 'value' : webweb.display.r,
             },
-            'nameToMatch' : {
-                'text' : 'Highlight nodes named: ',
-                'functions' : {
-                    'input' : matchNodesNamed,
-                },
-                'value' : webweb.display.nameToMatch,
-                'size' : 10,
-            },
             'showNodeNames' : {
                 'text' : 'Show node names ',
                 'type' : 'checkbox',
@@ -1964,6 +1956,14 @@ function writeMenus(container) {
                     'input' : toggleShowNodeNames,
                 },
                 'value' : webweb.display.showNodeNames,
+                'size' : 10,
+            },
+            'nameToMatch' : {
+                'text' : 'Highlight nodes named: ',
+                'functions' : {
+                    'input' : matchNodesNamed,
+                },
+                'value' : webweb.display.nameToMatch,
                 'size' : 10,
             },
         }

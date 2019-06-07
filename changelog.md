@@ -1,3 +1,7 @@
+## 20190607 - 0.0.35
+
+- put `Show node names` widget above of `Highlight nodes named` widget
+
 ## 20190606 - 0.0.34
 
 - fixed bug where links opacity and width were scaled without taking into account repeated edges. [issue](https://github.com/dblarremore/webweb/issues/43)
