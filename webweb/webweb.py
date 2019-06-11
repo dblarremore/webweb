@@ -87,7 +87,7 @@ class Web(dict):
         """
         path = self.html_path()
         path.write_text(self.html)
-        webbrowser.open_new("file:/" + str(path.resolve()))
+        webbrowser.open_new("file://" + str(path))
 
     def save(self, path):
         """saves the webweb visualization to the specified path

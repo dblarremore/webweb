@@ -1,3 +1,7 @@
+## 20190607 - 0.0.36
+
+- fixed bug introduced in `0.0.33` on linux where files won't pop up
+
 ## 20190607 - 0.0.35
 
 - put `Show node names` widget above of `Highlight nodes named` widget
