@@ -1197,7 +1197,7 @@ function getBinaryValues(type) {
     return [getBinaryValue(false, type), getBinaryValue(true, type)];
 }
 function toggleLinkWidthScaling(checked) {
-    var range = checked ? [0.5, 4] : [1, 1];
+    var range = checked ? [0.5, 2] : [1, 1];
     webweb.display.scaleLinkWidth = checked;
     webweb.scales.links.width.range(range);
     webweb.canvas.redraw();
