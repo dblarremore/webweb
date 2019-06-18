@@ -1,12 +1,14 @@
-# Python version of webweb was originally created by Michael Iuzzolino
+# Python version of webweb originally created by Michael Iuzzolino
 # Cleaned up and harmonized with existing versions by Daniel Larremore
-# Altered significantly by Hunter Wapman
-# version 4
+# Altered significantly and maintained by Hunter Wapman
 #
 # Daniel Larremore + Contributors
 # January 10, 2019
 # daniel.larremore@colorado.edu
 # http://github.com/dblarremore/webweb Comments and suggestions always welcome.
+
+__version__ = '0.0.37'
+__authors__ = 'Daniel Larremore; Hunter Wapman'
 
 import copy
 import json
@@ -14,6 +16,7 @@ import webbrowser
 import tempfile
 import numpy as np
 from pathlib import Path
+import uuid
 import sys
 
 sys.path.append(str(Path(__file__).parent))
@@ -42,11 +45,12 @@ class Web(dict):
         - `web = Web(adjacency=[[0, 1]], title='a web woohoo')`
 
         parameters:
-        - adjacency: edge list or adjacency matrix
-        - title: string. Will set the html title of the visualization if display.attachWebwebToElementWithId = None
-        - display: dictionary of display parameters
-        - adjacency_type: string. 'matrix' or 'edge list'
-        - nodes: dict of node attribute dicts
+        - `adjacency`: edge list or adjacency matrix
+        - `title`: string. Will set the html title of the visualization if
+          `display.attachWebwebToElementWithId = None`
+        - `display`: dictionary of display parameters
+        - `adjacency_type`: string. 'matrix' or 'edge list'
+        - `nodes`: dict of node attribute dicts
         ```json
         {
             'key1': {
@@ -56,7 +60,7 @@ class Web(dict):
             ...
         }
         ```
-        - metadata: dict of vectorized metadata and display information.
+        - `metadata`: dict of vectorized metadata and display information.
         ```python
         {
             'attribute': {
@@ -74,8 +78,8 @@ class Web(dict):
             }
         }
         ```
-        - nx_G: a networkx graph.
-        - gml_file: path to a gml file
+        - `nx_G`: a networkx graph.
+        - `gml_file`: path to a gml file
 
         ---
 
@@ -140,8 +144,11 @@ class Web(dict):
         return cls.client_file_path(dir_name, file_name).read_text()
 
     @staticmethod
-    def html_path():
-        return Path(tempfile.gettempdir()).joinpath('webweb.html')
+    def html_path(unique=True):
+        filename = str(uuid.uuid4()) + '-' if unique else ''
+        filename += 'webweb.html'
+
+        return Path(tempfile.gettempdir()).joinpath(filename)
 
     def show(self):
         """display the webweb visualization.
@@ -183,9 +190,9 @@ class Web(dict):
             if type(data) in [str, int, float]:
                 return data
             else:
-                try:
+                if hasattr(data, 'item'):
                     return data.item()
-                except:
+                else:
                     return data
 
     @property
@@ -276,9 +283,9 @@ class Network(dict):
         """adds a layer to the network.
 
         parameters:
-        - adjacency: edge list or adjacency matrix
-        - adjacency_type: string. 'matrix' or 'edge list'
-        - nodes: dict of node attribute dicts
+        - `adjacency`: edge list or adjacency matrix
+        - `adjacency_type`: string. 'matrix' or 'edge list'
+        - `nodes`: dict of node attribute dicts
         ```json
         {
             'key1': {
@@ -288,7 +295,7 @@ class Network(dict):
             ...
         }
         ```
-        - metadata: dict of vectorized metadata and display information.
+        - `metadata`: dict of vectorized metadata and display information.
         ```python
         {
             'attribute': {
@@ -306,8 +313,8 @@ class Network(dict):
             }
         }
         ```
-        - nx_G: a networkx graph.
-        - gml_file: path to a gml file
+        - `nx_G`: a networkx graph.
+        - `gml_file`: path to a gml file
 
         ---
 
@@ -318,7 +325,7 @@ class Network(dict):
         `adjacency_type` only needs to be supplied if your adjacency is
         represented as a matrix and that matrix has 3 or fewer nodes
 
-        call with at least one of:
+        no layer will be made without at least one of:
         - adjacency
         - nodes
         - metadata

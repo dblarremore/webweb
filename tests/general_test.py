@@ -51,7 +51,7 @@ def test_client_file_content():
 
 def test_html_path():
     expected_path = Path(tempfile.gettempdir()).joinpath('webweb.html')
-    actual_path = Web().html_path()
+    actual_path = Web().html_path(unique=False)
     assert actual_path == expected_path
 
 

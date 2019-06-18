@@ -1,3 +1,11 @@
+## 20190607 - 0.0.37
+
+- improved docstring [(issue)](https://github.com/dblarremore/webweb/issues/47)
+- changed import of `pygmlion` from relative to absolute so documentation can be properly generated
+- added hash to webweb file names so multiple can be shown at once [(issue)](https://github.com/dblarremore/webweb/issues/50).
+- fix link width scaling. (oops.)
+- add `__authors__` and `__version__` to the package
+
 ## 20190607 - 0.0.36
 
 - fixed bug introduced in `0.0.33` on linux where files won't pop up
