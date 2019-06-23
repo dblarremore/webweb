@@ -7,8 +7,6 @@
 # daniel.larremore@colorado.edu
 # http://github.com/dblarremore/webweb Comments and suggestions always welcome.
 
-__version__ = '0.0.37'
-__authors__ = 'Daniel Larremore; Hunter Wapman'
 
 import copy
 import json
