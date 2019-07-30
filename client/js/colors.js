@@ -1,5 +1,5 @@
 // color specifications and designs developed by Cynthia Brewer (http://colorbrewer.org/)
-var colorbrewer = {
+export const colorbrewer = {
     YlGn: {
         2: ["#f7fcb9","#addd8e"],
         3: ["#f7fcb9","#addd8e","#31a354"],

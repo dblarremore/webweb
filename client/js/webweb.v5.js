@@ -7,789 +7,28 @@
  * Comments and suggestions always welcome.
  *
  */
-var webweb;
 
-function Webweb(wwdata) {
-    this.networkNames = Object.keys(wwdata.networks);
-
-    this.scales = {
-        'nodeSize' : d3.scaleLinear().range([1, 1]),
-        'colors' : {
-            'scalar' : d3.scaleLinear().range([1, 1]),
-            'categorical' : d3.scaleOrdinal().range([1, 1]),
-        },
-        'links' : {
-            'width' : d3.scaleLinear().range([1, 1]),
-            'opacity' : d3.scaleLinear().range([0.4, 0.9]),
-        },
-    };
-
-    this.displayDefaults = {
-        'c' : 60, // charge
-        'g' : 0.1, // gravity
-        'l' : 20, // edge length
-        'r' : 5, // node radius
-        'linkStrength' : 1,
-        'colorPalette' : 'Set1',
-        'metadata' : {},
-        'nameToMatch' : "",
-        'freezeNodeMovement' : false,
-        'hideMenu' : false,
-        'invertBinaryColors' : false,
-        'invertBinarySizes' : false,
-        'colorBy' : 'none',
-        'sizeBy' : 'none',
-        'showLegend': true,
-        'scaleLinkOpacity' : false,
-        'networkName' : this.networkNames[0],
-        'networkLayer' : 0,
-    };
-
-    this.displaySynonyms = [
-        ['c', 'charge'],
-        ['g', 'gravity'],
-        ['h', 'height'],
-        ['l', 'linkLength'],
-        ['r', 'radius'],
-        ['w', 'width'],
-    ];
-
-    this.display = this.standardizeDisplayParameterSynonyms(wwdata.display);
-    this.standardizeNetworks(wwdata.networks);
-
-    this.createNodes();
-    this.createSimulation();
-
-    this.legendNodes = [];
-    this.legendText = [];
-}
-Webweb.prototype.standardizeNetworks = function(networks) {
-    this.networks = {};
-    for (var networkName in networks) {
-        var network = networks[networkName];
-        this.networks[networkName] = this.standardizeNetwork(network);
-    }
-}
-Webweb.prototype.standardizeDisplayParameterSynonyms = function(display) {
-    if (display == undefined) {
-        display = {};
-    }
-
-    for (var i in this.displaySynonyms) {
-        var key1 = this.displaySynonyms[i][0];
-        var key2 = this.displaySynonyms[i][1];
-
-        if (display[key1] == undefined && display[key2] !== undefined) {
-            display[key1] = display[key2];
-        }
-
-        delete display[key2];
-    }
-
-    for (var key in this.displayDefaults) {
-        if (display[key] == undefined) {
-            display[key] = this.displayDefaults[key];
-        }
-    }
-
-    return display;
-}
-Webweb.prototype.standardizeNetwork = function(network) {
-    if (network.layers == undefined) {
-        network.layers = [
-            {
-                'edgeList' : network.edgeList,
-                'nodes' : network.nodes,
-                'metadata' : network.metadata,
-            }
-        ];
-    }
-
-    for (var i in network.layers) {
-        network.layers[i] = this.standardizeLayer(network.layers[i]);
-        network.layers[i].nodeIdMap = this.getNodeIdMap(network.layers[i]);
-
-        for (var j in network.layers[i].edgeList) {
-            var edge = network.layers[i].edgeList[j];
-            var source = edge[0];
-            var target = edge[1];
-
-            network.layers[i].edgeList[j][0] = isNaN(source) ? source : +source;
-            network.layers[i].edgeList[j][1] = isNaN(target) ? target : +target;
-        }
-    }
-
-    return network;
-}
-Webweb.prototype.getNodeIdMap = function(network) {
-    var nodeNames = [];
-
-    network.edgeList.forEach(function(edge) {
-        nodeNames.push(edge[0]);
-        nodeNames.push(edge[1]);
-    });
-
-    if (getObjetPropertyCount(this.display.nodes) > 0) {
-        for (var i in this.display.nodes) {
-            var _id = isNaN(i) ? i : +i;
-            nodeNames.push(_id);
-        }
-    }
-
-    if (getObjetPropertyCount(network.nodes) > 0) {
-        for (var i in network.nodes) {
-            var _id = isNaN(i) ? i : +i;
-            nodeNames.push(_id);
-        }
-    }
-
-    if (allInts(nodeNames)) {
-        nodeNames.sort(function(a, b){return a-b});
-    }
-
-
-    var unusedId = 0;
-    var nodeIdMap = {};
-    nodeNames.forEach(function(name) {
-        if (nodeIdMap[name] == undefined) {
-            nodeIdMap[name] = unusedId;
-            nodeIdMap[+name] = unusedId;
-            unusedId += 1;
-        }
-    });
-
-    var unusedName = 0;
-    for (var key in nodeIdMap){
-        key = +key;
-        if (isInt(key) && key >= unusedName) {
-            unusedName = key + 1;
-        }
-    }
-
-    var count = 0;
-    for (var i in nodeIdMap) {
-        count += 1;
-    }
-
-    var displayMetadataValuesCount = metadataValuesCount(this.display.metadata);
-
-    if (displayMetadataValuesCount > unusedId) {
-        while (displayMetadataValuesCount > unusedId) {
-            nodeIdMap[unusedName] = unusedId;
-            unusedName += 1;
-            unusedId += 1;
-        }
-    }
-
-    var networkMetadataValuesCount = metadataValuesCount(network.metadata);
-
-    if (networkMetadataValuesCount > unusedId) {
-        while (networkMetadataValuesCount > unusedId) {
-            nodeIdMap[unusedName] = unusedId;
-            unusedName += 1;
-            unusedId += 1;
-        }
-    }
-
-    return nodeIdMap;
-}
-Webweb.prototype.getNodeCount = function(network) {
-    var nodeIdMap = this.getNodeIdMap(network);
-
-    var count = 0;
-    for (var node in nodeIdMap) {
-        var nodeId = nodeIdMap[node];
-        if (nodeId > count) {
-            count = nodeId
-        }
-    }
-    // those were indexes; add one
-    count += 1;
-    return count;
-}
-Webweb.prototype.standardizeLayer = function(layer) {
-    if (this.display.metadata == undefined) {
-        this.display.metadata = {};
-    }
-    if (layer.metadata !== undefined) {
-        for (var metadatum in layer.metadata) {
-            var layerMetadatum = layer.metadata[metadatum];
-
-            var displayMetadatum = {};
-            if (this.display.metadata[metadatum] !== undefined) {
-                displayMetadatum = this.display.metadata[metadatum];
-            }
-
-            if (layerMetadatum.categories !== undefined) {
-                displayMetadatum.categories = layerMetadatum.categories;
-            }
-
-            if (layerMetadatum.type !== undefined) {
-                displayMetadatum.type = layerMetadatum.type;
-            }
-
-            this.display.metadata[metadatum] = displayMetadatum;
-        }
-    }
-
-    return layer;
-}
-////////////////////////////////////////////////////////////////////////////////
-// Webweb:
-// nodes
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-// initialize the nodes (attempting to be smart about the number of them)
-////////////////////////////////////////////////////////////////////////////////
-Webweb.prototype.createNodes = function() {
-    // iterate through the networks and get their node counts
-    this.maxNodeCount = 0;
-    for (var i in this.networks) {
-        var network = this.networks[i];
-        for (var i in network.layers) {
-            var nodeCount = this.getNodeCount(network.layers[i]);
-
-            if (nodeCount > this.maxNodeCount) {
-                this.maxNodeCount = nodeCount;
-            }
-        }
-    }
-
-    this.nodes = [];
-    for (var i = 0; i < this.maxNodeCount; i++) {
-        this.nodes.push(new Node(i));
-    }
-
-    this.nodesPersistence = [];
-}
-////////////////////////////////////////////////////////////////////////////////
-// 
-// Node
-// 
-////////////////////////////////////////////////////////////////////////////////
-function Node(idx) {
-    this.idx = idx;
-}
-
-Node.prototype.radius = function() {
-    if (this.fixedRadius) {
-        return this.fixedRadius;
-    }
-
-    var radius = this.__scaledSize * webweb.display.r;
-    if (this.matchesString() || this.containsMouse(radius)) {
-        radius *= 1.3;
-    }
-
-    return radius;
-}
-Node.prototype.outline = function() {
-    if (this.matchesString() || this.containsMouse()) {
-        return "black";
-    }
-    else {
-        return d3.rgb(255, 255, 255);
-    }
-}
-Node.prototype.isMetadataKey = function(key) {
-    var nonMetadataKeys = [
-        'degree',
-        'strength',
-        'fx',
-        'fy',
-        'idx',
-        'index',
-        'vx',
-        'vy',
-        'x',
-        'y',
-    ];
-
-    if (nonMetadataKeys.indexOf(key) < 0) {
-        var attribute = this[key];
-        
-        if (attribute && {}.toString.call(attribute) !== '[object Function]') {
-            return true;
-        }
-    }
-
-    return false;
-}
-Node.prototype.draw = function(ctx) {
-    var radius = this.radius();
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, radius, 0, Math.PI * 2, false)
-    ctx.strokeStyle = this.outline();
-    ctx.stroke();
-    ctx.fillStyle = d3.rgb(this.__scaledColor);
-    ctx.fill();
-
-    this.pushNodeText();
-}
-Node.prototype.pushNodeText = function() {
-    var radius = this.radius();
-    if (! this.nonInteractive) {
-        if (this.matchesString() || webweb.display.showNodeNames || this.containsMouse(radius)) {
-            if (webweb.simulation.alpha() < .05 || webweb.display.freezeNodeMovement) {
-                var text = this.name || this.idx;
-                var textX = this.x + 1.1 * radius;
-                var textY = this.y - 1.1 * radius;
-                var font = "12px";
-                webweb.nodeText.push(new Text(text, textX, textY, font));
-            }
-        }
-    }
-}
-Node.prototype.drawSVG = function() {
-    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttributeNS(null, 'cx', this.x);
-    circle.setAttributeNS(null, 'cy', this.y);
-    circle.setAttributeNS(null, 'r', this.radius());
-    circle.setAttributeNS(null, 'style', 'fill: ' + d3.rgb(this.__scaledColor) + '; stroke: ' + this.outline() + ';' );
-
-    this.pushNodeText();
-    return circle;
-}
-Node.prototype.containsMouse = function(radius) {
-    if (webweb.canvas.mouseState == undefined) {
-        return false;
-    }
-
-    // recursion...
-    if (radius == undefined) {
-        radius = 1.3 * this.radius();
-    }
-
-    if (
-        this.x + radius >= webweb.canvas.mouseState.x &&
-        this.x - radius <= webweb.canvas.mouseState.x &&
-        this.y + radius >= webweb.canvas.mouseState.y &&
-        this.y - radius <= webweb.canvas.mouseState.y
-    ) {
-        return true;
-    }
-
-    return false;
-}
-Node.prototype.matchesString = function() {
-    var matchString = webweb.display.nameToMatch;
-    if (matchString !== undefined && matchString.length > 0) {
-        if (this.name !== undefined && this.name.indexOf(matchString) >= 0) {
-            return true;
-        }
-    }
-    
-    return false;
-}
-////////////////////////////////////////////////////////////////////////////////
-// 
-// Text
-// 
-////////////////////////////////////////////////////////////////////////////////
-function Text(value, x, y, font) {
-    this.value = value;
-    this.x = x;
-    this.y = y;
-    this.font = font;
-}
-
-Text.prototype.draw = function(ctx) {
-    ctx.save();
-    ctx.fillStyle = "black";
-    ctx.font = this.font;
-    ctx.fillText(this.value, this.x, this.y);
-    ctx.restore();
-}
-Text.prototype.drawSVG = function() {
-    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.textContent = this.value;
-    text.setAttributeNS(null, 'x', this.x);
-    text.setAttributeNS(null, 'y', this.y);
-    text.setAttributeNS(null, 'style', 'fill: black; font-size: ' + this.font + ';' );
-    return text;
-}
-////////////////////////////////////////////////////////////////////////////////
-// 
-// Link
-// 
-////////////////////////////////////////////////////////////////////////////////
-function Link(source, target, weight) {
-    this.source = source;
-    this.target = target;
-    this.w = weight;
-    this.strokeStyle = d3.rgb(150, 150, 150)
-}
-Link.prototype.width = function() {
-    return this.w == 0 ? 0 : webweb.scales.links.width(this.w);
-}
-Link.prototype.opacity = function() {
-    return webweb.scales.links.opacity(this.w);
-}
-Link.prototype.draw = function(ctx) {
-    ctx.save();
-    ctx.globalAlpha = this.opacity();
-    ctx.beginPath();
-    ctx.moveTo(this.source.x, this.source.y);
-    ctx.lineTo(this.target.x, this.target.y);
-    ctx.lineWidth = this.width();
-    ctx.strokeStyle = this.strokeStyle;
-    ctx.stroke();
-    ctx.restore();
-}
-Link.prototype.drawSVG = function() {
-    var link = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    link.setAttributeNS(null, 'x1', this.target.x);
-    link.setAttributeNS(null, 'y1', this.target.y);
-    link.setAttributeNS(null, 'x2', this.source.x);
-    link.setAttributeNS(null, 'y2', this.source.y);
-    link.setAttributeNS(null, 'style', 'stroke: ' + this.strokeStyle + '; stroke-opacity: ' + this.opacity() + ';' + 'stroke-width: ' + this.width() + ';' );
-
-    return link;
-}
-////////////////////////////////////////////////////////////////////////////////
-// adds/removes nodes from the visualization
-////////////////////////////////////////////////////////////////////////////////
-Webweb.prototype.setVisibleNodes = function() {
-    var count = this.getNodeCount(webweb.displayedNetworkData());
-
-    if (! count) {
-        count = this.maxNodeCount;
-    }
-
-    if (count < this.nodes.length) {
-        while (count != this.nodes.length) {
-            var node = this.nodes.pop();
-            this.nodesPersistence.push(node);
-        }
-    }
-    else if (count > this.nodes.length) {
-        while (count != this.nodes.length) {
-            var node = this.nodesPersistence.pop();
-            this.nodes.push(node);
-        }
-    }
-}
-Webweb.prototype.resetNodeMetadata = function() {
-    // reset node data
-    for (var i in this.nodes) {
-        for (var key in this.nodes[i]) {
-            if (this.nodes[i].isMetadataKey(key)) {
-                delete this.nodes[i][key];
-            }
-            else if (key == 'degree' || key == 'strength') {
-                // reset the degree and strength (strength not yet supported)
-                this.nodes[i][key] = 0;
-            }
-        }
-    }
-}
-Webweb.prototype.standardizeSourceMetadata = function(source) {
-    var nodeIdMap = this.displayedNetworkData().nodeIdMap;
-
-    // add the vectorized node metadata to the nodes
-    for (var metadatum in source.metadata) {
-        var values = source.metadata[metadatum].values;
-        for (var i in values) {
-            this.nodes[i][metadatum] = values[i];
-        }
-    }
-
-    if (getObjetPropertyCount(source.nodes) == 0) {
-        return;
-    }
-
-    for (var i in source.nodes) {
-        for (var metadatum in source.nodes[i]) {
-            this.nodes[nodeIdMap[i]][metadatum] = source.nodes[i][metadatum];
-        }
-    }
-}
-////////////////////////////////////////////////////////////////////////////////
-// loads the metadata up from the places they could come from:
-// 1. the defaults (none, degree)
-// 2. the display parameters
-// 3. the network itself
-//
-// Priority is given to the network's metadata, then display, then defaults
-////////////////////////////////////////////////////////////////////////////////
-Webweb.prototype.setNodeMetadata = function() {
-    this.setVisibleNodes();
-    this.resetNodeMetadata();
-
-    var networkData = this.displayedNetworkData();
-    var nodeIdMap = networkData.nodeIdMap;
-
-    this.standardizeSourceMetadata(this.display);
-    this.standardizeSourceMetadata(networkData);
-
-    var nodeNameMap = {};
-    for(var key in nodeIdMap){
-        nodeNameMap[nodeIdMap[key]] = key;
-    }
-
-    // now we need to define the set of metadata
-    for (var i in this.nodes) {
-        var node = this.nodes[i];
-        for (var key in node) {
-            if (node.isMetadataKey(key)) {
-                if (this.display.metadata !== undefined && this.display.metadata[key] !== undefined) {
-                    var metadatumInfo = this.display.metadata[key];
-
-                    var value = this.nodes[i][key];
-
-                    // if we have categories, change the node values here
-                    if (metadatumInfo.categories !== undefined) {
-                        if (isInt(value)) {
-                            var nodeCategoryNumber = this.nodes[i][key];
-                            this.nodes[i][key] = metadatumInfo.categories[nodeCategoryNumber];
-                        }
-                    }
-                    else if (metadatumInfo.type !== undefined && metadatumInfo.type == 'binary') {
-                        this.nodes[i][key] = value ? true : false;
-                    }
-                }
-            }
-        }
-
-        // if we don't already have node names, use the mapping to assign them
-        if (this.nodes[i]['name'] == undefined && nodeNameMap !== undefined) {
-            this.nodes[i]['name'] = nodeNameMap[this.nodes[i].idx];
-        }
-    }
-
-    this.allMetadata = {
-        'none' : {
-            'type' : 'none',
-        },
-        'degree' : {
-            'type' : 'degree',
-        },
-        'strength' : {
-            'type' : 'degree',
-        },
-    };
-
-    // identify the set of metadata keys
-    this.nodes.forEach(function(node) {
-        for (var key in node) {
-            if (node.isMetadataKey(key)) {
-                if (this.allMetadata[key] == undefined) {
-                    var networkMetadata = networkData.metadata;
-                    if (networkMetadata !== undefined && networkMetadata !== null && networkMetadata[key] !== undefined) {
-                        this.allMetadata[key] = networkMetadata[key];
-                    }
-                    else if (this.display.metadata[key] !== undefined) {
-                        this.allMetadata[key] = this.display.metadata[key];
-                    }
-                    else {
-                        this.allMetadata[key] = {};
-                    }
-                }
-            }
-        }
-    }, this);
-
-    for (metadatum in this.allMetadata) {
-        if (this.allMetadata[metadatum].type == undefined) {
-            this.allMetadata[metadatum].type = this.getMetadatumType(metadatum);
-        }
-
-        if (this.allMetadata[metadatum].type == "categorical") {
-            this.setCategoricalMetadataInfo(metadatum);
-        }
-    }
-
-    // these below if statements are only here because of poor design (says
-    // hunter, the designer of this bit)
-    // really, computeSizes and computeColors should already have this
-    // information.
-    if (this.display.colorBy !== undefined && this.display.colorBy !== 'none') {
-        if (this.allMetadata !== undefined && this.allMetadata[this.display.colorBy] == undefined) {
-            this.display.colorBy = 'none';
-        }
-    }
-    if (this.display.sizeBy !== undefined && this.display.sizeBy !== 'none') {
-        if (this.allMetadata !== undefined && this.allMetadata[this.display.sizeBy] == undefined) {
-            this.display.sizeBy = 'none';
-        }
-    }
-}
-////////////////////////////////////////////////////////////////////////////////
-// tries to figure out the metadatum type of a given metadatum.
-////////////////////////////////////////////////////////////////////////////////
-Webweb.prototype.getMetadatumType = function(metadatum) {
-    if (metadatum == 'none') {
-        return;
-    }
-
-    var q = d3.set(getRawNodeValues(metadatum)).values().sort();
-
-    // check if this is a binary relation
-    if (q.length == 2 && q[0] == 'false' && q[1] == 'true') {
-        return 'binary';
-    }
-    else if (q.length == 1 && (q[0] == 'false' || q[0] == 'true')) {
-        return 'binary';
-    }
-    else if (q.some(isNaN)) {
-        return 'categorical';
-    }
-
-    return 'scalar';
-}
-Webweb.prototype.setCategoricalMetadataInfo = function(metadatum) {
-    var metadata = this.allMetadata[metadatum];
-
-    if (metadata.categories == undefined) {
-        var rawValues = getRawNodeValues(metadatum);
-        metadata.categories = d3.set(rawValues).values().sort();
-    }
-
-    if (metadata.categories.length >= 9) {
-        metadata.type = 'scalarCategorical';
-    }
-
-    this.allMetadata[metadatum] = metadata;
-}
-////////////////////////////////////////////////////////////////////////////////
-// initialize links/edges
-//
-// - scale link width/opacity
-// - calculate node weights/degrees
-////////////////////////////////////////////////////////////////////////////////
-Webweb.prototype.createLinks = function() {
-    var networkData = this.displayedNetworkData();
-    var nodeIdMap = networkData.nodeIdMap;
-
-    var linkMatrix = {};
-
-    // reset the node degrees
-    for (var i in this.nodes) {
-        webweb.nodes[i].degree = 0;
-        webweb.nodes[i].strength = 0;
-
-        linkMatrix[i] = {};
-        for (var j in this.nodes) {
-            linkMatrix[i][j] = 0;
-        }
-    }
-
-    // push all the links to the list: links
-    for (var i in networkData.edgeList) {
-        var edge = networkData.edgeList[i];
-        var source = nodeIdMap[edge[0]];
-        var target = nodeIdMap[edge[1]];
-
-        // if there's no edge weight, default it to 1
-        var weight = edge.length == 3 ? parseFloat(edge[2]) : 1;
-
-        if (source <= target) {
-            linkMatrix[source][target] += weight;
-        }
-        else {
-            linkMatrix[target][source] += weight;
-        }
-            
-        this.nodes[source].degree += 1;
-        this.nodes[target].degree += 1;
-        this.nodes[source].strength += weight;
-        this.nodes[target].strength += weight;
-    }
-
-    var edgeWeights = [];
-    this.links = [];
-    for (var source in linkMatrix) {
-        for (var target in linkMatrix[source]) {
-            if (linkMatrix[source][target]) {
-                this.links.push(new Link(
-                    source,
-                    target,
-                    linkMatrix[source][target],
-                ));
-            }
-            edgeWeights.push(linkMatrix[source][target]);
-        }
-    }
-
-    var networkIsUnweighted = true;
-    this.nodes.forEach(function(node) {
-        if (node.strength !== node.degree) {
-            networkIsUnweighted = false;
-        }
-    });
-
-    if (networkIsUnweighted) {
-        delete this.allMetadata.strength;
-    }
-
-    this.scales.links.width.domain(d3.extent(edgeWeights));
-    this.scales.links.opacity.domain(d3.extent(edgeWeights));
-}
+import { Webweb } from './webweb.v6'
+// import { Legend } from './legend'
+import { colorbrewer } from './colors'
+import { Blob } from 'blob-polyfill'
+import { saveAs } from 'file-saver'
+import * as d3 from 'd3'
+
+// function Webweb(wwdata) {
+//     this.legendNodes = []
+//     this.legendText = []
+// }
 ////////////////////////////////////////////////////////////////////////////////
 // Webweb:
 //
 // UTIL
 ////////////////////////////////////////////////////////////////////////////////
-Webweb.prototype.displayedNetworkData = function() {
-    return this.networks[this.display.networkName].layers[this.display.networkLayer];
-}
 Webweb.prototype.getSizeByType = function() {
     return this.allMetadata[this.display.sizeBy].type;
 }
 Webweb.prototype.getColorByType = function() {
     return this.allMetadata[this.display.colorBy].type;
-}
-////////////////////////////////////////////////////////////////////////////////
-// Webweb:
-// simulation
-//////////////////////////////////////////////////////////////////////////////// 
-Webweb.prototype.tick = function() {
-    webweb.canvas.redraw.call(webweb.canvas);
-}
-Webweb.prototype.createSimulation = function() {
-    this.simulation = d3.forceSimulation(this.nodes)
-        .on('tick', this.tick);
-
-    this.simulation.alphaDecay = 0.001
-
-    this.forces = {
-        "center" : function () {
-            return d3.forceCenter(this.display.w / 2, this.display.h / 2);
-        },
-        "charge" : function () {
-            return d3.forceManyBody().strength(-this.display.c);
-        },
-        "gravity-x" : function () {
-            return d3.forceX(this.display.w / 2).strength(this.display.g);
-        },
-        "gravity-y" : function () {
-            return d3.forceY(webweb.display.h / 2).strength(webweb.display.g);
-        },
-        "link" : function () {
-            return d3.forceLink()
-                .links(this.links)
-                .distance(this.display.l)
-                .strength(this.display.linkStrength);
-        },
-    }
-}
-Webweb.prototype.updateSimulation = function(force) { 
-    var forcesToUpdate = [];
-    if (force && this.forces[force] !== undefined) {
-        forcesToUpdate.push(force)
-    }
-    else {
-        for (var force in this.forces) {
-            forcesToUpdate.push(force);
-        }
-    }
-
-    for (var i in forcesToUpdate) {
-        var forceToUpdate = forcesToUpdate[i];
-        var updatedForce = this.forces[forceToUpdate].call(this);
-        this.simulation.force(forceToUpdate, updatedForce);
-    }
-    this.simulation.alpha(1).restart();
 }
 ////////////////////////////////////////////////////////////////////////////////
 // initializeWebweb
@@ -803,54 +42,11 @@ Webweb.prototype.updateSimulation = function(force) {
 // - computes and draws nodes
 ////////////////////////////////////////////////////////////////////////////////
 function initializeWebweb() {
-    webweb = new Webweb(wwdata);
+    webweb = new Webweb(window.wwdata);
 
-    initializeHTML();
+    // writeMenus()
     displayNetwork();
 }
-function initializeHTML() {
-    var container;
-
-    if (webweb.display.attachWebwebToElementWithId == undefined) {
-        var container = document.createElement('div')
-        container.setAttribute('id', 'webweb-center');
-
-        document.getElementsByTagName("body")[0].appendChild(container);
-
-        if (wwdata.title !== undefined) {
-            document.title = wwdata.title;
-        }
-    }
-    else {
-        container = document.getElementById(webweb.display.attachWebwebToElementWithId);
-    }
-
-    writeMenus(container);
-    writeVisualization(container);
-}
-function writeVisualization(container) {
-    var visualizationContainer = document.createElement("div");
-    visualizationContainer.setAttribute('id', 'webweb-visualization-container');
-
-    container.appendChild(visualizationContainer);
-
-    if (webweb.display.w == undefined) {
-        var heuristic = container.clientWidth - 3 * 20;
-
-        if (heuristic <= 0) {
-            heuristic = 1000;
-        }
-        webweb.display.w = Math.min.apply(null, [heuristic, 1000]);
-    }
-
-    if (webweb.display.h == undefined) {
-        webweb.display.h = Math.min.apply(null, [webweb.display.w, 600]);
-    }
-
-    webweb.canvas = new CanvasState(webweb);
-    document.getElementById('webweb-visualization-container').appendChild(webweb.canvas.canvas);
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // - changes the number of visible nodes
 // - adds metadata to nodes
@@ -859,10 +55,6 @@ function writeVisualization(container) {
 // - uses the force (luke)
 ////////////////////////////////////////////////////////////////////////////////
 function displayNetwork() {
-    webweb.setNodeMetadata();
-    webweb.createLinks();
-    webweb.updateSimulation();
-
     // update the menus with these new metadata
     updateSizeMenu();
     updateColorMenu();
@@ -883,25 +75,6 @@ function displayNetwork() {
     }
 
     computeLegend();
-}
-////////////////////////////////////////////////////////////////////////////////
-// creates a map from observed nodes (nodes in the edge list, display.nodes, and
-// the current layer's nodes) to an internal "id"
-////////////////////////////////////////////////////////////////////////////////
-function metadataValuesCount(metadata) {
-    var maxValuesCount = 0;
-    if (metadata !== undefined) {
-        for (var metadatum in metadata) {
-            var values = metadata[metadatum].values;
-            if (values !== undefined) {
-                var valuesCount = values.length;
-                if (valuesCount > maxValuesCount) {
-                    maxValuesCount = valuesCount;
-                }
-            }
-        }
-    }
-    return maxValuesCount;
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Compute the radius multipliers of the nodes, given the data and chosen parameters
@@ -1339,7 +512,7 @@ function Legend(metadataName, legendType, dataType, rawValues) {
     this.rawValues = rawValues;
     this.values = [];
 
-    legendTypeToLegendMaker = {
+    var legendTypeToLegendMaker = {
         'size' : {
             'binary' : 'makeBinaryLegend',
             'scalar' : 'makeScalarLegend',
@@ -1674,7 +847,7 @@ function updateColorMenu() {
 function setNetworkLayerMenuVisibility() {
     var visibility = 'inline';
 
-    if (wwdata.networks[webweb.display.networkName].layers.length == 1) {
+    if (window.wwdata.networks[webweb.display.networkName].layers.length == 1) {
         visibility = 'none';
     }
 
@@ -1783,14 +956,11 @@ function writeMenus(container) {
     container.appendChild(menu);
 
     var layers = [];
-    for (var i in wwdata.networks[webweb.display.networkName].layers) {
+    for (var i in window.wwdata.networks[webweb.display.networkName].layers) {
         layers.push(i);
     }
 
-    var colorNames = [];
-    for (colorName in colorbrewer) {
-        colorNames.push(colorName);
-    }
+    var colorNames = Object.keys(colorbrewer);
 
     var colorPaletteSelectValue = 'Set1';
     if (webweb.display.colorPalette !== undefined) {
@@ -2074,7 +1244,7 @@ function rounddown(x, dec) {
     return (Math.floor(x * dec) / dec);
 }
 function allInts(vals) {
-    for (i in vals) {
+    for (var i in vals) {
         if (!isInt(vals[i])) {
             return false;
         }
@@ -2143,7 +1313,7 @@ function changeNetworkLayerListener(event) {
     }
 
     if (changeToLayer !== undefined) {
-        if (0 <= changeToLayer && changeToLayer < wwdata.networks[webweb.display.networkName].layers.length) {
+        if (0 <= changeToLayer && changeToLayer < window.wwdata.networks[webweb.display.networkName].layers.length) {
             changeLayer(changeToLayer);
         }
     }
@@ -2167,7 +1337,7 @@ window.onload = function() {
     initializeWebweb();
 };
 window.addEventListener("keydown", function (event) {
-    listeners = {
+    const listeners = {
         37 : changeNetworkLayerListener,
         38 : changeNetworkListener,
         39 : changeNetworkLayerListener,
