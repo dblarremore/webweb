@@ -14,7 +14,17 @@ describe("network object metadata regularization", () => {
       "freezeNodeMovement": false,
       "hideMenu": false,
       'showLegend': true,
-      "metadata": {},
+      "metadata": {
+        "degree": {
+          "type": "degree",
+        },
+        "none": {
+          "type": "none",
+        },
+        "strength": {
+          "type": "degree",
+        },
+      },
       "g": 0.1,
       "nameToMatch": "",
       "networkNames": [
@@ -26,6 +36,9 @@ describe("network object metadata regularization", () => {
       'height': undefined,
       'width': undefined,
       "networkLayer": 0,
+      "networkLayers": {
+        "webweb": 1,
+      },
       "sizeBy": "none",
       "colorBy": "degree",
       'c' : 60,
@@ -76,7 +89,17 @@ describe("network object metadata regularization", () => {
       "freezeNodeMovement": false,
       "hideMenu": false,
       'showLegend': true,
-      "metadata": {},
+      "metadata": {
+        "degree": {
+          "type": "degree",
+        },
+        "none": {
+          "type": "none",
+        },
+        "strength": {
+          "type": "degree",
+        },
+      },
       "g": 0.1,
       "nameToMatch": "",
       "networkNames": [
@@ -88,6 +111,9 @@ describe("network object metadata regularization", () => {
       'width': undefined,
       'height': undefined,
       "networkLayer": 0,
+      "networkLayers": {
+        "webweb": 1,
+      },
       "sizeBy": "none",
       "colorBy": "degree",
       'c' : 60,

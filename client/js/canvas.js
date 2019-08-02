@@ -1,20 +1,20 @@
-console.log(JSON.stringify('on any update, change the settings object of all nodes and links'));
-
 export class CanvasState {
-  constructor(settings) {
+  constructor(settings, simulation) {
     this.settings = settings
+    this.simulation = simulation
 
+    this.w = settings.w
+    this.h = settings.h
     this.dpr = window.devicePixelRatio || 1
-    this.canvas = document.createElement("canvas")
-    this.canvas.id = "webweb-vis-canvas"
 
-    this.canvas.style.width = this.settings.w + "px"
-    this.canvas.style.height = this.settings.h + "px"
+    this.HTMLId = "webweb-vis-canvas"
+    this.HTML = this.getHTML()
 
-    this.canvas.width = this.settings.w * this.dpr
-    this.canvas.height = this.settings.h * this.dpr
+    this.boxId = "webweb-visualization-container"
+    this.box = this.getBox()
 
-    // this.setContext()
+    this.context = this.HTML.getContext('2d')
+    this.context.scale(this.dpr, this.dpr)
 
     this.padding = 3
     this.dragBoundary = 15
@@ -22,55 +22,71 @@ export class CanvasState {
     this.dragging = false
     this.draggedNode = undefined
 
-    this.canvas.addEventListener("mousedown", this.canvas.mouseDownListener)
-    this.canvas.addEventListener("mousemove", this.canvas.mouseMoveListener)
-    this.canvas.addEventListener("mouseup", this.canvas.mouseUpListener)
+    this.HTML.addEventListener("mousedown", this.HTML.mouseDownListener)
+    this.HTML.addEventListener("mousemove", this.HTML.mouseMoveListener)
+    this.HTML.addEventListener("mouseup", this.HTML.mouseUpListener)
+
+    this.simulation.simulation.on('tick', this.redraw.bind(this))
+    this.simulation.simulation.alpha(1).restart()
   }
 
-  setContext() {
-    if (this.context == undefined) {
-      this.context = this.canvas.getContext('2d')
-      // TODO: FIX THIS?
-      // this.context.scale(this.dpr, this.dpr)
-    }
+  getBox() {
+    let box = document.createElement("div")
+    box.setAttribute('id', this.boxId)
+    box.append(this.HTML)
+    return box
+  }
+
+  getHTML() {
+    let HTML = document.createElement("canvas")
+    HTML.id = this.HTMLId
+
+    HTML.style.width = this.w + "px"
+    HTML.style.height = this.h + "px"
+
+    HTML.width = this.w * this.dpr
+    HTML.height = this.h * this.dpr
+
+    return HTML
   }
 
   clear() {
-    this.context.clearRect(0, 0, this.settings.w, this.settings.h)
+    this.context.clearRect(0, 0, this.w, this.h)
   }
 
   redraw() {
     this.clear()
-    this.links.forEach(function(link) {
-      link.draw(this.context)
-    }, this)
+    let ctx = this.context
+    // if (this.simulation.links !== undefined) {
+    //   this.simulation.links.forEach((link) => {
+    //     link.draw(this.context)
+    //   }, this)
+    // }
 
-    this.nodes.forEach(function(node) {
-      node.draw(this.context)
-    }, this);
+    this.simulation.nodes.forEach((node) => {
+      node.draw(ctx)
+    })
 
-    this.nodes.forEach(function(node) {
-      node.nodeText.draw(this.context)
-    }, this)
+    // this.nodes.forEach(function(node) {
+    //   node.nodeText.draw(this.context)
+    // }, this)
 
-    if (this.settings.showLegend) {
-      this.legendNodes.forEach(function(node) {
-        node.draw(this.context);
-      }, this);
-      this.settings.legendText.forEach(function(text) {
-        text.draw(this.context);
-      }, this);
-    }
+    // if (this.settings.showLegend) {
+    //   this.legendNodes.forEach(function(node) {
+    //     node.draw(this.context);
+    //   }, this);
+    //   this.settings.legendText.forEach(function(text) {
+    //     text.draw(this.context);
+    //   }, this);
+    // }
   }
 
   getMouseState(event) {
-    let box = this.canvas.getBoundingClientRect()
-    const mouseState = {
+    let box = this.HTML.getBoundingClientRect()
+    return {
       x: event.clientX - box.left - this.padding,
       y: event.clientY - box.top - this.padding,
     }
-
-    return mouseState
   }
 
   mouseIsWithinDragBoundary(mouseState) {
@@ -91,24 +107,25 @@ export class CanvasState {
     this.draggedNode.fx = mouseState.x
     this.draggedNode.fy = mouseState.y
   }
+
+  // don't really understand the dragging logic atm
   endDragging() {
-    // TODO:
-    // - fix this
-    // webweb.simulation.alphaTarget(0);
-    console.log(JSON.stringify('sim broke'))
+    this.simulation.alphaTarget(0)
 
     if (! this.settings.freezeNodeMovement && this.draggedNode !== undefined) {
       this.draggedNode.fx = null
       this.draggedNode.fy = null
     }
-    this.draggedNode = undefined;
+    this.draggedNode = undefined
     this.dragging = false
   }
+
   mouseUpListener() {
     if (this.dragging) {
       this.endDragging()
     }
   }
+
   mouseMoveListener(event) {
     const mouseState = this.getMouseState(event)
 
@@ -127,16 +144,12 @@ export class CanvasState {
     const mouseState = this.getMouseState(event)
     this.endDragging()
 
-    for (let node of this.nodes) {
-      if (node.containsMouse()) {
+    for (let node of this.simulation.nodes) {
+      if (node.containsMouse(mouseState)) {
         this.dragging = true
         this.draggedNode = node
 
-        // TODO:
-        // - make this work
-        // webweb.simulation.alphaTarget(0.3).restart();
-        console.log(JSON.stringify('sim broke'))
-
+        this.simulation.alphaTarget(0.3).restart()
         this.updateDraggedNode(mouseState)
       }
     }

@@ -1,10 +1,10 @@
+import { Menu } from './menu'
 import { Node } from './node'
 import { Link } from './link'
 import { AllSettings } from './controller'
 import { Network } from './network'
 import { Simulation } from './simulation'
-import { colorbrewer } from './colors';
-import { CanvasState } from './canvas';
+import { CanvasState } from './canvas'
 import * as d3 from 'd3';
 
 export class Webweb {
@@ -32,26 +32,36 @@ export class Webweb {
 
     if (this.state.global.settings['networkName'] == undefined) {
       this.state.global.settings['networkName'] = this.networkNames[0]
+      this.networkName = this.networkNames[0]
+    }
+    else {
+      this.networkName = this.state.global.settings['networkName']
     }
 
     this.state.global.settings['networkNames'] = this.networkNames
 
     // NETWORKS
-    let maxNodes = 0;
+    this.maxNodes = 0
     this.networks = {}
+    this.state.global.settings['networkLayers'] = {}
     for (let [networkName, networkData] of Object.entries(webwebData.networks)) {
       let network = new Network(networkName, networkData, this.state.global, this.globalNodes)
       this.networks[networkName] = network
 
-      if (network.nodeCount > maxNodes) {
-        maxNodes = network.nodeCount
+      for (let layer of network.layers) {
+        if (layer.nodeCount > this.maxNodes) {
+          this.maxNodes = layer.nodeCount
+        }
       }
+
+      this.state.global.settings['networkLayers'][networkName] = network.layers.length
     }
 
     // NODES
     this.nodes = []
-    for (let i = 0; i < this.maxNodeCount; i++) {
-      this.nodes.push(Node(i))
+    for (let i = 0; i < this.maxNodes; i++) {
+      let node = new Node(i)
+      this.nodes.push(node)
     }
 
     this.nodesPersistence = []
@@ -66,15 +76,107 @@ export class Webweb {
     }
 
     // TODO: these two below are... important
-    // if (! settings.hideMenu) {
-    //   this.writeMenus(box, settings);
-    // }
-    let canvas = new CanvasState(this)
-    box.appendChild(canvas.canvas)
+    if (! this.state.global.settings.hideMenu) {
+      this.menu = new Menu(this.state.global.settings, this.getCallHandler())
+      box.appendChild(this.menu.HTML)
+    }
 
-    this.canvas = canvas
+    let canvas = new CanvasState(this.state.global.settings, this.simulation)
+    box.append(canvas.box)
+    // this.canvas = canvas
 
-    this.displayNetwork(this.networkNames[0], this.state.global.settings)
+    this.displayNetwork(this.networkName, this.state.global.settings)
+  }
+
+  // object that will hopefully make things nicer and give only restricted
+  // access to the widgets
+  getCallHandler() {
+    // allows:
+    // - `display-network`: displays the network specified in the settings
+    let _this = this
+    let handleFunction = (request, settings) => {
+      const handler = {
+        'display-network': function(settings) {
+          _this.displayNetwork(settings.networkName, settings)
+        },
+        'freeze-nodes':  function(settings) {
+          if (settings.freezeNodeMovement) {
+            _this.simulation.freeze()
+          }
+          else {
+            _this.simulation.unfreeze()
+          }
+        },
+        'update-sim': function(settings) {
+          _this.simulation.update()
+        },
+        'update-links': (settings) => {
+          _this.updateScales(settings)
+        },
+        // TODO
+        // TODO
+        'save-svg': () => {},
+        'node-text': () => {},
+        'change-sizes': () => {},
+        'change-colors': () => {},
+      }
+
+      let fn = handler[request]
+      if (fn !== undefined) {
+        fn(settings)
+      }
+    }
+
+    return handleFunction
+  }
+
+  
+
+  /* nodes persist between layers (for the simulation's sake), so when the
+   * network changes:
+   * - reset the node metadata
+   *    - save those nodes' x/y positions under their name, for later layer-coherence
+   * - for all the nodes in the layer metadata, use the nodeNameToIdMap to set
+   *   corresponding node's values
+   * - for any node in the old network that also exists in the new one:
+   *    - set that new node's x/y positions to the old one's
+    * */
+  applyNodeMetadata(settings, nodeMetadata, nodeNameToIdMap, nodeIdToNameMap) {
+    let nodeNamesToPositions = {}
+
+    // save coords & reset metadata
+    for (let node of this.nodes) {
+      let nodeName = node.name
+      nodeNamesToPositions[nodeName] = {
+        'x': node.x,
+        'y': node.y,
+        'fx': node.fx,
+        'fy': node.fy,
+        'vx': node.vx,
+        'vy': node.vy,
+      }
+      node.resetMetadata()
+      node.settings = settings
+    }
+
+    // set metadata of nodes in new network
+    for (let [_id, node] of Object.entries(this.nodes)) {
+      let _name = nodeIdToNameMap[_id]
+
+      if (_name !== undefined) {
+        node.setMetadata(nodeMetadata[_name])
+      }
+    }
+
+    // reapply coords of nodes in old & new network
+    for (let [name, coords] of Object.entries(nodeNamesToPositions)) {
+      let _id = nodeNameToIdMap[name]
+      if (_id !== undefined) {
+        Object.entries(coords).forEach(([key, val]) => {
+          this.nodes[_id][key] = val
+        })
+      }
+    }
   }
 
   displayNetwork(networkName, settings) {
@@ -82,25 +184,20 @@ export class Webweb {
     let layer = network.layers[settings['networkLayer']]
 
     let links = layer.links
-    console.log(layer)
+    let displayableMetadata = layer.displayableMetadata
+
+    this.menu.refresh(settings, displayableMetadata)
 
     this.setVisibleNodes(layer.nodeCount)
-    this.simulation.settings = settings
-    // must update simulation
-    // this.simulation.update()
+    this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
 
-    // updateSizeMenu();
-    // updateColorMenu();
+    this.updateScales(settings)
+
+    // TODO: SIMULATION
+    // this.simulation.links= layer.edgeList
+    this.simulation.update(settings)
 
     // toggleFreezeNodes(webweb.display.freezeNodeMovement);
-    // toggleShowNodeNames(webweb.display.showNodeNames);
-    // toggleInvertBinaryColors(webweb.display.invertBinaryColors);
-    // toggleInvertBinarySizes(webweb.display.invertBinarySizes);
-    // toggleLinkWidthScaling(webweb.display.scaleLinkWidth);
-    // toggleLinkOpacityScaling(webweb.display.scaleLinkOpacity);
-
-    // // change the display of the layers widget
-    // setNetworkLayerMenuVisibility();
 
     // // if we've frozen node movement manually tick so new edges are evaluated.
     // if (webweb.display.freezeNodeMovement) {
@@ -110,11 +207,21 @@ export class Webweb {
     // computeLegend();
   }
 
+  getLayerDisplayedBySettings(settings) {
+    let networkName = settings.networkName
+    let network = this.networks[networkName]
+
+    let layerIndex = settings.networkLayer
+    let layer = network.layers[layerIndex]
+
+    return layer
+  }
+
   ////////////////////////////////////////////////////////////////////////////////
   // adds/removes nodes from the visualization
   ////////////////////////////////////////////////////////////////////////////////
   setVisibleNodes(nodeCount) {
-    const count = nodeCount || this.maxNodeCount
+    const count = nodeCount || this.maxNodes
 
     if (count < this.nodes.length) {
         while (count != this.nodes.length) {
@@ -128,15 +235,19 @@ export class Webweb {
             this.nodes.push(node)
         }
     }
-}
+  }
 
-  updateScales(edgeWeights, settings) {
+  updateScales(settings) {
+    let layer = this.getLayerDisplayedBySettings(settings)
     for (let scale of Object.keys(this.scales)) {
       this.scales[scale].range(
         settings['scales'][scale]['min'],
         settings['scales'][scale]['max']
       )
     }
+
+    this.scales['linkWidth'].domain(d3.extent(layer.edgeWeights))
+    this.scales['linkOpacity'].domain(d3.extent(layer.edgeWeights))
   }
 
   displayedNetworkData() {
@@ -162,11 +273,6 @@ export class Webweb {
         document.title = title
       }
     }
-
-    var subBox = document.createElement("div")
-    subBox.setAttribute('id', 'webweb-visualization-container')
-
-    box.appendChild(subBox)
 
     return box
   }
