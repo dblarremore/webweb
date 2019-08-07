@@ -19,17 +19,6 @@ import * as d3 from 'd3'
 //     this.legendNodes = []
 //     this.legendText = []
 // }
-////////////////////////////////////////////////////////////////////////////////
-// Webweb:
-//
-// UTIL
-////////////////////////////////////////////////////////////////////////////////
-Webweb.prototype.getSizeByType = function() {
-    return this.allMetadata[this.display.sizeBy].type;
-}
-Webweb.prototype.getColorByType = function() {
-    return this.allMetadata[this.display.colorBy].type;
-}
 function displayNetwork() {
     // if we've frozen node movement manually tick so new edges are evaluated.
     if (webweb.display.freezeNodeMovement) {
@@ -153,26 +142,6 @@ function computeColors() {
         webweb.nodes[i]['__scaledColor'] = scaledValues[i];
         webweb.nodes[i]['__rawColor'] = rawValues[i];
     }
-}
-////////////////////////////////////////////////////////////////////////////////
-// returns raw values for:
-// - a metadatumName
-// - a metadatumType
-// - a displayType (color/size)
-////////////////////////////////////////////////////////////////////////////////
-function getRawNodeValues(metadatumName, metadatumType, displayType) {
-    var rawValues = [];
-    for (var i in webweb.nodes){
-        var val = webweb.nodes[i][metadatumName];
-
-        if (metadatumType == 'binary') {
-            val = getBinaryValue(val, displayType);
-        }
-
-        rawValues[i] = val;
-    }
-
-    return rawValues;
 }
 // ColorWheel is a function that takes a node metadatum, like a category or scalar
 // and just gets the damn color. But it has to take into account what the 
@@ -594,6 +563,7 @@ function playNetworkLayers() {
 ////////////////////////////////////////////////////////////////////////////////
 window.onload = function() {
   let webweb = new Webweb(window.wwdata);
+  webweb.displayNetwork(webweb.networkName, webweb.state.global.settings)
 };
 window.addEventListener("keydown", function (event) {
     const listeners = {

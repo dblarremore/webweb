@@ -1,3 +1,4 @@
+import {colorbrewer } from './colors'
 import { Menu } from './menu'
 import { Node } from './node'
 import { Link } from './link'
@@ -5,7 +6,7 @@ import { AllSettings } from './controller'
 import { Network } from './network'
 import { Simulation } from './simulation'
 import { CanvasState } from './canvas'
-import * as d3 from 'd3';
+import * as d3 from 'd3'
 
 export class Webweb {
   constructor(webwebData) {
@@ -75,15 +76,16 @@ export class Webweb {
       this.networks[networkName].updateState(new AllSettings(this.state.global.settings))
     }
 
-    // TODO: these two below are... important
+    let layer = this.getLayerDisplayedBySettings(this.state.global.settings)
+
     if (! this.state.global.settings.hideMenu) {
-      this.menu = new Menu(this.state.global.settings, this.getCallHandler())
+      this.menu = new Menu(this.state.global.settings, layer.attributes, this.getCallHandler())
       box.appendChild(this.menu.HTML)
     }
 
     let canvas = new CanvasState(this.state.global.settings, this.simulation)
     box.append(canvas.box)
-    // this.canvas = canvas
+    this.canvas = canvas
 
     this.displayNetwork(this.networkName, this.state.global.settings)
   }
@@ -108,17 +110,11 @@ export class Webweb {
           }
         },
         'update-sim': function(settings) {
-          _this.simulation.update()
-        },
-        'update-links': (settings) => {
-          _this.updateScales(settings)
+          _this.simulation.update(settings)
         },
         // TODO
         // TODO
         'save-svg': () => {},
-        'node-text': () => {},
-        'change-sizes': () => {},
-        'change-colors': () => {},
       }
 
       let fn = handler[request]
@@ -129,8 +125,6 @@ export class Webweb {
 
     return handleFunction
   }
-
-  
 
   /* nodes persist between layers (for the simulation's sake), so when the
    * network changes:
@@ -145,7 +139,7 @@ export class Webweb {
     let nodeNamesToPositions = {}
 
     // save coords & reset metadata
-    for (let node of this.nodes) {
+    for (let node of this.simulation.nodes) {
       let nodeName = node.name
       nodeNamesToPositions[nodeName] = {
         'x': node.x,
@@ -160,11 +154,13 @@ export class Webweb {
     }
 
     // set metadata of nodes in new network
-    for (let [_id, node] of Object.entries(this.nodes)) {
+    for (let [_id, node] of Object.entries(this.simulation.nodes)) {
       let _name = nodeIdToNameMap[_id]
 
       if (_name !== undefined) {
-        node.setMetadata(nodeMetadata[_name])
+        Object.entries(nodeMetadata[_name]).forEach(([key, value]) => {
+          node[key] = value
+        })
       }
     }
 
@@ -173,7 +169,7 @@ export class Webweb {
       let _id = nodeNameToIdMap[name]
       if (_id !== undefined) {
         Object.entries(coords).forEach(([key, val]) => {
-          this.nodes[_id][key] = val
+          this.simulation.nodes[_id][key] = val
         })
       }
     }
@@ -184,18 +180,21 @@ export class Webweb {
     let layer = network.layers[settings['networkLayer']]
 
     let links = layer.links
-    let displayableMetadata = layer.displayableMetadata
+    let attributes = layer.attributes
 
-    this.menu.refresh(settings, displayableMetadata)
+    this.canvas.settings = settings
+
+    this.menu.refresh(settings, attributes)
 
     this.setVisibleNodes(layer.nodeCount)
     this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
 
     this.updateScales(settings)
 
-    // TODO: SIMULATION
-    // this.simulation.links= layer.edgeList
+    this.simulation.links = this.getLinks(layer, this.simulation.nodes, this.scales)
     this.simulation.update(settings)
+
+    console.log(this.simulation.nodes)
 
     // toggleFreezeNodes(webweb.display.freezeNodeMovement);
 
@@ -205,6 +204,18 @@ export class Webweb {
     // }
 
     // computeLegend();
+  }
+
+  getLinks(layer, nodes, scales) {
+    return layer.links.map((edge) => {
+      const source = nodes[edge[0]]
+      const target = nodes[edge[1]]
+      const weight = edge[2]
+      const width = scales.linkWidth(weight)
+      const opacity = scales.linkOpacity(weight)
+
+      return new Link(source, target, weight, width, opacity)
+    })
   }
 
   getLayerDisplayedBySettings(settings) {
@@ -235,19 +246,6 @@ export class Webweb {
             this.nodes.push(node)
         }
     }
-  }
-
-  updateScales(settings) {
-    let layer = this.getLayerDisplayedBySettings(settings)
-    for (let scale of Object.keys(this.scales)) {
-      this.scales[scale].range(
-        settings['scales'][scale]['min'],
-        settings['scales'][scale]['max']
-      )
-    }
-
-    this.scales['linkWidth'].domain(d3.extent(layer.edgeWeights))
-    this.scales['linkOpacity'].domain(d3.extent(layer.edgeWeights))
   }
 
   displayedNetworkData() {
@@ -292,5 +290,90 @@ export class Webweb {
     }
 
     return settings
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Scales
+  ////////////////////////////////////////////////////////////////////////////////
+  updateScales(settings) {
+    let layer = this.getLayerDisplayedBySettings(settings)
+    let nodes = this.simulation.nodes
+
+    let sizeAttribute = layer.attributes.size[settings.sizeBy]
+    let colorAttribute = layer.attributes.color[settings.colorBy]
+
+    sizeAttribute.nodes = nodes
+    colorAttribute.nodes = nodes
+
+    let sizeScaleName = sizeAttribute.sizeScale
+    let colorScaleName = colorAttribute.colorScale
+
+    const scales = {
+      'linkWidth': {
+        'extent': layer.edgeWeights,
+      },
+      'linkOpacity': {
+        'extent': layer.edgeWeights,
+      },
+    }
+
+    scales[sizeScaleName] = {
+      'attribute': sizeAttribute,
+      'extent': sizeAttribute.extent(nodes),
+    }
+
+    scales[colorScaleName] = {
+      'attribute': colorAttribute,
+      'extent': colorAttribute.colorExtent(nodes),
+    }
+
+    for (let [name, data] of Object.entries(scales)) {
+      const extent = data.extent
+
+      let range
+      if (name == 'categoricalColors') {
+        let valueSetSize = colorAttribute.valueSetSize(nodes)
+        range = colorbrewer[settings.colorPalette][valueSetSize] 
+      }
+      else {
+        if (settings.scales[name] !== undefined) {
+          range = [settings.scales[name].min, settings.scales[name].max]
+        }
+      }
+
+      if (this.scales[name] !== undefined) {
+        this.scales[name].domain(d3.extent(extent)).range(range)
+      }
+    }
+
+    Object.entries(nodes).forEach(([i, node]) => {
+      node.__rawSize = sizeAttribute.getRawSizeValue(node)
+      node.__scaledSize = sizeAttribute.getScaledSizeValue(node, this.scales[sizeScaleName])
+
+      node.__rawColor = colorAttribute.getRawColorValue(node)
+      node.__scaledColor = colorAttribute.getScaledColorValue(node, this.scales[colorScaleName])
+    })
+  }
+
+  getScaledColor(value, scaleType, scales) {
+    if (scaleType == "categorical") {
+      return scales.categoricalColors(value)
+    }
+    else if (scaleType == 'binary') {
+      return scales.categoricalColors(getBinaryValue(value, 'color'))
+    }
+    else {
+      return d3.hsl(210 * (1 - scales.scalarColors(value)), 0.7, 0.5)
+    }
+  }
+
+  getSizeByType(settings) {
+    let sizeBy = settings.sizeBy
+    return settings.metadata[sizeBy].type
+  }
+
+  getColorByType(settings) {
+    let colorBy = settings.colorBy
+    return settings.metadata[colorBy].type
   }
 }

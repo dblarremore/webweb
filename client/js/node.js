@@ -1,7 +1,18 @@
 import * as d3 from 'd3'
 import { Text } from './text'
 
-export class NodeKey {
+export class Node {
+  /********************************************************************************
+   *
+   *
+   * static Methods
+   *
+   *
+   ********************************************************************************/
+  static filterMetadataKeys(obj) {
+    return Object.keys(obj).filter((key) => this.isMetadataKey(key, obj), this)
+  }
+
   static get nonMetadataKeys() {
     return [
       'degree',
@@ -41,26 +52,20 @@ export class NodeKey {
     return false
   }
 
-  static filterMetadataKeys(keys, obj) {
-    return keys.filter((key) => this.isMetadataKey(key, obj), this)
-  }
-}
-
-
-export class Node {
+  /********************************************************************************
+   *
+   *
+   * static Methods
+   *
+   *
+   ********************************************************************************/
   constructor(idx, settings) {
     this.idx = idx
     this.settings = settings
   }
 
-  setMetadata(metadata) {
-    for (let [key, value] of Object.entries(metadata)) {
-      this.key = value
-    }
-  }
-
   resetMetadata() {
-    NodeKey.filterMetadataKeys(Object.keys(this), this).forEach((key) => {
+    Node.filterMetadataKeys(this).forEach((key) => {
       delete this[key]
     }, this)
 
@@ -84,9 +89,9 @@ export class Node {
   matchesString() {
     let matchString = this.settings.nameToMatch
     if (matchString !== undefined && matchString.length > 0) {
-        if (this.name !== undefined && this.name.indexOf(matchString) >= 0) {
-            return true
-        }
+      if (this.name !== undefined && this.name.indexOf(matchString) >= 0) {
+        return true
+      }
     }
     
     return false
@@ -125,16 +130,16 @@ export class Node {
 
   get nodeText() {
     let radius = this.radius
-    if (! this.nonInteractive) {
-      if (this.matchesString() || this.settings.showNodeNames || this.containsMouse(radius)) {
-        if (this.simulation.alpha() < .05 || this.display.freezeNodeMovement) {
-          let text = this.name || this.idx
-          let textX = this.x + 1.1 * radius
-          let textY = this.y - 1.1 * radius
-          let font = "12px"
-          return new Text(text, textX, textY, font)
-        }
-      }
+    if (this.nonInteractive) {
+      return
+    }
+
+    if (this.matchesString() || this.settings.showNodeNames || this.containsMouse(radius)) {
+      const text = this.name || this.idx
+      const textX = this.x + 1.1 * radius
+      const textY = this.y - 1.1 * radius
+      const font = "12px"
+      return new Text(text, textX, textY, font)
     }
   }
 
@@ -142,10 +147,8 @@ export class Node {
     ctx.beginPath()
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
     ctx.strokeStyle = this.outline
-    // ctx.strokeStyle = d3.rgb(0, 0, 0)
     ctx.stroke()
     ctx.fillStyle = d3.rgb(this.__scaledColor || 0)
-    // ctx.fillStyle = d3.rgb(0, 0, 0)
     ctx.fill()
   }
   drawSVG() {

@@ -1,4 +1,5 @@
 import { Layer } from '../layer'
+import { Attribute, NameAttribute, ScalarAttribute, BinaryAttribute, DegreeAttribute, CategoricalAttribute } from '../attribute'
 
 describe("layer object metadata regularization", () => {
   const globalMetadata = {
@@ -71,26 +72,19 @@ describe("tests layer object nodes regularization", () => {
         "degree": 0,
         'hi': 1,
         "name": "1",
+        "strength": 0,
       },
       2: {
         "degree": 0,
         'hi': 2,
         "name": "2",
-      },
-      '1': {
-        "degree": 0,
-        'hi': 1,
-        "name": "1",
-      },
-      '2': {
-        "degree": 0,
-        'hi': 2,
-        "name": "2",
+        "strength": 0,
       },
       'non-int': {
         "degree": 0,
         'hi': 3,
         "name": "non-int",
+        "strength": 0,
       }
     })
   })
@@ -454,7 +448,7 @@ describe("weightedness test", () => {
 describe("add edge metadata to nodes test", () => {
   let layer = new Layer([], {}, {}, {}, {}, {})
 
-  it("adds single metadata, unweighted", () => {
+  it("adds single metadata", () => {
     let edges = [
       [
         0,
@@ -471,36 +465,7 @@ describe("add edge metadata to nodes test", () => {
       '1': 1,
       '2': 2,
     }
-    let results = layer.addEdgeMetadataToNodes(edges, nodes, nodeNameToIdMap, true)
-    expect(results).toStrictEqual({
-      '0': {
-        'degree': 1
-      },
-      '1': {
-        'degree': 1
-      }
-
-    })
-  })
-
-  it("adds single metadata, weighted", () => {
-    let edges = [
-      [
-        0,
-        1,
-        1
-      ]
-    ]
-    let nodes = {
-      '0': {},
-      '1': {},
-    }
-    let nodeNameToIdMap = {
-      '0': 0,
-      '1': 1,
-      '2': 2,
-    }
-    let results = layer.addEdgeMetadataToNodes(edges, nodes, nodeNameToIdMap, false)
+    let results = layer.addEdgeMetadataToNodes(edges, nodes, nodeNameToIdMap)
     expect(results).toStrictEqual({
       '0': {
         'degree': 1,
@@ -512,7 +477,7 @@ describe("add edge metadata to nodes test", () => {
       }
     })
   })
-  it("adds multiple metadata, unweighted", () => {
+  it("adds multiple metadata", () => {
     let edges = [
       [
         0,
@@ -535,16 +500,19 @@ describe("add edge metadata to nodes test", () => {
       '1': 1,
       '2': 2,
     }
-    let results = layer.addEdgeMetadataToNodes(edges, nodes, nodeNameToIdMap, true)
+    let results = layer.addEdgeMetadataToNodes(edges, nodes, nodeNameToIdMap)
     expect(results).toStrictEqual({
       '0': {
         'degree': 2,
+        'strength': 2,
       },
       '1': {
         'degree': 1,
+        'strength': 1,
       },
       '2': {
         'degree': 1,
+        'strength': 1,
       },
     })
   })
@@ -557,17 +525,13 @@ describe("finding displayable metadata", () => {
       0: {
         'hi': 1,
         'hue': 'yellow',
-        'justtrue': true,
-        'negative': false,
-        'onezero': true,
+        'boolean': true,
         'catsize': 1,
       },
       1: {
         'hi': 2,
         'hue': 'orange',
-        'negative': false,
-        'justtrue': true,
-        'onezero': false,
+        'boolean': false,
         'catsize': 2,
       }
     }
@@ -579,41 +543,27 @@ describe("finding displayable metadata", () => {
     }
 
     let expected = {
-      'hue': {
-        'type': 'categorical',
-        'categories': ['orange', 'yellow',],
+      'color': {
+        'none': new Attribute("none"),
+        'hi': new ScalarAttribute('hi'),
+        'hue': new CategoricalAttribute('hue', ['orange', 'yellow']),
+        'degree': new DegreeAttribute("degree"),
+        'strength': new DegreeAttribute("strength"),
+        'catsize': new CategoricalAttribute("catsize", metadata.catsize.categories),
+        'boolean': new BinaryAttribute("boolean"),
       },
-      'hi': {
-        'type': 'scalar',
+      'size': {
+        'none': new Attribute("none"),
+        'degree': new DegreeAttribute("degree"),
+        'strength': new DegreeAttribute("strength"),
+        'boolean': new BinaryAttribute("boolean"),
+        'hi': new ScalarAttribute('hi'),
       },
-      'none': {
-        'type': 'none',
-      },
-      'onezero': {
-        'type': 'binary'
-      },
-      'negative': {
-        'type': 'binary',
-      },
-      'justtrue': {
-        'type': 'binary',
-      },
-      'catsize': {
-        'categories': [
-          "small",
-          "large"
-        ],
-        'type': 'categorical',
-      },
-      'degree': {
-        'type': 'degree',
-      },
-      'strength': {
-        'type': 'degree',
-      },
+      'noType': {},
     }
+    
 
-    let results = layer.getDisplayableMetadata(nodes, metadata)
-    expect(results).toStrictEqual(expected)
+    let [outAttributes, outNodes] = layer.getAttributes(nodes, metadata, true)
+    expect(outAttributes).toStrictEqual(expected)
   })
 })

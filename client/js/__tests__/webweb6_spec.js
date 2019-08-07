@@ -14,17 +14,7 @@ describe("network object metadata regularization", () => {
       "freezeNodeMovement": false,
       "hideMenu": false,
       'showLegend': true,
-      "metadata": {
-        "degree": {
-          "type": "degree",
-        },
-        "none": {
-          "type": "none",
-        },
-        "strength": {
-          "type": "degree",
-        },
-      },
+      "metadata": {},
       "g": 0.1,
       "nameToMatch": "",
       "networkNames": [
@@ -62,18 +52,16 @@ describe("network object metadata regularization", () => {
           'type': 'linear',
         },
         "categoricalColors": {
-          "max": 1,
-          "min": 1,
           'type': 'ordinal',
         },
         "scalarColors": {
+          "min": 0,
           "max": 1,
-          "min": 1,
           'type': 'linear',
         },
         "nodeSize": {
-          "max": 1,
-          "min": 1,
+          "max": 1.5,
+          "min": 0.5,
           'type': 'linear',
         },
       }
@@ -81,7 +69,7 @@ describe("network object metadata regularization", () => {
   })
 
   // put the max of a value to 2
-  const webjson_2 = {"display": {"scaleLinkWidth": true, "colorBy": "degree", "scales": {"categoricalColors": {"max": 2}}}, "networks": {"webweb": {"layers": [{"edgeList": [[0, 1], [0, 1], [1, 2], [2, 3]], "nodes": {"0": {"name": 0}, "1": {"name": 1}, "2": {"name": 2}, "3": {"name": 3}}, "metadata": null}]}}, "title": "webweb"}
+  const webjson_2 = {"display": {"scaleLinkWidth": true, "colorBy": "degree", "scales": {"scalarColors": {"max": 2}}}, "networks": {"webweb": {"layers": [{"edgeList": [[0, 1], [0, 1], [1, 2], [2, 3]], "nodes": {"0": {"name": 0}, "1": {"name": 1}, "2": {"name": 2}, "3": {"name": 3}}, "metadata": null}]}}, "title": "webweb"}
 
   it("tests `node` settings loaded properly", () => {
     let web = new Webweb(webjson_2)
@@ -89,17 +77,7 @@ describe("network object metadata regularization", () => {
       "freezeNodeMovement": false,
       "hideMenu": false,
       'showLegend': true,
-      "metadata": {
-        "degree": {
-          "type": "degree",
-        },
-        "none": {
-          "type": "none",
-        },
-        "strength": {
-          "type": "degree",
-        },
-      },
+      "metadata": { },
       "g": 0.1,
       "nameToMatch": "",
       "networkNames": [
@@ -137,18 +115,16 @@ describe("network object metadata regularization", () => {
           'type': 'linear',
         },
         "categoricalColors": {
-          "max": 2,
-          "min": 1,
           'type': 'ordinal',
         },
         "scalarColors": {
-          "max": 1,
-          "min": 1,
+          "min": 0,
+          "max": 2,
           'type': 'linear',
         },
         "nodeSize": {
-          "max": 1,
-          "min": 1,
+          "min": 0.5,
+          "max": 1.5,
           'type': 'linear',
         },
       }

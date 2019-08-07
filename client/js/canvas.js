@@ -57,15 +57,25 @@ export class CanvasState {
   redraw() {
     this.clear()
     let ctx = this.context
-    // if (this.simulation.links !== undefined) {
-    //   this.simulation.links.forEach((link) => {
-    //     link.draw(this.context)
-    //   }, this)
-    // }
+    if (this.simulation.links !== undefined) {
+      this.simulation.links.forEach((link) => {
+        link.draw(this.context)
+      }, this)
+    }
 
     this.simulation.nodes.forEach((node) => {
       node.draw(ctx)
     })
+
+    if (this.simulation.simulation.alpha() < .05 || this.settings.freezeNodeMovement) {
+      this.simulation.nodes.forEach((node) => {
+        let nodeText = node.nodeText
+
+        if (nodeText !== undefined) {
+          nodeText.draw(ctx)
+        }
+      })
+    }
 
     // this.nodes.forEach(function(node) {
     //   node.nodeText.draw(this.context)

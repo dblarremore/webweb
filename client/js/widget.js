@@ -1,9 +1,10 @@
 import { colorbrewer } from './colors'
 
 export class Widget {
-  constructor(settings, callHandler) {
-    this.callHandler = callHandler
+  constructor(settings, attributes, callHandler) {
     this.settings = settings
+    this.attributes = attributes
+    this.callHandler = callHandler
     this.id = 'NONE'
     this.inline = false
   }
@@ -149,9 +150,12 @@ export class Widget {
     return []
   }
 
-  refresh(settings) {
+  refresh(settings, attributes) {
     if (settings !== undefined) {
       this.settings = settings
+    }
+    if (attributes !== undefined) {
+      this.attributes = attributes
     }
     this.syncTo(this.SettingValue)
     this.showOrHide()
@@ -195,9 +199,12 @@ export class SelectWidget extends Widget {
     return HTML
   }
 
-  refresh(settings) {
+  refresh(settings, attributes) {
     if (settings !== undefined) {
       this.settings = settings
+    }
+    if (attributes !== undefined) {
+      this.attributes = attributes
     }
     this.setSelectOptions(this.HTML, this.options)
     this.HTMLValue = this.SettingValue
@@ -247,8 +254,8 @@ export class ButtonWidget extends Widget {
 
 }
 export class NetworkSelectWidget extends SelectWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'networkSelect'
     this.text = "Display data from "
     this.inline = true
@@ -280,8 +287,8 @@ export class NetworkSelectWidget extends SelectWidget {
 }
 
 export class NetworkLayerSelectWidget extends SelectWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'layerSelect'
     this.text = " layer "
     this.inline = true
@@ -303,13 +310,14 @@ export class NetworkLayerSelectWidget extends SelectWidget {
 
   set SettingValue(value) {
     this.settings.networkLayer = value
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
 
 export class SizeSelectWidget extends SelectWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'sizeSelect'
     this.text = "Scale node sizes by "
     this.inline = true
@@ -318,14 +326,7 @@ export class SizeSelectWidget extends SelectWidget {
   }
 
   get options() {
-    let sizeOptions = []
-    let sizeOptionTypes = ['degree', 'strength', 'scalar', 'binary']
-    Object.entries(this.settings.metadata).forEach(([key, info]) => {
-      if (sizeOptionTypes.includes(info.type)) {
-        sizeOptions.push(key)
-      }
-    })
-    return sizeOptions
+    return Object.keys(this.attributes.size)
   }
 
   get SettingValue() {
@@ -334,13 +335,13 @@ export class SizeSelectWidget extends SelectWidget {
 
   set SettingValue(value) {
     this.settings.sizeBy = value
-    this.callHandler('change-sizes', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
 export class InvertBinarySizesWidget extends CheckboxWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'invertBinarySizes'
     this.text = "' invert '"
     this.inline = true
@@ -354,7 +355,7 @@ export class InvertBinarySizesWidget extends CheckboxWidget {
 
   set SettingValue(value) {
     this.settings.invertBinarySizes = value
-    this.callHandler('change-sizes', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 
@@ -362,21 +363,20 @@ export class InvertBinarySizesWidget extends CheckboxWidget {
   shouldBeVisible() {
     let sizingBy = this.settings.sizeBy
     if (sizingBy !== undefined) {
-      let sizingMetadata = this.settings.metadata[sizingBy]
+      let sizingAttribute = this.attributes.size[sizingBy]
 
-      if (sizingMetadata !== undefined) {
-        if (sizingMetadata.type == 'binary') {
+      if (sizingAttribute !== undefined) {
+        if (sizingAttribute.TYPE == 'binary') {
           return true
         }
       }
-
     }
     return false
   }
 }
 export class ColorSelectWidget extends SelectWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'colorSelect'
     this.text = "Color nodes by "
     this.inline = true
@@ -385,7 +385,7 @@ export class ColorSelectWidget extends SelectWidget {
   }
   
   get options() {
-    return Object.keys(this.settings.metadata) 
+    return Object.keys(this.attributes.color) 
   }
 
   get SettingValue() {
@@ -394,14 +394,14 @@ export class ColorSelectWidget extends SelectWidget {
 
   set SettingValue(value) {
     this.settings.colorBy = value
-    this.callHandler('change-colors', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
                   
 export class ColorPaletteSelectWidget extends SelectWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'colorPaletteSelect'
     this.text = " with color palette "
     this.inline = true
@@ -419,29 +419,34 @@ export class ColorPaletteSelectWidget extends SelectWidget {
 
   set SettingValue(value) {
     this.settings.colorPalette = value
-    this.callHandler('change-colors', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 
   shouldBeVisible() {
     let coloringBy = this.settings.colorBy
-    if (coloringBy !== undefined) {
-      let coloringMetadata = this.settings.metadata[coloringBy]
+    if (coloringBy == undefined) {
+      return false
+    }
 
-      if (coloringMetadata !== undefined) {
-        if (coloringMetadata.type == 'categorical') {
-          if (coloringMetadata.categories.length < 9) {
-            return true
-          }
-        }
+    let coloringAttribute = this.attributes.color[coloringBy]
+
+    if (coloringAttribute == undefined) {
+      return false
+    }
+
+    if (coloringAttribute.TYPE == 'CATEGORICAL') {
+      if (! coloringAttribute.isScalarCategorical) {
+        return true
       }
     }
+
     return false
   }
 }
 export class InvertBinaryColorsWidget extends CheckboxWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'invertBinaryColors'
     this.text = ' invert '
     this.inline = true
@@ -455,17 +460,17 @@ export class InvertBinaryColorsWidget extends CheckboxWidget {
 
   set SettingValue(value) {
     this.settings.invertBinaryColors = value
-    this.callHandler('change-colors', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 
   shouldBeVisible() {
     let coloringBy = this.settings.colorBy
     if (coloringBy !== undefined) {
-      let coloringMetadata = this.settings.metadata[coloringBy]
+      let coloringAttribute = this.attributes.color[coloringBy]
 
-      if (coloringMetadata !== undefined) {
-        if (coloringMetadata.type == 'binary') {
+      if (coloringAttribute !== undefined) {
+        if (coloringAttribute.type == 'binary') {
           return true
         }
       }
@@ -475,8 +480,8 @@ export class InvertBinaryColorsWidget extends CheckboxWidget {
   }
 }
 export class ScaleLinkWidthWidget extends CheckboxWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'scaleLinkWidth'
     this.text = 'Scale link width '
     this.size = 10
@@ -495,13 +500,13 @@ export class ScaleLinkWidthWidget extends CheckboxWidget {
     this.settings.scales.linkWidth.range.min = range[0]
     this.settings.scales.linkWidth.range.max = range[1]
 
-    this.callHandler('update-links', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
 export class ScaleLinkOpacityWidget extends CheckboxWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'scaleLinkOpacity'
     this.text = 'Scale link opacity '
     this.size = 10
@@ -520,14 +525,14 @@ export class ScaleLinkOpacityWidget extends CheckboxWidget {
     this.settings.scales.linkOpacity.range.min = range[0]
     this.settings.scales.linkOpacity.range.max = range[1]
 
-    this.callHandler('update-links', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
 
 export class FreezeNodesWidget extends CheckboxWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'freezeNodes'
     this.text = 'Freeze nodes '
     this.size = 10
@@ -546,8 +551,8 @@ export class FreezeNodesWidget extends CheckboxWidget {
   }
 }
 export class SaveSVGWidget extends ButtonWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'saveSVG'
     this.size = 10
     this.value = 'Save SVG'
@@ -562,8 +567,8 @@ export class SaveSVGWidget extends ButtonWidget {
 }
 
 export class ChargeWidget extends Widget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'charge'
     this.text = 'Node charge: '
 
@@ -593,8 +598,8 @@ export class ChargeWidget extends Widget {
   }
 }
 export class LinkLengthWidget extends Widget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'linkLength'
     this.text = 'Link length: '
     this.inline = false
@@ -626,8 +631,8 @@ export class LinkLengthWidget extends Widget {
 }
 
 export class LinkStrengthWidget extends Widget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'linkStrength'
     this.text = 'Link strength: '
 
@@ -657,8 +662,8 @@ export class LinkStrengthWidget extends Widget {
   }
 }
 export class GravityWidget extends Widget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'gravity'
     this.text = 'Gravity: '
 
@@ -690,8 +695,8 @@ export class GravityWidget extends Widget {
   }
 }
 export class RadiusWidget extends Widget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'radius'
     this.text = 'Node radius: '
     this.inline = false
@@ -720,8 +725,8 @@ export class RadiusWidget extends Widget {
   }
 }
 export class ShowNodeNamesWidget extends CheckboxWidget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'showNodeNames'
     this.text = 'Show node names '
     this.size = 10
@@ -737,13 +742,13 @@ export class ShowNodeNamesWidget extends CheckboxWidget {
   set SettingValue(value) {
     this.settings.showNodeNames = value
 
-    this.callHandler('node-text', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
 export class NameToMatchWidget extends Widget {
-  constructor(settings, callHandler) {
-    super(settings, callHandler)
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
     this.id = 'nameToMatch'
     this.text = 'Highlight nodes named: '
     this.size = 10
@@ -759,7 +764,7 @@ export class NameToMatchWidget extends Widget {
   set SettingValue(value) {
     this.settings.nameToMatch = value
 
-    this.callHandler('node-text', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 

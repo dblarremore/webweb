@@ -36,18 +36,16 @@ export class AllSettings extends SettingsObject {
     return {
       'nodeSize' : {
         'type': 'linear',
-        'min': 1,
-        'max': 1,
+        'min': 0.5,
+        'max': 1.5,
       },
       'scalarColors': {
         'type': 'linear',
-        'min': 1,
+        'min': 0,
         'max': 1,
       },
       'categoricalColors': {
         'type': 'ordinal',
-        'min': 1,
-        'max': 1,
       },
       'linkWidth' : {
         'min': 1,

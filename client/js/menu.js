@@ -1,8 +1,9 @@
 import * as widgetDefs from './widget'
 
 export class Menu {
-  constructor(settings, callHandler) {
+  constructor(settings, attributes, callHandler) {
     this.settings = settings
+    this.attributes = attributes
     this.callHandler = callHandler
     this.makeHTML()
     this.makeWidgets()
@@ -16,12 +17,11 @@ export class Menu {
 
   // when the network changes, we will re-inject the settings, and this should
   // percolate up to the html
-  refresh(settings, displayableMetadata) {
+  refresh(settings, attributes) {
     this.settings = settings
-    this.settings['metadata'] = displayableMetadata
     this.widgets.forEach((widget) => {
       widget.settings = this.settings
-      widget.refresh(settings)
+      widget.refresh(settings, attributes)
     }, this)
   }
 
@@ -66,7 +66,7 @@ export class Menu {
         let subwidgets = []
 
         for (let subwidgetConstructor of widgetList) {
-          let widget = new subwidgetConstructor(this.settings, this.callHandler)
+          let widget = new subwidgetConstructor(this.settings, this.attributes, this.callHandler)
           this.widgets.push(widget)
           subwidgets.push(widget)
         }
@@ -106,34 +106,6 @@ export class Menu {
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-function changeSizes(sizeBy) {
-    webweb.display.sizeBy = sizeBy;
-
-    computeLegend();
-    webweb.canvas.redraw();
-
-    var showInvertWidget = webweb.getSizeByType() == 'binary' ? true : false;
-    setInvertBinaryWidgetVisibility(showInvertWidget, 'size');
-}
-function changeColors(colorBy) {
-    webweb.display.colorBy = colorBy;
-    computeLegend();
-    webweb.canvas.redraw();
-    var showColorPaletteWidget = webweb.getColorByType() == 'categorical' ? true : false;
-    var showInvertWidget = false;
-
-    if (webweb.getColorByType() == 'binary') {
-        showColorPaletteWidget = true;
-        showInvertWidget = true;
-    }
-    setColorPaletteMenuVisibility(showColorPaletteWidget);
-    setInvertBinaryWidgetVisibility(showInvertWidget, 'color');
-}
-function setColorPalette(colorPalette) {
-    webweb.display.colorPalette = colorPalette;
-    computeLegend();
-    webweb.canvas.redraw();
-}
 function getBinaryValue(value, type) {
     var attribute = getBinaryInversionAttributeForType(type);
 

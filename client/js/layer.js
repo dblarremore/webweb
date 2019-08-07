@@ -1,6 +1,13 @@
 import * as d3 from 'd3'
-import { NodeKey } from './node'
+import { Node } from './node'
+import { Attribute, NameAttribute, ScalarAttribute, BinaryAttribute, DegreeAttribute, CategoricalAttribute } from './attribute'
 
+/*********************************************************************************
+ * Layer
+ *
+ * the fundamental unit of a network webweb displays.
+ *
+*********************************************************************************/
 export class Layer {
   constructor(edgeList, nodes, metadata, display, globalMetadata, globalNodes) {
     this.edgeList = this.regularizeEdgeList(edgeList || [])
@@ -15,16 +22,16 @@ export class Layer {
 
     this.links = this.createLinks(this.edgeList, this.nodeNameToIdMap)
 
-    this.nodes = this.addEdgeMetadataToNodes(
-      this.links,
+    this.nodes = this.addEdgeMetadataToNodes(this.links, this.nodes, this.nodeIdToNameMap)
+
+    let [attributes, newNodes] =  this.getAttributes(
       this.nodes,
-      this.nodeIdToNameMap,
+      this.metadata,
       this.isUnweighted(this.nodes)
     )
 
-    this.displayableMetadata = this.getDisplayableMetadata(this.nodes, this.metadata)
-
-    this.nodes = this.mapScalarCategoricalValues(this.nodes, this.displayableMetadata)
+    this.attributes = attributes
+    this.nodes = newNodes
   }
 
   get nodeCount() {
@@ -38,6 +45,14 @@ export class Layer {
   get nodeIdToNameMap() {
     return Object.fromEntries(Object.entries(this.nodeNameToIdMap).map(([k, v]) => ([v, k])))
   }
+
+  /*********************************************************************************
+   * 
+   *
+   * regularization and initing
+   * 
+   *
+   *********************************************************************************/
 
   // we want to convert "string" edges into int edges
   regularizeEdgeList(edgeList) {
@@ -222,7 +237,7 @@ export class Layer {
 
   // adds `degree`
   // if the network is weighted, adds `strength`
-  addEdgeMetadataToNodes(links, nodes, nodeIdToNameMap, isUnweighted) {
+  addEdgeMetadataToNodes(links, nodes, nodeIdToNameMap) {
     Object.values(nodes).forEach((node) => {
       node.degree = 0
       node.strength = 0
@@ -237,12 +252,6 @@ export class Layer {
       nodes[target].strength += l[2]
     })
 
-    if (isUnweighted) {
-      Object.values(nodes).forEach((node) => {
-        delete node.strength
-      })
-    }
-
     return nodes
   }
 
@@ -255,94 +264,6 @@ export class Layer {
     })
 
     return networkIsUnweighted
-  }
-
-  // iterates over all of the nodes and identifies the set of metadata we can
-  // include in the visualization.
-  getDisplayableMetadata(nodes, metadata) {
-    let allMetadata = {
-      'degree': {
-        'type': 'degree',
-      },
-      'strength': {
-        'type': 'degree',
-      },
-    }
-
-    // let nodeKeyer = new NodeKey()
-
-    Object.entries(nodes).forEach(([id, node]) => {
-      let metadataKeys = NodeKey.filterMetadataKeys(Object.keys(node), node)
-      for (let key of metadataKeys) {
-        if (allMetadata[key] == undefined) {
-          if (metadata !== undefined) {
-            let keyMetadata = metadata[key] || {}
-
-            let values = this.getRawNodeValues(nodes, key)
-
-            if (keyMetadata.type == undefined) {
-              keyMetadata.type = this.getValuesType(values)
-            }
-
-            if (keyMetadata.type == "categorical" || keyMetadata.categories !== undefined) {
-              keyMetadata = this.setCategoricalMetadataInfo(keyMetadata, values)
-            }
-
-            allMetadata[key] = keyMetadata == undefined ? {} : keyMetadata
-          }
-        }
-      }
-    })
-
-    allMetadata['none'] = {
-      'type' : 'none',
-    }
-
-    delete allMetadata['name']
-
-    return allMetadata
-  }
-
-  setCategoricalMetadataInfo(keyMetadata, values) {
-    if (keyMetadata.categories == undefined) {
-      keyMetadata.categories = d3.set(values).values().sort()
-    }
-
-    if (keyMetadata.categories.length >= 9) {
-      keyMetadata.type = 'scalarCategorical'
-    }
-    else {
-      keyMetadata.type = 'categorical'
-    }
-
-    return keyMetadata
-  }
-
-  getRawNodeValues(nodes, key) {
-    return Object.values(nodes).map(node => node[key])
-  }
-
-  getValuesType(values) {
-    let q = d3.set(values).values().sort()
-
-    // check if this is a binary relation
-    if (q.length == 2 && q[0] == 'false' && q[1] == 'true') {
-        return 'binary'
-    }
-    else if (q.length == 2 && q[0] == 'false' && q[1] == 'undefined') {
-        return 'binary'
-    }
-    else if (q.length == 2 && q[0] == 'true' && q[1] == 'undefined') {
-        return 'binary'
-    }
-    else if (q.length == 1 && (q[0] == 'false' || q[0] == 'true')) {
-      return 'binary'
-    }
-    else if (q.some(isNaN)) {
-      return 'categorical'
-    }
-
-    return 'scalar'
   }
 
   // retrieves the nodeNames. The ordering of these is important.
@@ -399,26 +320,124 @@ export class Layer {
     return maxValuesCount
   }
 
-  mapScalarCategoricalValues(nodes, displayableMetadata) {
-    for (let [key, info] of Object.entries(displayableMetadata)) {
-      if (info.type == 'categorical') {
-        if (info.categories !== undefined) {
-          for (let nodeValues of Object.values(nodes)) {
-            let nodeCategoryNumber = nodeValues[key]
-            if (isInt(nodeCategoryNumber)) {
-              nodeValues[key] = info.categories[nodeCategoryNumber]
-            }
-          }
-        }
+  /********************************************************************************
+   *
+   *
+   *
+   * Node Attributes
+   * 
+   * 
+   * 
+  ********************************************************************************/
+  // iterates over all of the nodes and identifies the set of metadata we can
+  // include in the visualization.
+  getAttributes(nodes, metadata, isUnweighted) {
+    let attributes = [
+      [Attribute, 'none', []],
+      [DegreeAttribute, 'degree', []],
+    ]
+
+    if (isUnweighted) {
+      attributes.push([DegreeAttribute, 'strength', []])
+    }
+
+    let metadataAttributes
+    [nodes, metadataAttributes] = this.getMetadataAttributes(nodes, metadata)
+    attributes = attributes.concat(metadataAttributes)
+
+    let attributesByType = {
+      'color': {},
+      'size': {},
+      'noType': {},
+    }
+
+    attributes.map(([attributeClass, key, categories]) => {
+      if (attributeClass.DISPLAY_COLOR) {
+        attributesByType.color[key] = new attributeClass(key, categories, nodes)
       }
-      else if (info.type == 'binary') {
-        for (let nodeValues of Object.values(nodes)) {
-          nodeValues[key] = nodeValues[key] ? true : false
-        }
+
+      if (attributeClass.DISPLAY_SIZE) {
+        attributesByType.size[key] = new attributeClass(key, categories, nodes)
+      }
+
+      if (! attributeClass.DISPLAY_COLOR && ! attributeClass.DISPLAY_SIZE) {
+        attributesByType.noType[key] = new attributeClass(key, categories, nodes)
+      }
+    })
+
+    return [attributesByType, nodes]
+  }
+
+  getMetadataAttributes(nodes, metadata) {
+    let allKeys = [] 
+    Object.values(nodes).map((node) => {
+      let keys = Node.filterMetadataKeys(node)
+      allKeys = allKeys.concat(keys)
+    })
+    allKeys = d3.set(allKeys).values().sort()
+
+    let cleanMetadata = []
+    allKeys.forEach((key) => {
+      let keyMetadata = metadata !== undefined ? metadata[key] || {} : {}
+      let type = keyMetadata.type
+      let categories = keyMetadata.categories
+      cleanMetadata.push([key, type, categories])
+    })
+
+    let attributes = []
+    for (let [key, type, categories] of cleanMetadata) {
+      let attributeClass
+      [nodes, attributeClass] = this.getAttributeClassToAdd(key, type, nodes, categories)
+
+      if (attributeClass !== undefined) {
+        attributes.push([attributeClass, key, categories])
+
+        // transform the nodes here, once
+        let attribute = new attributeClass(key, categories)
+        attribute.nodes = nodes
+        nodes = attribute.transformNodeValues(nodes)
       }
     }
 
-    return nodes
+    return [nodes, attributes]
+  }
+
+  getAttributeClassToAdd(key, type, nodes, categories) {
+    let attributeClassToMake
+
+    if (key == 'name') {
+      return [nodes, NameAttribute]
+    }
+
+    for (let attributeClass of [BinaryAttribute, CategoricalAttribute, ScalarAttribute]) {
+      let attribute = new attributeClass(key, categories)
+      attribute.nodes = nodes
+
+      let typeDefinedAndTypesEqual = false
+      let typeUndefinedAndNodesOfType = false
+      let typeUndefinedAndCategories = false
+
+      if (type == undefined) {
+        if (attribute.isType(nodes)) {
+          typeUndefinedAndNodesOfType = true
+        }
+        if (categories !== undefined && attributeClass.TYPE == 'categorical') {
+          typeUndefinedAndCategories = true
+        }
+      }
+      else {
+        if (type == attribute.TYPE) {
+          typeDefinedAndTypesEqual = true
+        }
+      }
+
+      if (typeDefinedAndTypesEqual || typeUndefinedAndNodesOfType || typeUndefinedAndCategories) {
+        nodes = attribute.transformNodeValues(nodes)
+        return [nodes, attributeClass]
+      }
+    }
+
+    return undefined
   }
 }
 function allInts(vals) {
