@@ -9,8 +9,6 @@
  */
 
 import { Webweb } from './webweb.v6'
-// import { Legend } from './legend'
-// import { colorbrewer } from './colors'
 import { Blob } from 'blob-polyfill'
 import { saveAs } from 'file-saver'
 import * as d3 from 'd3'
@@ -20,64 +18,8 @@ import * as d3 from 'd3'
 //     this.legendText = []
 // }
 function displayNetwork() {
-    // if we've frozen node movement manually tick so new edges are evaluated.
-    if (webweb.display.freezeNodeMovement) {
-        webweb.canvas.redraw();
-    }
-
     computeLegend();
 }
-////////////////////////////////////////////////////////////////////////////////
-// Compute the radius multipliers of the nodes, given the data and chosen parameters
-// 
-// the 'sizeBy' display parameter determines how we will scale this.
-// For example, if sizeBy is None, then the multiplier is 1 (the identity)
-// Otherwise, the multiplier can be something else!
-////////////////////////////////////////////////////////////////////////////////
-function computeSizes() {
-    var rawValues = [];
-    var scaledValues = [];
-
-    var sizeBy = webweb.display.sizeBy;
-
-    // set all sizes to 1 if there's no scaling 
-    if (sizeBy == "none") {
-        for (var i in webweb.nodes) {
-            scaledValues[i] = 1;
-            rawValues[i] = 1;
-        }
-    }
-    else {
-        var type = webweb.getSizeByType();
-        rawValues = getRawNodeValues(sizeBy, type, 'size');
-
-        // if we're sizing by degree (or strength), square root the value
-        rawValues.forEach(function(val) {
-            var scaled = type == 'degree' ? Math.sqrt(val) : val;
-            scaledValues.push(scaled);
-        });
-
-        // scale between true and false even if we only have one of
-        // the two values
-        var extent = type == 'binary' ? [true, false] : scaledValues;
-        var range = d3.set(extent).values().length > 1 ? [0.5, 1.5] : [1, 1];
-
-        webweb.scales.nodeSize.domain(d3.extent(extent)).range(range);
-
-        for (var i in scaledValues) {
-            scaledValues[i] = webweb.scales.nodeSize(scaledValues[i]);
-        }
-    }
-
-    for (var i in webweb.nodes) {
-        webweb.nodes[i]['__scaledSize'] = scaledValues[i];
-        webweb.nodes[i]['__rawSize'] = rawValues[i];
-    }
-}
-////////////////////////////////////////////////////////////////////////////////
-// computes the colors for the nodes based on the preferences of the user chosen
-// in the dropdown menus.
-////////////////////////////////////////////////////////////////////////////////
 function computeColors() {
     var rawValues = [];
     var scaledValues = [];
@@ -143,259 +85,6 @@ function computeColors() {
         webweb.nodes[i]['__rawColor'] = rawValues[i];
     }
 }
-// ColorWheel is a function that takes a node metadatum, like a category or scalar
-// and just gets the damn color. But it has to take into account what the 
-// current colorType is. Basically, this is trying to apply our prefs to colors
-function colorWheel(x) {
-    var type = webweb.getColorByType();
-
-    if (type == "categorical") {
-        return webweb.scales.colors.categorical(x);
-    }
-    else if (type == 'binary') {
-        return webweb.scales.colors.categorical(getBinaryValue(x, 'color'));
-    }
-    else {
-        return d3.hsl(210 * (1 - webweb.scales.colors.scalar(x)), 0.7, 0.5);
-    }
-}
-////////////////////////////////////////////////////////////////////////////////
-// draw legend(s) for size and color
-// 
-// If size and color are tied to the same attribute, make one legend
-// Otherwise, keep em separate
-//
-// prefer integer boundaries in our legends... but only if the values that are
-// getting passed in are integers... etc. (etc... etc...)
-//
-// steps through what we think of as standard human preference.
-////////////////////////////////////////////////////////////////////////////////
-function computeLegend() {
-    computeColors();
-    computeSizes();
-    webweb.legendNodes = [];
-    webweb.legendText = [];
-
-    var sizeBy = webweb.display.sizeBy;
-    var sizeType = webweb.getSizeByType();
-    var colorBy = webweb.display.colorBy;
-    var colorType = webweb.getColorByType();
-
-    if (sizeType == "none" && colorType == "none") {
-        return;
-    };
-
-    var sizeLegend = new Legend(sizeBy, 'size', sizeType, getRawNodeValues('__rawSize'));
-    var colorLegend = new Legend(colorBy, 'color', colorType, getRawNodeValues('__rawColor'));
-
-    var R = 0;
-
-    if (sizeLegend.values.length > 0) {
-        R = webweb.display.r * d3.max(sizeLegend.values);;
-    }
-
-    // if we have a color legend, use it for the size menu (if it's there)
-    var fillFunction = function(i) {
-        return d3.rgb(100, 100, 100);
-    };
-
-    if (sizeBy == colorBy) {
-        fillFunction = function(i) {
-            return colorWheel(colorLegend.values[i]);
-        }
-    }
-
-    var datatypeTextPushdown = 15;
-
-    var textPushRight = 2 * (Math.max(R, 5) + 5);
-    var nodePushRight = 5 + Math.max(R, 5);
-    var pushdown = function(i) { return 0 };
-
-    if (sizeBy != "none") {
-        pushdown = function (i) {
-            if (i !== undefined) {
-                return 5 + R + 2.3 * R * i + datatypeTextPushdown;
-            }
-            return datatypeTextPushdown;
-        };
-
-        sizeLegend.drawLegendLabel(pushdown);
-        sizeLegend.drawLegendText(pushdown, textPushRight);
-        sizeLegend.drawLegendValues(
-            pushdown,
-            nodePushRight,
-            function (d) { return webweb.display.r * d },
-            fillFunction,
-        );
-    }
-
-    // if we've drawn the size legend and the color legend shows the same value,
-    // return
-    if (sizeBy == colorBy) {
-        return;
-    }
-
-    if (colorType != "none") {
-        var initialPushdown = datatypeTextPushdown;
-
-        if (webweb.display.sizeBy != "none") {
-            initialPushdown += pushdown(sizeLegend.values.length);
-            pushdown = function (i) {
-                if (i !== undefined) {
-                    return 2.3 * Math.max(R, 7.5) * i + initialPushdown + datatypeTextPushdown;
-                }
-                return initialPushdown;
-            }
-        }
-        else {
-            pushdown = function (i) {
-                if (i !== undefined) {
-                    return 2.3 * webweb.display.r * i + initialPushdown + (3 + i) * webweb.display.r;
-                }
-                return initialPushdown;
-            }
-        }
-
-        // show the variable being displayed
-        colorLegend.drawLegendLabel(pushdown);
-        colorLegend.drawLegendText(pushdown, textPushRight);
-        colorLegend.drawLegendValues(
-            pushdown,
-            nodePushRight,
-            function (i) { return webweb.display.r },
-            function (i) { return colorWheel(colorLegend.values[i]); }
-        );
-    }
-}
-function Legend(metadataName, legendType, dataType, rawValues) {
-    this.metadataName = metadataName;
-    this.legendType = legendType;
-    this.dataType = dataType;
-    this.rawValues = rawValues;
-    this.values = [];
-
-    var legendTypeToLegendMaker = {
-        'size' : {
-            'binary' : 'makeBinaryLegend',
-            'scalar' : 'makeScalarLegend',
-            'degree' : 'makeDegreeLegend',
-        },
-        'color' : {
-            'binary' : 'makeBinaryLegend',
-            'scalar' : 'makeScalarLegend',
-            'degree' : 'makeDegreeLegend',
-            'categorical' : 'makeCategoricalLegend',
-            'scalarCategorical' : 'makeScalarCategoricalLegend',
-        },
-    }
-
-    var legendFunction = legendTypeToLegendMaker[this.legendType][this.dataType];
-
-    if (legendFunction !== undefined) {
-        this[legendFunction]();
-
-        if (this.legendType == 'size') {
-            for (var i in this.values) {
-                this.values[i] = webweb.scales.nodeSize(this.values[i]);
-            }
-        }
-    }
-}
-Legend.prototype.drawLegendLabel = function(pushDown) {
-    var text = new Text(this.metadataName, 5, pushDown(), "12px");
-    webweb.legendText.push(text);
-}
-Legend.prototype.drawLegendText = function(pushDown, pushRight) {
-    var valuesCount = this.values.length;
-    this.text.forEach(function(d, i) {
-        // only draw text for as many values as there are
-        if (i < valuesCount) {
-            var text = new Text(d, pushRight, pushDown(i) + 3.5, "12px");
-            webweb.legendText.push(text);
-        }
-    });
-}
-Legend.prototype.drawLegendValues = function(pushDown, pushRight, sizeFunction, colorFunction) {
-    var textCount = this.text.length;
-    this.values.forEach(function(d, i){
-        // only draw text for as many values as there are
-        if (i < textCount) {
-            var node = new Node(-1);
-            node.fixedRadius = sizeFunction(d);
-            node.x = pushRight;
-            node.y = pushDown(i);
-            node.__scaledColor = colorFunction(i);
-            node.nonInteractive = true;
-
-            webweb.legendNodes.push(node);
-        }
-    });
-}
-Legend.prototype.makeBinaryLegend = function() {
-    this.values = getBinaryValues(this.legendType);
-    this.text = ["false", "true"];
-}
-Legend.prototype.makeDegreeLegend = function () {
-    this.makeScalarLegend();
-    if (this.legendType == 'size') {
-        for (var i in this.values) {
-            this.values[i] = Math.sqrt(this.values[i]);
-        }
-    }
-}
-Legend.prototype.makeCategoricalLegend = function() {
-    this.values = webweb.scales.colors.categorical.domain();
-    this.text = d3.values(webweb.allMetadata[webweb.display.colorBy].categories);
-}
-Legend.prototype.makeScalarLegend = function() {
-    // if it is integer scalars:
-    if (allInts(this.rawValues)) {
-        var max = d3.max(this.rawValues);
-        var min = d3.min(this.rawValues);
-
-        if (max - min <= 8) {
-            this.values = d3.range(min, max + 1);
-        }
-    }
-
-    if (this.values.length == 0) {
-        this.makeBinnedLegend(4);
-    }
-
-    this.text = this.values.slice(0);
-}
-// 'bins' a set of values so that we can display a finite legend.
-Legend.prototype.makeBinnedLegend = function(bins) {
-    if (bins == undefined) {
-        bins = 4;
-    }
-    var min_val = d3.min(this.rawValues);
-    var max_val = d3.max(this.rawValues);
-    var step = (max_val - min_val) / bins;
-
-    this.values.push(rounddown(min_val, 10));
-
-    for (var i = 1; i < bins; i++) {
-        this.values.push(round(min_val + i * step, 10));
-    }
-
-    this.values.push(roundup(max_val, 10));
-
-    this.text = this.values.slice(0);
-}
-Legend.prototype.makeScalarCategoricalLegend = function(bins) {
-    this.makeBinnedLegend();
-
-    // this logic is sorta weird; we have converted the categorical information
-    // to indexes, but we want the legend to display the actual category values
-    // at those indexes
-    var categoryValues = d3.set(getRawNodeValues(this.metadataName)).values().sort();
-
-    for (var i in this.text) {
-        this.text[i] = categoryValues[parseInt(this.text[i])];
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
@@ -417,8 +106,7 @@ function saveIt(fileName, fileType, content) {
 }
 function SaveSVG(title) {
   html = getSVGHTML()
-  saveIt(title, "image/svg+xml", html);
-this.settings.networkName, "image/svg+xml", html
+  saveIt(title, "image/svg+xml", html)
 }
 function getSVGHTML(){
     var svg = drawSVG();
@@ -466,15 +154,6 @@ function isInt(n){
 }
 function isFloat(n){
     return Number(n) === n && n % 1 !== 0;
-}
-function round(x, dec) {
-    return (Math.round(x * dec) / dec);
-}
-function roundup(x, dec) {
-    return (Math.ceil(x * dec) / dec);
-}
-function rounddown(x, dec) {
-    return (Math.floor(x * dec) / dec);
 }
 function allInts(vals) {
     for (var i in vals) {
@@ -542,15 +221,6 @@ function playNetworkLayers() {
     }, 1000);
 }
 ////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-// Imperial Death March
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 // initializeWebweb
 //
 // run once on startup
@@ -576,4 +246,4 @@ window.addEventListener("keydown", function (event) {
     if (event.keyCode in listeners) {
         listeners[event.keyCode](event);
     }
-});
+})

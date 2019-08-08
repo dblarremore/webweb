@@ -1,5 +1,8 @@
 import * as d3 from 'd3'
 
+const zip = (arr, ...arrs) => {
+  return arr.map((val, i) => arrs.reduce((a, arr) => [...a, arr[i]], [val]))
+}
 /********************************************************************************
  * Attribute object
  *
@@ -13,16 +16,80 @@ import * as d3 from 'd3'
  *    - slapping them onto the nodes
 ********************************************************************************/
 export class Attribute {
-  static TYPE = 'none'
 
-  static defaultColorValue = d3.rgb(100, 100, 100)
-  static defaultValue = 1
+  get defaultColorValue() { return d3.rgb(128, 128, 128) }
+  get defaultValue() { return 1 }
+  static get DISPLAY_COLOR() { return true }
+  static get DISPLAY_SIZE() { return true }
 
-  static DISPLAY_COLOR = true
-  static DISPLAY_SIZE = true
+  get TYPE() {
+    return 'none'
+  }
 
   get sizeScale() {
     return 'nodeSize'
+  }
+
+  getLegendValuesAndText(rawValues, scaledValues, nodes) {
+    let text = rawValues
+    let values = scaledValues
+    return this.legendSort(values, text)
+  }
+
+  legendSort(rawValues, rawText) {
+    if (rawValues == undefined) {
+      rawValues = []
+    }
+    if (rawText == undefined) {
+      rawText = []
+    }
+
+    let length = rawValues.length < rawText.length ? rawValues.length : rawText.length
+    let pairList = []
+
+    let seenText = {}
+
+    for (let i = 0; i < length; i++) {
+      let text = rawText[i]
+      if (seenText[text] == undefined) {
+        seenText[text] = true
+        pairList.push({
+          'value': rawValues[i],
+          'text': text,
+        })
+      }
+    }
+
+    // sort by text element
+    pairList.sort((a, b) => a.text - b.text)
+
+    return {
+      'values': pairList.map(x => x.value),
+      'text': pairList.map(x => x.text),
+    }
+  }
+
+  // 'bins' a set of values so that we can display a finite legend.
+  makeBinnedLegend(rawValues, bins) {
+    if (bins == undefined || isNaN(bins)) {
+      bins = 4
+    }
+
+    let [min, max] = [d3.min(rawValues), d3.max(rawValues)]
+    let step = (max - min) / bins
+
+    let values = []
+    
+    values.push(rounddown(min, 10))
+    for (let i = 1; i < bins; i++) {
+      values.push(round(min + i * step, 10))
+    }
+    values.push(roundup(max, 10))
+
+    return {
+      'values': values,
+      'text': values.slice(0),
+    }
   }
 
   // want to opaquly handle color and size
@@ -49,11 +116,11 @@ export class Attribute {
   // EXTENT and other size properties
   extent(nodes) {
     let nodeValues = Object.values(nodes).map(node => node[this.key])
-    return d3.set(nodeValues).values().sort()
+    return d3.set(nodeValues).values()
   }
 
   colorExtent(nodes) {
-    return d3.set(this.getRawColorValues(nodes)).values().sort()
+    return d3.set(this.getRawColorValues(nodes)).values()
   }
 
   valueSetSize(nodes) {
@@ -172,37 +239,86 @@ export class Attribute {
 }
 
 export class NameAttribute extends Attribute {
-  static TYPE = 'name'
+  get TYPE() {
+    return 'name'
+  }
 
-  static DISPLAY_COLOR = false
-  static DISPLAY_SIZE = false
+  static get DISPLAY_COLOR() { return false }
+  static get DISPLAY_SIZE() { return false }
 
 }
+export class ScalarAttribute extends Attribute {
+  get TYPE() {
+    return 'scalar'
+  }
 
-export class DegreeAttribute extends Attribute {
-  static TYPE = 'degree'
+  isType(nodes) {
+    return true
+  }
+
+  getLegendValuesAndText(rawValues, scaledValues, nodes) {
+    let map = {
+      'values': [],
+      'text': rawValues,
+    }
+    // if it is integer scalars:
+    if (allInts(scaledValues)) {
+      let [min, max] = [d3.min(scaledValues), d3.max(scaledValues)]
+
+      if (max - min <= 8) {
+        map.values = d3.range(min, max + 1)
+        map.text = map.values.slice(0)
+      }
+    }
+
+    if (map.values.length == 0) {
+      return this.makeBinnedLegend(scaledValues)
+    }
+
+    return map
+  }
 
   get colorScale() {
     return 'scalarColors'
+  }
+}
+export class DegreeAttribute extends ScalarAttribute {
+  get TYPE() {
+    return 'degree'
+  }
+
+  get colorScale() {
+    return 'scalarColors'
+  }
+
+  getLegendValuesAndText(rawValues, scaledValues, nodes) {
+    let values = []
+    let text = []
+    for (let [i, rawValue] of Object.entries(rawValues)) {
+      if (text.indexOf(rawValue) < 0) {
+        values.push(scaledValues[i])
+        text.push(rawValue)
+      }
+    }
+
+    return this.legendSort(values, text)
   }
 
   getScaledSizeValue(node, scale) {
     return scale(Math.sqrt(this.getRawSizeValue(node)))
   }
 }
-export class ScalarAttribute extends Attribute {
-  static TYPE = 'scalar'
-
-  isType(nodes) {
-    return true
-  }
-
-  get colorScale() {
-    return 'scalarColors'
-  }
-}
 export class BinaryAttribute extends Attribute {
-  static TYPE = 'binary'
+  get TYPE() {
+    return 'binary'
+  }
+
+  getLegendValuesAndText(rawValues, scaledValues, nodes) {
+    return {
+      'values': scaledValues,
+      'text': ["false", "true"],
+    }
+  }
 
   /*
    * Explanation: 
@@ -293,8 +409,10 @@ export class BinaryAttribute extends Attribute {
 
 }
 export class CategoricalAttribute extends Attribute {
-  static TYPE = 'categorical'
-  static DISPLAY_SIZE = false
+  get TYPE() {
+    return 'categorical'
+  }
+  static get DISPLAY_SIZE() { return false }
 
   constructor(key, categories, nodes) {
     super(key)
@@ -302,6 +420,19 @@ export class CategoricalAttribute extends Attribute {
 
     if (nodes !== undefined && ! this.categories) {
       this.defaultCategories(nodes)
+    }
+  }
+
+  getLegendValuesAndText(rawValues, scaledValues, nodes) {
+    this.defaultCategories(nodes)
+    if (this.isScalarCategorical) {
+      // TODO:
+      // this might now work, unsure about how the scalarCategorical
+      // "is it an index, is it a string" is working
+      return this.makeBinnedLegend(scaledValues)
+    }
+    else {
+      return super.getLegendValuesAndText(rawValues, scaledValues, nodes)
     }
   }
 
@@ -366,4 +497,26 @@ export class CategoricalAttribute extends Attribute {
       return node[this.key]
     }
   }
+}
+
+function isInt(n){
+    return Number(n) === n && n % 1 === 0;
+}
+function allInts(vals) {
+    for (var i in vals) {
+        if (!isInt(vals[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+function round(x, dec) {
+    return (Math.round(x * dec) / dec);
+}
+function rounddown(x, dec) {
+    return (Math.floor(x * dec) / dec);
+}
+function roundup(x, dec) {
+    return (Math.ceil(x * dec) / dec);
 }

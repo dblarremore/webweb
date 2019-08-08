@@ -22,9 +22,19 @@ export class CanvasState {
     this.dragging = false
     this.draggedNode = undefined
 
-    this.HTML.addEventListener("mousedown", this.HTML.mouseDownListener)
-    this.HTML.addEventListener("mousemove", this.HTML.mouseMoveListener)
-    this.HTML.addEventListener("mouseup", this.HTML.mouseUpListener)
+    let _this = this
+    this.HTML.addEventListener("mousedown", (event) => {
+      _this.setMouseState(event)
+      _this.mouseDownListener()
+    })
+    this.HTML.addEventListener("mousemove", (event) => {
+      _this.setMouseState(event)
+      _this.mouseMoveListener()
+    })
+    this.HTML.addEventListener("mouseup", (event) => {
+      _this.setMouseState(event)
+      _this.mouseUpListener()
+    })
 
     this.simulation.simulation.on('tick', this.redraw.bind(this))
     this.simulation.simulation.alpha(1).restart()
@@ -56,6 +66,9 @@ export class CanvasState {
 
   redraw() {
     this.clear()
+    this.nodesMatchingString(this.settings.nameToMatch)
+    this.nodesContainingMouse(this.mouseState)
+
     let ctx = this.context
     if (this.simulation.links !== undefined) {
       this.simulation.links.forEach((link) => {
@@ -69,13 +82,23 @@ export class CanvasState {
 
     if (this.simulation.simulation.alpha() < .05 || this.settings.freezeNodeMovement) {
       this.simulation.nodes.forEach((node) => {
-        let nodeText = node.nodeText
+        if (node.matchesString || node.containsMouse || this.settings.showNodeNames) {
+          let nodeText = node.nodeText
 
-        if (nodeText !== undefined) {
-          nodeText.draw(ctx)
+          if (nodeText !== undefined) {
+            nodeText.draw(ctx)
+          }
         }
       })
     }
+
+    this.legendNodes.forEach((node) => {
+      node.draw(ctx)
+    })
+
+    this.legendText.forEach((text) => {
+      text.draw(ctx)
+    })
 
     // this.nodes.forEach(function(node) {
     //   node.nodeText.draw(this.context)
@@ -91,12 +114,61 @@ export class CanvasState {
     // }
   }
 
-  getMouseState(event) {
+  nodesMatchingString(matchString) {
+    let namesToMatch
+    if (matchString.indexOf(',') >= 0) {
+      namesToMatch = matchString.split(',')
+    }
+    else {
+      namesToMatch = [matchString]
+    }
+
+    namesToMatch = namesToMatch.filter(name => name.length)
+
+    this.simulation.nodes.forEach((node) => {
+      node.matchesString = false
+      for (let nameToMatch of namesToMatch) {
+        if (nameToMatch.length > 0) {
+          if (node.name !== undefined) {
+            if (node.name.indexOf(nameToMatch) >= 0) {
+              node.matchesString = true
+            }
+          }
+        }
+      }
+    })
+  }
+
+  nodesContainingMouse(mouseState) {
+    this.simulation.nodes.forEach((node) => {
+      node.containsMouse = this.nodeContainsMouse(node, mouseState)
+    })
+  }
+
+  nodeContainsMouse(node, mouseState) {
+    if (mouseState !== undefined) {
+      let radius = 1.3 * node.radius
+
+      if (
+        node.x + radius >= mouseState.x &&
+        node.x - radius <= mouseState.x &&
+        node.y + radius >= mouseState.y &&
+        node.y - radius <= mouseState.y
+      ) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  setMouseState(event) {
     let box = this.HTML.getBoundingClientRect()
-    return {
+    this.mouseState = {
       x: event.clientX - box.left - this.padding,
       y: event.clientY - box.top - this.padding,
     }
+    return this.mouseState
   }
 
   mouseIsWithinDragBoundary(mouseState) {
@@ -120,7 +192,7 @@ export class CanvasState {
 
   // don't really understand the dragging logic atm
   endDragging() {
-    this.simulation.alphaTarget(0)
+    this.simulation.simulation.alphaTarget(0)
 
     if (! this.settings.freezeNodeMovement && this.draggedNode !== undefined) {
       this.draggedNode.fx = null
@@ -137,7 +209,7 @@ export class CanvasState {
   }
 
   mouseMoveListener(event) {
-    const mouseState = this.getMouseState(event)
+    const mouseState = this.mouseState
 
     if (this.dragging) {
       if (this.mouseIsWithinDragBoundary(mouseState)) {
@@ -150,16 +222,16 @@ export class CanvasState {
 
     this.redraw()
   }
-  mouseDownListener(event) {
-    const mouseState = this.getMouseState(event)
+  mouseDownListener() {
+    const mouseState = this.mouseState
     this.endDragging()
 
     for (let node of this.simulation.nodes) {
-      if (node.containsMouse(mouseState)) {
+      if (this.nodeContainsMouse(node, mouseState)) {
         this.dragging = true
         this.draggedNode = node
 
-        this.simulation.alphaTarget(0.3).restart()
+        this.simulation.simulation.alphaTarget(0.3).restart()
         this.updateDraggedNode(mouseState)
       }
     }

@@ -421,7 +421,7 @@ export class Layer {
         if (attribute.isType(nodes)) {
           typeUndefinedAndNodesOfType = true
         }
-        if (categories !== undefined && attributeClass.TYPE == 'categorical') {
+        if (categories !== undefined && attribute.TYPE == 'categorical') {
           typeUndefinedAndCategories = true
         }
       }

@@ -2,6 +2,7 @@ import {colorbrewer } from './colors'
 import { Menu } from './menu'
 import { Node } from './node'
 import { Link } from './link'
+import { Legend } from './legend'
 import { AllSettings } from './controller'
 import { Network } from './network'
 import { Simulation } from './simulation'
@@ -16,11 +17,12 @@ export class Webweb {
     this.globalNodes = webwebData.display.nodes
 
     this.scales = {
-        'nodeSize' : d3.scaleLinear(),
-        'scalarColors' : d3.scaleLinear(),
-        'categoricalColors' : d3.scaleOrdinal(),
-        'linkWidth' : d3.scaleLinear(),
-        'linkOpacity' : d3.scaleLinear(),
+      'nodeSize' : d3.scaleLinear(),
+      'scalarColors' : d3.scaleLinear(),
+      'categoricalColors' : d3.scaleOrdinal(),
+      'linkWidth' : d3.scaleLinear(),
+      'linkOpacity' : d3.scaleLinear(),
+      'none': x => x,
     }
 
     // STATE
@@ -93,8 +95,6 @@ export class Webweb {
   // object that will hopefully make things nicer and give only restricted
   // access to the widgets
   getCallHandler() {
-    // allows:
-    // - `display-network`: displays the network specified in the settings
     let _this = this
     let handleFunction = (request, settings) => {
       const handler = {
@@ -108,9 +108,19 @@ export class Webweb {
           else {
             _this.simulation.unfreeze()
           }
+          _this.simulation.simulation.tick()
         },
         'update-sim': function(settings) {
           _this.simulation.update(settings)
+        },
+        'redraw': (settings) => {
+          _this.canvas.settings = settings
+          _this.canvas.redraw()
+        },
+        'update-scales': (settings) => {
+          _this.updateScales(settings)
+          _this.canvas.settings = settings
+          _this.canvas.redraw()
         },
         // TODO
         // TODO
@@ -125,6 +135,7 @@ export class Webweb {
 
     return handleFunction
   }
+
 
   /* nodes persist between layers (for the simulation's sake), so when the
    * network changes:
@@ -194,16 +205,11 @@ export class Webweb {
     this.simulation.links = this.getLinks(layer, this.simulation.nodes, this.scales)
     this.simulation.update(settings)
 
-    console.log(this.simulation.nodes)
+    // if we've frozen node movement manually tick so new edges are evaluated.
+    if (settings.freezeNodeMovement) {
+      this.simulation.simulation.tick()
+    }
 
-    // toggleFreezeNodes(webweb.display.freezeNodeMovement);
-
-    // // if we've frozen node movement manually tick so new edges are evaluated.
-    // if (webweb.display.freezeNodeMovement) {
-    //     webweb.canvas.redraw();
-    // }
-
-    // computeLegend();
   }
 
   getLinks(layer, nodes, scales) {
@@ -302,6 +308,13 @@ export class Webweb {
     let sizeAttribute = layer.attributes.size[settings.sizeBy]
     let colorAttribute = layer.attributes.color[settings.colorBy]
 
+    if (sizeAttribute == undefined) {
+      sizeAttribute = layer.attributes.size.none
+    }
+    if (colorAttribute == undefined) {
+      colorAttribute = layer.attributes.color.none
+    }
+
     sizeAttribute.nodes = nodes
     colorAttribute.nodes = nodes
 
@@ -341,7 +354,7 @@ export class Webweb {
         }
       }
 
-      if (this.scales[name] !== undefined) {
+      if (name !== 'none' && this.scales[name] !== undefined) {
         this.scales[name].domain(d3.extent(extent)).range(range)
       }
     }
@@ -353,6 +366,30 @@ export class Webweb {
       node.__rawColor = colorAttribute.getRawColorValue(node)
       node.__scaledColor = colorAttribute.getScaledColorValue(node, this.scales[colorScaleName])
     })
+
+    let legend = new Legend(
+      settings.sizeBy,
+      sizeAttribute,
+      settings.colorBy,
+      colorAttribute,
+      settings.r,
+      nodes,
+      this.scales,
+    )
+
+    let objects = legend.legendNodeAndText
+
+    objects.nodes = objects.nodes.map((node) => {
+      node.settings = settings
+      return node
+    })
+
+    if (settings.showLegend) {
+      this.canvas.legendNodes = objects.nodes
+      this.canvas.legendText = objects.text
+    }
+
+    // computeLegend();
   }
 
   getScaledColor(value, scaleType, scales) {

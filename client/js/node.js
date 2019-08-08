@@ -79,48 +79,15 @@ export class Node {
     }
 
     let radius = this.__scaledSize * this.settings.r || this.settings.r
-    if (this.matchesString() || this.containsMouse(radius)) {
+    if (this.matchesString || this.containsMouse) {
       radius *= 1.3;
     }
 
     return radius
   }
 
-  matchesString() {
-    let matchString = this.settings.nameToMatch
-    if (matchString !== undefined && matchString.length > 0) {
-      if (this.name !== undefined && this.name.indexOf(matchString) >= 0) {
-        return true
-      }
-    }
-    
-    return false
-  }
-
-  containsMouse(radius, mouseState) {
-    if (mouseState == undefined) {
-        return false
-    }
-
-    // recursion...
-    if (radius == undefined) {
-      radius = 1.3 * this.radius
-    }
-
-    if (
-      this.x + radius >= mouseState.x &&
-      this.x - radius <= mouseState.x &&
-      this.y + radius >= mouseState.y &&
-      this.y - radius <= mouseState.y
-    ) {
-      return true
-    }
-
-    return false
-  }
-
   get outline() {
-    if (this.matchesString() || this.containsMouse()) {
+    if (this.matchesString || this.containsMouse) {
       return "black"
     }
     else {
@@ -134,13 +101,11 @@ export class Node {
       return
     }
 
-    if (this.matchesString() || this.settings.showNodeNames || this.containsMouse(radius)) {
-      const text = this.name || this.idx
-      const textX = this.x + 1.1 * radius
-      const textY = this.y - 1.1 * radius
-      const font = "12px"
-      return new Text(text, textX, textY, font)
-    }
+    const text = this.name || this.idx
+    const textX = this.x + 1.1 * radius
+    const textY = this.y - 1.1 * radius
+    const font = "12px"
+    return new Text(text, textX, textY, font)
   }
 
   draw(ctx) {
