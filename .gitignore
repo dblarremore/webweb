@@ -8,3 +8,4 @@ build
 **/*.pyc
 webweb/client
 .idea/
+**/node_modules

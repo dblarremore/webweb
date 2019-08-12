@@ -13,13 +13,6 @@ import { Blob } from 'blob-polyfill'
 import { saveAs } from 'file-saver'
 import * as d3 from 'd3'
 
-// function Webweb(wwdata) {
-//     this.legendNodes = []
-//     this.legendText = []
-// }
-function displayNetwork() {
-    computeLegend();
-}
 function computeColors() {
     var rawValues = [];
     var scaledValues = [];
@@ -149,20 +142,8 @@ function drawSVG() {
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-function isInt(n){
-    return Number(n) === n && n % 1 === 0;
-}
 function isFloat(n){
     return Number(n) === n && n % 1 !== 0;
-}
-function allInts(vals) {
-    for (var i in vals) {
-        if (!isInt(vals[i])) {
-            return false;
-        }
-    }
-
-    return true;
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -235,15 +216,3 @@ window.onload = function() {
   let webweb = new Webweb(window.wwdata);
   webweb.displayNetwork(webweb.networkName, webweb.state.global.settings)
 };
-window.addEventListener("keydown", function (event) {
-    const listeners = {
-        37 : changeNetworkLayerListener,
-        38 : changeNetworkListener,
-        39 : changeNetworkLayerListener,
-        40 : changeNetworkListener,
-    };
-
-    if (event.keyCode in listeners) {
-        listeners[event.keyCode](event);
-    }
-})

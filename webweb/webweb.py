@@ -198,16 +198,12 @@ class Web(dict):
         return """
             <html>
                 <head>
-                    <script>{d3js}</script>
                     <style>{style}</style>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
                 <body>
-                    <script type="text/javascript">{colorsjs}</script>
-                    <script type="text/javascript">{blobjs}</script>
-                    <script type="text/javascript">{filesaverjs}</script>
-                    <script type="text/javascript">var wwdata = {json};</script>
-                    <script type="text/javascript">{webwebjs}</script>
+                    <script type="text/javascript">window.wwdata = {json};</script>
+                    <script type="text/javascript">{webwebbundlejs}</script>
                 </body>
             </html>
         """.format(
@@ -219,6 +215,7 @@ class Web(dict):
             filesaverjs=self.get_client_file_content('js', 'FileSaver.min.js'),
             json=self.json,
             webwebjs=self.get_client_file_content('js', 'webweb.v5.js'),
+            webwebbundlejs=self.get_client_file_content('js', 'webweb.bundle.js'),
         )
 
 

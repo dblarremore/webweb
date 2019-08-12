@@ -1,5 +1,6 @@
-import {colorbrewer } from './colors'
+import { colorbrewer } from './colors'
 import { Menu } from './menu'
+import { GlobalListeners } from './listeners'
 import { Node } from './node'
 import { Link } from './link'
 import { Legend } from './legend'
@@ -88,6 +89,8 @@ export class Webweb {
     let canvas = new CanvasState(this.state.global.settings, this.simulation)
     box.append(canvas.box)
     this.canvas = canvas
+
+    let listeners = 
 
     this.displayNetwork(this.networkName, this.state.global.settings)
   }
