@@ -23,20 +23,24 @@ import pygmlion
 
 
 class Web(dict):
-    """a webweb object.
-    a collection of named webweb Network objects, a set of display parameters, and a title
+    """a webweb object:
+    a collection of:
+    - named webweb Network objects
+    - a set of display parameters
+    - and (optionally) a title
     """
 
     def __init__(
-            self,
-            adjacency=[],
-            title="webweb",
-            display={},
-            adjacency_type=None,
-            nodes={},
-            metadata=None,
-            nx_G=None,
-            gml_file=None,
+        self,
+        adjacency=[],
+        title="webweb",
+        display={},
+        adjacency_type=None,
+        nodes={},
+        metadata=None,
+        nx_G=None,
+        gml_file=None,
+        path=None,
     ):
         """
         usage:
@@ -102,6 +106,49 @@ class Web(dict):
                 nx_G=nx_G,
                 gml_file=gml_file,
             )
+        elif path:
+            g = self.attempt_to_read(path)
+
+            if g:
+                getattr(self.networks, self.title)(
+                    nodes=nodes,
+                    metadata=metadata,
+                    nx_G=g,
+                )
+
+    @staticmethod
+    def attempt_to_read(path):
+        nx_methods = [
+            'read_edgelist',
+            'read_weighted_edgelist',
+            'read_adjlist',
+            'read_multiline_adjlist',
+            'read_gexf',
+            'read_gml',
+            'read_gpickle',
+            'read_graphml',
+            'node_link_data',
+            'node_link_graph',
+            'adjacency_data',
+            'adjacency_graph',
+            'cytoscape_data',
+            'cytoscape_graph',
+            'tree_data',
+            'tree_graph',
+            'jit_data',
+            'jit_graph',
+            'read_leda',
+            'read_yaml',
+            'read_pajek',
+            'read_shp',
+        ]
+
+        for method in nx_methods:
+            try:
+                import networkx.readwrite
+                return getattr(networkx.readwrite, method)(path)
+            except:
+                pass
 
     @staticmethod
     def base_path():
@@ -328,7 +375,11 @@ class Network(dict):
         - gml_file
         """
         if len(adjacency) and isinstance(adjacency, np.ndarray):
-            adjacency = adjacency.tolist()
+            new_adjacency = []
+            for i, row in enumerate(adjacency.tolist()):
+                new_adjacency.extend([[i, j, v] for j, v in enumerate(row) if v])
+
+            adjacency = new_adjacency
 
         if nx_G:
             adjacency, nodes = self.get_adjacency_and_nodes_from_networkx_graph(
