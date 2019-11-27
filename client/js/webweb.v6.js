@@ -10,6 +10,9 @@ import { Simulation } from './simulation'
 import { CanvasState } from './canvas'
 import * as d3 from 'd3'
 
+import { saveAs } from 'file-saver'
+import { Blob } from 'blob-polyfill'
+
 export class Webweb {
   constructor(webwebData) {
     this.title = webwebData.title || 'webweb'
@@ -33,21 +36,22 @@ export class Webweb {
     }
 
     this.state.global = new AllSettings(webwebData.display)
+    let settings = this.state.global.settings
 
-    if (this.state.global.settings['networkName'] == undefined) {
-      this.state.global.settings['networkName'] = this.networkNames[0]
+    if (settings['networkName'] == undefined) {
+      settings['networkName'] = this.networkNames[0]
       this.networkName = this.networkNames[0]
     }
     else {
-      this.networkName = this.state.global.settings['networkName']
+      this.networkName = settings['networkName']
     }
 
-    this.state.global.settings['networkNames'] = this.networkNames
+    settings['networkNames'] = this.networkNames
 
     // NETWORKS
     this.maxNodes = 0
     this.networks = {}
-    this.state.global.settings['networkLayers'] = {}
+    settings['networkLayers'] = {}
     for (let [networkName, networkData] of Object.entries(webwebData.networks)) {
       let network = new Network(networkName, networkData, this.state.global, this.globalNodes)
       this.networks[networkName] = network
@@ -58,7 +62,7 @@ export class Webweb {
         }
       }
 
-      this.state.global.settings['networkLayers'][networkName] = network.layers.length
+      settings['networkLayers'][networkName] = network.layers.length
     }
 
     // NODES
@@ -70,29 +74,29 @@ export class Webweb {
 
     this.nodesPersistence = []
 
-    this.simulation = new Simulation(this.nodes, this.state.global.settings)
+    this.simulation = new Simulation(this.nodes, settings)
 
-    let box = this.getBox(this.title, this.state.global.settings)
-    this.state.global.settings = this.setVizualizationDimensions(box, this.state.global.settings)
+    let box = this.getBox(this.title, settings)
+    settings = this.setVizualizationDimensions(box, settings)
 
     for (let networkName of Object.keys(this.networks)) {
-      this.networks[networkName].updateState(new AllSettings(this.state.global.settings))
+      this.networks[networkName].updateState(new AllSettings(settings))
     }
 
-    let layer = this.getLayerDisplayedBySettings(this.state.global.settings)
+    let layer = this.getLayerDisplayedBySettings(settings)
 
-    if (! this.state.global.settings.hideMenu) {
-      this.menu = new Menu(this.state.global.settings, layer.attributes, this.getCallHandler())
+    if (! settings.hideMenu) {
+      this.menu = new Menu(settings, layer.attributes, this.getCallHandler())
       box.appendChild(this.menu.HTML)
     }
 
-    let canvas = new CanvasState(this.state.global.settings, this.simulation)
+    let canvas = new CanvasState(settings, this.simulation)
     box.append(canvas.box)
     this.canvas = canvas
 
-    let listeners = 
+    let listeners = new GlobalListeners(settings, this.getCallHandler())
 
-    this.displayNetwork(this.networkName, this.state.global.settings)
+    this.displayNetwork(this.networkName, settings)
   }
 
   // object that will hopefully make things nicer and give only restricted
@@ -125,9 +129,27 @@ export class Webweb {
           _this.canvas.settings = settings
           _this.canvas.redraw()
         },
-        // TODO
-        // TODO
-        'save-svg': () => {},
+        'save-svg': () => {
+          var svg = _this.canvas.svgDraw()
+          const title = _this.state.global.settings.networkName
+          svg.setAttribute("title", title)
+          svg.setAttribute("version", 1.1)
+          svg.setAttribute("xmlns", "http://www.w3.org/2000/svg")
+
+          try {
+            var isFileSaverSupported = !!new Blob()
+            var blob = new Blob([svg.outerHTML], {type: "image/svg+xml"})
+            saveAs(blob, title);
+          } catch (e) {
+            alert("can't save :(")
+          }
+        },
+        'save-canvas': (settings) => {
+          const link = document.createElement('a')
+          link.download = settings.networkName + ".png"
+          link.href = _this.canvas.HTML.toDataURL()
+          link.click()
+        }
       }
 
       let fn = handler[request]
@@ -138,7 +160,6 @@ export class Webweb {
 
     return handleFunction
   }
-
 
   /* nodes persist between layers (for the simulation's sake), so when the
    * network changes:
@@ -191,14 +212,16 @@ export class Webweb {
 
   displayNetwork(networkName, settings) {
     let network = this.networks[networkName]
-    let layer = network.layers[settings['networkLayer']]
 
-    let links = layer.links
-    let attributes = layer.attributes
+    // would be nice to cache last network layer :|
+    if ((settings['networkLayer'] < 0) || (network.layers.length <= settings['networkLayer'])) {
+      settings['networkLayer'] = 0
+    }
+    let layer = network.layers[settings['networkLayer']]
 
     this.canvas.settings = settings
 
-    this.menu.refresh(settings, attributes)
+    this.menu.refresh(settings, layer.attributes)
 
     this.setVisibleNodes(layer.nodeCount)
     this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
@@ -255,11 +278,6 @@ export class Webweb {
             this.nodes.push(node)
         }
     }
-  }
-
-  displayedNetworkData() {
-    return 1
-    // return this.networks[this.settings.networkName].layers[this.display.networkLayer]
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -391,29 +409,5 @@ export class Webweb {
       this.canvas.legendNodes = objects.nodes
       this.canvas.legendText = objects.text
     }
-
-    // computeLegend();
-  }
-
-  getScaledColor(value, scaleType, scales) {
-    if (scaleType == "categorical") {
-      return scales.categoricalColors(value)
-    }
-    else if (scaleType == 'binary') {
-      return scales.categoricalColors(getBinaryValue(value, 'color'))
-    }
-    else {
-      return d3.hsl(210 * (1 - scales.scalarColors(value)), 0.7, 0.5)
-    }
-  }
-
-  getSizeByType(settings) {
-    let sizeBy = settings.sizeBy
-    return settings.metadata[sizeBy].type
-  }
-
-  getColorByType(settings) {
-    let colorBy = settings.colorBy
-    return settings.metadata[colorBy].type
   }
 }

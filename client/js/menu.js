@@ -44,7 +44,10 @@ export class Menu {
         'scaleLinkWidth': [widgetDefs.ScaleLinkWidthWidget],
         'scaleLinkOpacity': [widgetDefs.ScaleLinkOpacityWidget],
         'freezeNodes': [widgetDefs.FreezeNodesWidget],
-        'saveSVG': [widgetDefs.SaveSVGWidget],
+        'save': [
+          widgetDefs.SaveSVGWidget,
+          widgetDefs.SaveCanvasWidget
+        ],
       },
       'webweb-menu-right': {
         'charge': [widgetDefs.ChargeWidget],

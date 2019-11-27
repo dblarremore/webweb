@@ -1,22 +1,33 @@
-export class GlobalListeners() {
+export class GlobalListeners {
   constructor(settings, callHandler) {
-    this.callHandler = callHandler
+    const _this = this
     this.settings = settings
-    this.eventTokeyCodesToListeners = {
+    this.callHandler = callHandler
+
+    const eventKeyCodeListeners = {
       'keydown': {
         // binds the up/down arrow keys to change networks
         // up arrow
-        38: this.gotoNextNetworkListener,
+        38: (settings) => _this.gotoPreviousNetworkListener(settings),
         // down arrow
-        40: this.gotoPreviousNetworkListener,
+        40: (settings) => _this.gotoNextNetworkListener(settings),
         // binds the left/right arrow keys to change layers
         // left arrow
-        37: this.gotoPreviousLayerListener,
+        37: (settings) => _this.gotoPreviousLayerListener(settings),
         // right arrow
-        39: this.gotoNextLayerListener,
+        39: (settings) => _this.gotoNextLayerListener(settings),
       }
     }
-    this.addEventListeners()
+
+    for (let [eventName, keyCodeToListener] of Object.entries(eventKeyCodeListeners)) {
+      window.addEventListener(eventName, (event) => {
+        let keyCode = event.keyCode
+        let listener = keyCodeToListener[keyCode]
+        if (listener !== undefined) {
+            listener(_this.settings)
+        }
+      })
+    }
   }
 
   gotoPreviousNetworkListener(settings) {
@@ -33,7 +44,7 @@ export class GlobalListeners() {
     if (networkIndex == undefined) {
       return
     }
-    if (0 <= networkIndex && networkIndex < settings.networkNames.length) {
+    if ((0 <= networkIndex) && (networkIndex < settings.networkNames.length)) {
       settings.networkName = settings.networkNames[networkIndex]
       this.callHandler('display-network', settings)
     }
@@ -49,8 +60,8 @@ export class GlobalListeners() {
     if (layerIndex == undefined) {
       return
     }
-    const layerCount = settings.networklayers[settings.networkName]
-    if (0 <= layerIndex && layerIndex < layerCount) {
+    const layerCount = settings.networkLayers[settings.networkName]
+    if ((0 <= layerIndex) && (layerIndex < layerCount)) {
       settings.networkLayer = layerIndex
       this.callHandler('display-network', settings)
     }

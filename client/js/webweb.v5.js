@@ -9,9 +9,22 @@
  */
 
 import { Webweb } from './webweb.v6'
-import { Blob } from 'blob-polyfill'
-import { saveAs } from 'file-saver'
 import * as d3 from 'd3'
+
+////////////////////////////////////////////////////////////////////////////////
+// initializeWebweb
+//
+// run once on startup
+//
+// - loads webweb data
+// - standardizes its representation
+// - sets up the scales
+// - initializes the webweb html
+// - computes and draws nodes
+////////////////////////////////////////////////////////////////////////////////
+window.onload = function() {
+  const webweb = new Webweb(window.wwdata)
+}
 
 function computeColors() {
     var rawValues = [];
@@ -78,141 +91,3 @@ function computeColors() {
         webweb.nodes[i]['__rawColor'] = rawValues[i];
     }
 }
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-// Files
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-// it's crazy, this function right here, it saves: it
-function saveIt(fileName, fileType, content) {
-    try {
-        var isFileSaverSupported = !!new Blob();
-        var blob = new Blob([content], {type: fileType});
-        saveAs(blob, fileName);
-    } catch (e) {
-        alert("can't save :(");
-    }
-}
-function SaveSVG(title) {
-  html = getSVGHTML()
-  saveIt(title, "image/svg+xml", html)
-}
-function getSVGHTML(){
-    var svg = drawSVG();
-    svg.setAttribute("title", webweb.display.networkName);
-    svg.setAttribute("version", 1.1);
-    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    return svg.outerHTML;
-}
-function drawSVG() {
-    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-
-    webweb.links.forEach(function(link) {
-        svg.appendChild(link.drawSVG());
-    });
-
-    webweb.nodes.forEach(function(node) {
-        svg.appendChild(node.drawSVG());
-    });
-    webweb.nodeText.forEach(function(text) {
-        svg.appendChild(text.drawSVG());
-    });
-
-    if (webweb.display.showLegend) {
-        webweb.legendNodes.forEach(function(node) {
-            svg.appendChild(node.drawSVG());
-        });
-        webweb.legendText.forEach(function(text) {
-            svg.appendChild(text.drawSVG());
-        });
-    }
-
-    return svg;
-}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-// Helpers
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-function isFloat(n){
-    return Number(n) === n && n % 1 !== 0;
-}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-// Event Listeners
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-// binds the up/down arrow keys to change networks
-function changeNetworkListener(event) {
-    var currentNetworkIndex = webweb.networkNames.indexOf(webweb.display.networkName);
-    var changeToNetworkIndex;
-
-    if (event.keyCode == 38) {
-        // up arrow
-        changeToNetworkIndex = currentNetworkIndex - 1;
-    }
-    else if (event.keyCode == 40) {
-        // down arrow
-        changeToNetworkIndex = currentNetworkIndex + 1;
-    }
-
-    if (changeToNetworkIndex !== undefined) {
-        if (0 <= changeToNetworkIndex && changeToNetworkIndex < webweb.networkNames.length) {
-            var changeToNetworkName = webweb.networkNames[changeToNetworkIndex];
-            changeNetwork(changeToNetworkName);
-        }
-    }
-}
-// binds the left/right arrow keys to change layers
-function changeNetworkLayerListener(event) {
-    var currentLayer = webweb.display.networkLayer;
-    var changeToLayer;
-
-    if (event.keyCode == 39) {
-        // right arrow
-        changeToLayer = currentLayer + 1;
-    }
-    else if (event.keyCode == 37) {
-        // left arrow
-        changeToLayer = currentLayer - 1;
-    }
-
-    if (changeToLayer !== undefined) {
-        if (0 <= changeToLayer && changeToLayer < window.wwdata.networks[webweb.display.networkName].layers.length) {
-            changeLayer(changeToLayer);
-        }
-    }
-}
-function playNetworkLayers() {
-    window.setTimeout(function() {
-        changeNetworkLayerListener({'keyCode' : 39});
-        playNetworkLayers();
-    }, 1000);
-}
-////////////////////////////////////////////////////////////////////////////////
-// initializeWebweb
-//
-// run once on startup
-//
-// - loads webweb data
-// - standardizes its representation
-// - sets up the scales
-// - initializes the webweb html
-// - computes and draws nodes
-////////////////////////////////////////////////////////////////////////////////
-window.onload = function() {
-  let webweb = new Webweb(window.wwdata);
-  webweb.displayNetwork(webweb.networkName, webweb.state.global.settings)
-};

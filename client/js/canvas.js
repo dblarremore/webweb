@@ -65,20 +65,38 @@ export class CanvasState {
   }
 
   redraw() {
+    const redrawContent = this.getRedrawContent()
+    const ctx = this.context
+
+    redrawContent.forEach((element) => {
+      element.draw(ctx)
+    }, this)
+  }
+
+  svgDraw() {
+    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    const redrawContent = this.getRedrawContent()
+
+    redrawContent.forEach((element) => {
+      svg.appendChild(element.drawSVG())
+    }, this)
+
+    return svg
+  }
+
+  getRedrawContent() {
     this.clear()
     this.nodesMatchingString(this.settings.nameToMatch)
     this.nodesContainingMouse(this.mouseState)
 
+    let elementsToDraw = []
+
     let ctx = this.context
     if (this.simulation.links !== undefined) {
-      this.simulation.links.forEach((link) => {
-        link.draw(this.context)
-      }, this)
+      elementsToDraw = elementsToDraw.concat(this.simulation.links)
     }
 
-    this.simulation.nodes.forEach((node) => {
-      node.draw(ctx)
-    })
+    elementsToDraw = elementsToDraw.concat(this.simulation.nodes)
 
     if (this.simulation.simulation.alpha() < .05 || this.settings.freezeNodeMovement) {
       this.simulation.nodes.forEach((node) => {
@@ -86,32 +104,17 @@ export class CanvasState {
           let nodeText = node.nodeText
 
           if (nodeText !== undefined) {
-            nodeText.draw(ctx)
+            elementsToDraw.push(nodeText)
           }
         }
       })
     }
 
-    this.legendNodes.forEach((node) => {
-      node.draw(ctx)
-    })
-
-    this.legendText.forEach((text) => {
-      text.draw(ctx)
-    })
-
-    // this.nodes.forEach(function(node) {
-    //   node.nodeText.draw(this.context)
-    // }, this)
-
     // if (this.settings.showLegend) {
-    //   this.legendNodes.forEach(function(node) {
-    //     node.draw(this.context);
-    //   }, this);
-    //   this.settings.legendText.forEach(function(text) {
-    //     text.draw(this.context);
-    //   }, this);
-    // }
+    elementsToDraw = elementsToDraw.concat(this.legendNodes)
+    elementsToDraw = elementsToDraw.concat(this.legendText)
+
+    return elementsToDraw
   }
 
   nodesMatchingString(matchString) {

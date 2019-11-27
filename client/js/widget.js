@@ -555,14 +555,30 @@ export class SaveSVGWidget extends ButtonWidget {
     super(settings, attributes, callHandler)
     this.id = 'saveSVG'
     this.size = 10
-    this.value = 'Save SVG'
+    this.text = 'Save as'
+    this.value = 'SVG'
+    this.inline = true
 
     this.init()
   }
 
   click() {
     this.callHandler('save-svg', this.settings)
-    saveSVG()
+  }
+}
+export class SaveCanvasWidget extends ButtonWidget {
+  constructor(settings, attributes, callHandler) {
+    super(settings, attributes, callHandler)
+    this.id = 'saveCanvas'
+    this.size = 10
+    this.value = 'PNG'
+    this.inline = true
+
+    this.init()
+  }
+
+  click() {
+    this.callHandler('save-canvas', this.settings)
   }
 }
 

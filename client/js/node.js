@@ -121,7 +121,7 @@ export class Node {
     circle.setAttributeNS(null, 'cx', this.x)
     circle.setAttributeNS(null, 'cy', this.y)
     circle.setAttributeNS(null, 'r', this.radius)
-    circle.setAttributeNS(null, 'style', 'fill: ' + d3.rgb(this.__scaledColor) + '; stroke: ' + this.outline() + ';' )
+    circle.setAttributeNS(null, 'style', 'fill: ' + d3.rgb(this.__scaledColor) + '; stroke: ' + this.outline + ';' )
 
     return circle
   }
