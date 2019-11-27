@@ -24,6 +24,17 @@ export class Widget {
     return 'input'
   }
 
+  refresh(settings, attributes) {
+    if (settings !== undefined) {
+      this.settings = settings
+    }
+    if (attributes !== undefined) {
+      this.attributes = attributes
+    }
+    this.HTMLValue = this.SettingValue
+    this.showOrHide()
+  }
+
   showOrHide() {
     let visibility = 'none'
     if (this.shouldBeVisible()) {
@@ -335,7 +346,7 @@ export class SizeSelectWidget extends SelectWidget {
 
   set SettingValue(value) {
     this.settings.sizeBy = value
-    this.callHandler('update-scales', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
@@ -355,22 +366,27 @@ export class InvertBinarySizesWidget extends CheckboxWidget {
 
   set SettingValue(value) {
     this.settings.invertBinarySizes = value
-    this.callHandler('update-scales', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 
   // only show this widget when we're sizing by something binary
   shouldBeVisible() {
     let sizingBy = this.settings.sizeBy
-    if (sizingBy !== undefined) {
-      let sizingAttribute = this.attributes.size[sizingBy]
-
-      if (sizingAttribute !== undefined) {
-        if (sizingAttribute.TYPE == 'binary') {
-          return true
-        }
-      }
+    if (sizingBy == undefined) {
+      return false
     }
+
+    let sizingAttribute = this.attributes.size[sizingBy]
+
+    if (sizingAttribute == undefined) {
+      return false
+    }
+
+    if (sizingAttribute.TYPE == 'binary') {
+      return true
+    }
+
     return false
   }
 }
@@ -394,7 +410,7 @@ export class ColorSelectWidget extends SelectWidget {
 
   set SettingValue(value) {
     this.settings.colorBy = value
-    this.callHandler('update-scales', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
@@ -419,7 +435,7 @@ export class ColorPaletteSelectWidget extends SelectWidget {
 
   set SettingValue(value) {
     this.settings.colorPalette = value
-    this.callHandler('update-scales', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 
@@ -435,7 +451,10 @@ export class ColorPaletteSelectWidget extends SelectWidget {
       return false
     }
 
-    if (coloringAttribute.TYPE == 'categorical') {
+    if (coloringAttribute.TYPE == 'binary') {
+      return true
+    }
+    else if (coloringAttribute.TYPE == 'categorical') {
       if (! coloringAttribute.isScalarCategorical) {
         return true
       }
@@ -460,7 +479,7 @@ export class InvertBinaryColorsWidget extends CheckboxWidget {
 
   set SettingValue(value) {
     this.settings.invertBinaryColors = value
-    this.callHandler('update-scales', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 
@@ -470,7 +489,7 @@ export class InvertBinaryColorsWidget extends CheckboxWidget {
       let coloringAttribute = this.attributes.color[coloringBy]
 
       if (coloringAttribute !== undefined) {
-        if (coloringAttribute.type == 'binary') {
+        if (coloringAttribute.TYPE == 'binary') {
           return true
         }
       }
@@ -500,7 +519,7 @@ export class ScaleLinkWidthWidget extends CheckboxWidget {
     this.settings.scales.linkWidth.min = range[0]
     this.settings.scales.linkWidth.max = range[1]
 
-    this.callHandler('update-scales', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }
@@ -525,7 +544,7 @@ export class ScaleLinkOpacityWidget extends CheckboxWidget {
     this.settings.scales.linkOpacity.min = range[0]
     this.settings.scales.linkOpacity.max = range[1]
 
-    this.callHandler('update-scales', this.settings)
+    this.callHandler('display-network', this.settings)
     this.refresh()
   }
 }

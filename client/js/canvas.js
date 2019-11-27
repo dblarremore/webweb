@@ -110,7 +110,6 @@ export class CanvasState {
       })
     }
 
-    // if (this.settings.showLegend) {
     elementsToDraw = elementsToDraw.concat(this.legendNodes)
     elementsToDraw = elementsToDraw.concat(this.legendText)
 

@@ -124,11 +124,6 @@ export class Webweb {
           _this.canvas.settings = settings
           _this.canvas.redraw()
         },
-        'update-scales': (settings) => {
-          _this.updateScales(settings)
-          _this.canvas.settings = settings
-          _this.canvas.redraw()
-        },
         'save-svg': () => {
           var svg = _this.canvas.svgDraw()
           const title = _this.state.global.settings.networkName
@@ -362,7 +357,19 @@ export class Webweb {
     }
 
     for (let [name, data] of Object.entries(scales)) {
-      const extent = data.extent
+      let extent = d3.extent(data.extent)
+
+      if (name == colorScaleName) {
+        if ((settings.invertBinaryColors == true) && (colorAttribute.TYPE == 'binary')) {
+          extent = extent.reverse()
+        }
+      }
+
+      if (name == sizeScaleName) {
+        if ((settings.invertBinarySizes == true) && (sizeAttribute.TYPE == 'binary')) {
+          extent = extent.reverse()
+        }
+      }
 
       let range
       if (name == 'categoricalColors') {
@@ -376,7 +383,7 @@ export class Webweb {
       }
 
       if (name !== 'none' && this.scales[name] !== undefined) {
-        this.scales[name].domain(d3.extent(extent)).range(range)
+        this.scales[name].domain(extent).range(range)
       }
     }
 
