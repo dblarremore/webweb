@@ -287,15 +287,22 @@ export class Layer {
       _id => isNaN(_id) ? _id : +_id
     )
 
-    if (allInts(nodeNames)) {
-        nodeNames.sort(function(a, b){return a-b});
-    }
+    // take a set
+    nodeNames = [... new Set(nodeNames)]
     
+    let unusedName = 'UNUSED_NAME'
+
+    if (allInts(nodeNames)) {
+      nodeNames.sort(function(a, b){return a-b});
+      unusedName = Math.max.apply(Math, nodeNames) + 1
+    }
+
     // add in the max count from the metadata values
     const metadataCount = this.maxMetadataValuesCount(metadata)
 
     while (nodeNames.length < metadataCount) {
-      nodeNames.push(null)
+      nodeNames.push(unusedName)
+      unusedName += 1
     }
 
     return nodeNames
@@ -341,8 +348,7 @@ export class Layer {
       attributes.push([DegreeAttribute, 'strength', []])
     }
 
-    let metadataAttributes
-    [nodes, metadataAttributes] = this.getMetadataAttributes(nodes, metadata)
+    const metadataAttributes = this.getMetadataAttributes(nodes, metadata)
     attributes = attributes.concat(metadataAttributes)
 
     let attributesByType = {
@@ -352,16 +358,28 @@ export class Layer {
     }
 
     attributes.map(([attributeClass, key, categories]) => {
+      const attribute = new attributeClass(key, categories, nodes)
+      let addedAttribute = false
+
       if (attributeClass.DISPLAY_COLOR) {
-        attributesByType.color[key] = new attributeClass(key, categories, nodes)
+        attributesByType.color[key] = attribute
+        let addedAttribute = true
       }
 
       if (attributeClass.DISPLAY_SIZE) {
-        attributesByType.size[key] = new attributeClass(key, categories, nodes)
+        attributesByType.size[key] = attribute
+        let addedAttribute = true
       }
 
       if (! attributeClass.DISPLAY_COLOR && ! attributeClass.DISPLAY_SIZE) {
-        attributesByType.noType[key] = new attributeClass(key, categories, nodes)
+        attributesByType.noType[key] = attribute
+        let addedAttribute = true
+      }
+
+      if (addedAttribute) {
+        for (let [nodeKey, node] of Object.entries(nodes)) {
+          nodes[nodeKey][key] = attribute.transformNodeValue(node[key])
+        }
       }
     })
 
@@ -386,54 +404,42 @@ export class Layer {
 
     let attributes = []
     for (let [key, type, categories] of cleanMetadata) {
-      let attributeClass
-      [nodes, attributeClass] = this.getAttributeClassToAdd(key, type, nodes, categories)
+      const AttributeClass = this.getAttributeClassToAdd(key, type, nodes, categories)
 
-      if (attributeClass !== undefined) {
-        attributes.push([attributeClass, key, categories])
-
-        // transform the nodes here, once
-        let attribute = new attributeClass(key, categories)
-        attribute.nodes = nodes
-        nodes = attribute.transformNodeValues(nodes)
+      if (AttributeClass !== undefined) {
+        attributes.push([AttributeClass, key, categories])
       }
     }
 
-    return [nodes, attributes]
+    return attributes
   }
 
   getAttributeClassToAdd(key, type, nodes, categories) {
-    let attributeClassToMake
-
     if (key == 'name') {
-      return [nodes, NameAttribute]
+      return NameAttribute
     }
 
-    for (let attributeClass of [BinaryAttribute, CategoricalAttribute, ScalarAttribute]) {
-      let attribute = new attributeClass(key, categories)
-      attribute.nodes = nodes
+    const nodeValues = Object.values(nodes).map(node => node[key])
 
+    for (let AttributeClass of [BinaryAttribute, CategoricalAttribute, ScalarAttribute]) {
       let typeDefinedAndTypesEqual = false
       let typeUndefinedAndNodesOfType = false
       let typeUndefinedAndCategories = false
 
       if (type == undefined) {
-        if (attribute.isType(nodes)) {
+        if (AttributeClass.isType(nodeValues)) {
           typeUndefinedAndNodesOfType = true
         }
         if (categories !== undefined && attribute.TYPE == 'categorical') {
           typeUndefinedAndCategories = true
         }
       }
-      else {
-        if (type == attribute.TYPE) {
-          typeDefinedAndTypesEqual = true
-        }
+      else if (type == attribute.TYPE) {
+        typeDefinedAndTypesEqual = true
       }
 
       if (typeDefinedAndTypesEqual || typeUndefinedAndNodesOfType || typeUndefinedAndCategories) {
-        nodes = attribute.transformNodeValues(nodes)
-        return [nodes, attributeClass]
+        return AttributeClass
       }
     }
 

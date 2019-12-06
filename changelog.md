@@ -1,3 +1,11 @@
+## 20191207 - 0.0.38
+
+- can save as pngs
+- added a `webweb` commandline tool. give it a file name and it'll try to open it up.
+- attempts to remember last state for networks
+- if a node has a `url` attribute, clicking it will open the link
+- unit tested (somewhat)
+
 ## 20190607 - 0.0.37
 
 - improved docstring [(issue)](https://github.com/dblarremore/webweb/issues/47)

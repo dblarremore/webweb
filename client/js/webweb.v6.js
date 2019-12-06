@@ -216,7 +216,9 @@ export class Webweb {
 
     this.canvas.settings = settings
 
-    this.menu.refresh(settings, layer.attributes)
+    if (! settings.hideMenu) {
+      this.menu.refresh(settings, layer.attributes)
+    }
 
     this.setVisibleNodes(layer.nodeCount)
     this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
@@ -367,6 +369,7 @@ export class Webweb {
 
       if (name == sizeScaleName) {
         if ((settings.invertBinarySizes == true) && (sizeAttribute.TYPE == 'binary')) {
+          console.log(JSON.stringify('hiiii'));
           extent = extent.reverse()
         }
       }
@@ -395,24 +398,27 @@ export class Webweb {
       node.__scaledColor = colorAttribute.getScaledColorValue(node, this.scales[colorScaleName])
     })
 
-    let legend = new Legend(
-      settings.sizeBy,
-      sizeAttribute,
-      settings.colorBy,
-      colorAttribute,
-      settings.r,
-      nodes,
-      this.scales,
-    )
-
-    let objects = legend.legendNodeAndText
-
-    objects.nodes = objects.nodes.map((node) => {
-      node.settings = settings
-      return node
-    })
+    this.canvas.legendNodes = []
+    this.canvas.legendText = []
 
     if (settings.showLegend) {
+      let legend = new Legend(
+      settings.sizeBy,
+        sizeAttribute,
+        settings.colorBy,
+        colorAttribute,
+        settings.r,
+        nodes,
+        this.scales,
+    )
+
+      let objects = legend.legendNodeAndText
+
+      objects.nodes = objects.nodes.map((node) => {
+        node.settings = settings
+        return node
+      })
+
       this.canvas.legendNodes = objects.nodes
       this.canvas.legendText = objects.text
     }

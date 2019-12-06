@@ -3,6 +3,7 @@ import * as d3 from 'd3'
 const zip = (arr, ...arrs) => {
   return arr.map((val, i) => arrs.reduce((a, arr) => [...a, arr[i]], [val]))
 }
+
 /********************************************************************************
  * Attribute object
  *
@@ -16,23 +17,105 @@ const zip = (arr, ...arrs) => {
  *    - slapping them onto the nodes
 ********************************************************************************/
 export class Attribute {
-
   get defaultColorValue() { return d3.rgb(128, 128, 128) }
   get defaultValue() { return 1 }
+  get hslMaxValue() { return 330 }
+
   static get DISPLAY_COLOR() { return true }
   static get DISPLAY_SIZE() { return true }
 
-  get TYPE() {
-    return 'none'
+  get TYPE() { return 'none' }
+
+  static isType(nodeValues) { return false }
+
+  get sizeScale() { return 'nodeSize' }
+  get colorScale() { return 'none' }
+
+  constructor(key) {
+    this.key = key
   }
 
-  get sizeScale() {
-    return 'nodeSize'
+  /********************************************************************************
+   * EXTENT
+  ********************************************************************************/
+  extent(nodes) {
+    return [... new Set(Object.values(nodes).map(node => node[this.key]))]
   }
 
-  getLegendValuesAndText(rawValues, scaledValues, nodes) {
-    let text = rawValues
-    let values = scaledValues
+  colorExtent(nodes) {
+    return [... new Set(this.getRawColorValues(nodes))]
+  }
+
+  valueSetSize(nodes) {
+    return this.extent(nodes).length
+  }
+
+  /********************************************************************************
+   * TRANSFORMATION
+   *
+   * makes the input stuff nicer (eg, turns 0 into false for binary attributes,
+   * etc)
+  ********************************************************************************/
+  transformNodeValue(val) { return val }
+
+  /********************************************************************************
+   *
+   *
+   * COLOR
+   * 
+   * 
+  ********************************************************************************/
+  getRawColorValue(node) {
+    return node[this.key]
+  }
+
+  getRawColorValues(nodes) {
+    return Object.entries(nodes).map(node => this.getRawColorValue(node))
+  }
+
+  getScaledColorValue(node, scale) {
+    return d3.hsl(210 * (1 - this.getRawColorValue(node)), 0.7, 0.5);
+  }
+
+  getScaledColorValues(nodes, scale) {
+    return nodes.map(node => getScaledColorValue(node, scale))
+  }
+
+  /********************************************************************************
+   *
+   *
+   * SIZE
+   * 
+   * 
+  ********************************************************************************/
+  getRawSizeValue(node) {
+    return node[this.key]
+  }
+
+  getRawSizeValues(nodes) {
+    return nodes.map(node => this.getRawSizeValue(node))
+  }
+
+  /*
+   * Parameters:
+   * - node. Node object. basically a key/value store.
+   * - scale. d3 scale object.
+   * 
+   * Returns:
+   *    Int. Scaled size.
+  */ 
+  getScaledSizeValue(node, scale) {
+    return scale(this.getRawSizeValue(node))
+  }
+
+  getScaledSizeValues(nodes, scale) {
+    return nodes.map(node => this.getScaledSizeValue(node, scale))
+  }
+
+  /********************************************************************************
+   * Legend Functions
+  ********************************************************************************/
+  getLegendValuesAndText(text, values) {
     return this.legendSort(values, text)
   }
 
@@ -75,8 +158,8 @@ export class Attribute {
       bins = 4
     }
 
-    let [min, max] = [d3.min(rawValues), d3.max(rawValues)]
-    let step = (max - min) / bins
+    const [min, max] = [d3.min(rawValues), d3.max(rawValues)]
+    const step = (max - min) / bins
 
     let values = []
     
@@ -91,212 +174,57 @@ export class Attribute {
       'text': values.slice(0),
     }
   }
-
-  // want to opaquly handle color and size
-  // also want 'shouldDisplay'
-  constructor(key) {
-    this.key = key
-  }
-
-  get nodes() {
-    return this._nodes
-  }
-
-  set nodes(nodes) {
-    this._nodes = nodes
-  }
-
-  static typeIsStatedType(type) {
-    if (type !== undefined && type == this.TYPE) {
-      return true
-    }
-    return false
-  }
-
-  // EXTENT and other size properties
-  extent(nodes) {
-    let nodeValues = Object.values(nodes).map(node => node[this.key])
-    return d3.set(nodeValues).values()
-  }
-
-  colorExtent(nodes) {
-    return d3.set(this.getRawColorValues(nodes)).values()
-  }
-
-  valueSetSize(nodes) {
-    return this.extent(nodes).length
-  }
-
-  /*
-   * Parameters:
-   * - nodes
-   *
-   * Returns: 
-   *    boolean. True if the values are of the type
-    * */
-  isType(nodes) {
-    return false
-  }
-
-
-  /********************************************************************************
-   * Transformation Functions
-   *
-   * these modify the imput, and run on dictionaries of elements. 
-   * run as part of the startup process. 
-   * stored in layers after.
-  ********************************************************************************/
-
-  /*
-   * Parameters:
-   * - node
-   * 
-   * Returns:
-   *    modified node
-  */ 
-  transformNode(node) {
-    return node
-  }
-
-  transformNodeValues(nodes) {
-    this.nodes = nodes
-    let newNodes = {}
-    Object.entries(nodes).forEach(([key, node]) => {
-      newNodes[key] = this.transformNode(node)
-    })
-
-    return newNodes
-  }
-
-  /********************************************************************************
-   *
-   *
-   * COLOR
-   * 
-   * 
-  ********************************************************************************/
-  get colorScale() {
-    return 'none'
-  }
-
-  getRawColorValue(node) {
-    return node[this.key]
-  }
-
-  getRawColorValues(nodes) {
-    return Object.entries(nodes).map(node => this.getRawColorValue(node))
-  }
-
-  getScaledColorValue(node, scale) {
-    let raw = this.getRawColorValue(node)
-    let scaled = scale(raw)
-    return d3.hsl(210 * (1 - raw), 0.7, 0.5);
-  }
-
-  getScaledColorValues(nodes, scale) {
-    return nodes.map(node => getScaledColorValue(node, scale))
-  }
-
-  /********************************************************************************
-   *
-   *
-   * SIZE
-   * 
-   * 
-  ********************************************************************************/
-  getRawSizeValue(node) {
-    return node[this.key]
-  }
-
-  getRawSizeValues(nodes) {
-    return nodes.map(node => this.getRawSizeValue(node))
-  }
-
-  /*
-   * Parameters:
-   * - node. Node object. basically a key/value store.
-   * - scale. d3 scale object.
-   * 
-   * Returns:
-   *    Int. Scaled size.
-  */ 
-  getScaledSizeValue(node, scale) {
-    return scale(this.getRawSizeValue(node))
-  }
-
-  getScaledSizeValues(nodes, scale) {
-    return nodes.map(node => this.getScaledSizeValue(node, scale))
-  }
-
-  setNodeDictOntoNodeArray(nodeDict, nodeArray, nameToIdMap) {
-    Object.entries(nodeDict).forEach((sourceKey, sourceNode) => {
-      let targetIndex = nameToIdMap[sourceKey]
-      let targetNode = nodeArray[targetIndex]
-
-      targetNode[this.key] = sourceNode[this.key]
-    })
-  }
 }
 
 export class NameAttribute extends Attribute {
-  get TYPE() {
-    return 'name'
-  }
+  get TYPE() { return 'name' }
 
   static get DISPLAY_COLOR() { return false }
   static get DISPLAY_SIZE() { return false }
 
 }
 export class ScalarAttribute extends Attribute {
-  get TYPE() {
-    return 'scalar'
-  }
+  get TYPE() { return 'scalar' }
 
-  isType(nodes) {
-    return true
-  }
+  static isType(nodeValues) { return true }
 
-  getLegendValuesAndText(rawValues, scaledValues, nodes) {
-    let map = {
-      'values': [],
-      'text': rawValues,
-    }
+  get colorScale() { return 'scalarColors' }
+
+  getLegendValuesAndText(rawValues, scaledValues) {
+    let values = []
+    let text = []
+
     // if it is integer scalars:
     if (allInts(scaledValues)) {
-      let [min, max] = [d3.min(scaledValues), d3.max(scaledValues)]
+      const [min, max] = [d3.min(scaledValues), d3.max(scaledValues)]
 
       if (max - min <= 8) {
-        map.values = d3.range(min, max + 1)
-        map.text = map.values.slice(0)
+        values = d3.range(min, max + 1)
+        text = values.slice(0)
       }
     }
 
-    if (map.values.length == 0) {
+    if (values.length == 0) {
       return this.makeBinnedLegend(scaledValues)
     }
 
-    return map
-  }
-
-  get colorScale() {
-    return 'scalarColors'
+    return {
+      'values': values,
+      'text': text,
+    }
   }
 }
 export class DegreeAttribute extends ScalarAttribute {
-  get TYPE() {
-    return 'degree'
-  }
+  get TYPE() { return 'degree' }
 
-  get colorScale() {
-    return 'scalarColors'
-  }
+  get colorScale() { return 'scalarColors' }
 
-  getLegendValuesAndText(rawValues, scaledValues, nodes) {
+  getLegendValuesAndText(rawValues, scaledValues) {
     let values = []
     let text = []
-    for (let [i, rawValue] of Object.entries(rawValues)) {
-      if (text.indexOf(rawValue) < 0) {
-        values.push(scaledValues[i])
+    for (let [rawValue, scaledValue] of zip(rawValues, scaledValues)) {
+      if (! text.includes(rawValue)) {
+        values.push(scaledValue)
         text.push(rawValue)
       }
     }
@@ -304,189 +232,98 @@ export class DegreeAttribute extends ScalarAttribute {
     return this.legendSort(values, text)
   }
 
-  getScaledSizeValue(node, scale) {
-    return scale(Math.sqrt(this.getRawSizeValue(node)))
-  }
+  getScaledSizeValue(node, scale) { return scale(Math.sqrt(this.getRawSizeValue(node))) }
 }
 export class BinaryAttribute extends Attribute {
-  get TYPE() {
-    return 'binary'
+  get TYPE() { return 'binary' }
+
+  get colorScale() { return 'categoricalColors' }
+
+  static get trueValues() { return [true, 'true', 1] }
+  static get falseValues() { return [false, 'false', 0, undefined, null] }
+
+  extent() { return [true, false] }
+  colorExtent() { return [true, false] }
+
+  transformNodeValue(value) {
+    return this.trueValues.includes(value)
   }
 
-  getLegendValuesAndText(rawValues, scaledValues, nodes) {
+  static isType(nodeValues) {
+    const validValues = this.trueValues.concat(this.falseValues)
+    return [... new Set(nodeValues)].filter(
+      (val) => val !== undefined && val !== null
+    ).filter(
+      (val) => ! validValues.includes(val)
+    ).length == 0
+  }
+
+  getScaledColorValue(node, scale) {
+    return scale(this.getRawColorValue(node))
+  }
+
+  getLegendValuesAndText(rawValues, scaledValues) {
     return {
-      'values': scaledValues,
+      'values': [
+        scaledValues[rawValues.indexOf(false)],
+        scaledValues[rawValues.indexOf(true)]
+      ],
       'text': ["false", "true"],
     }
   }
-
-  /*
-   * Explanation: 
-   *    it's type 'binary' if it's:
-   *        - [true, false]
-   *        - [false, undefined]
-   *        - [true, undefined]
-   *        - [0, 1]
-   *        - [0, undefined]
-   *        - [1, undefined]
-   *        - [true]
-   *        - [false]
-   *        - [0]
-   *        - [1]
-  */ 
-  isType(nodes) {
-    let valSet = d3.set(Object.values(nodes).map(node => node[this.key])).values().sort()
-    if (valSet.length == 2) {
-      // 'true' and 'false'
-      if (valSet[0] == 'false' && valSet[1] == 'true') {
-        return true
-      }
-      else if (valSet[0] == 'false' && valSet[1] == 'undefined') {
-        return true
-      }
-      else if (valSet[0] == 'true' && valSet[1] == 'undefined') {
-        return true
-      }
-
-      // true and false
-      if (valSet[0] == false && valSet[1] == true) {
-        return true
-      }
-      else if (valSet[0] == false && valSet[1] == 'undefined') {
-        return true
-      }
-      else if (valSet[0] == true && valSet[1] == 'undefined') {
-        return true
-      }
-
-
-      // 0 and 1
-      if (valSet[0] == 0 && valSet[1] == 1) {
-        return true
-      }
-      else if (valSet[0] == 0 && valSet[1] == 'undefined') {
-        return true
-      }
-      else if (valSet[0] == 1 && valSet[1] == 'undefined') {
-        return true
-      }
-    }
-    else if (valSet.length == 1) {
-      if (valSet[0] == 'false' || valSet[0] == 'true') {
-        return true
-      }
-      else if (valSet[0] == false || valSet[0] == true) {
-        return true
-      }
-      else if (valSet[0] == 0 || valSet[0] == 1) {
-        return true
-      }
-    }
-    return false
-  }
-
-  extent() {
-    return [true, false]
-  }
-
-  colorExtent() {
-    return [true, false]
-  }
-
-  transformNode(node) {
-    node[this.key] = node[this.key] ? true : false
-    return node
-  }
-
-  get colorScale() {
-    return 'categoricalColors'
-  }
-  getScaledColorValue(node, scale) {
-    let raw = this.getRawColorValue(node)
-    let scaled = scale(raw)
-    return scaled
-  }
-
 }
+
 export class CategoricalAttribute extends Attribute {
-  get TYPE() {
-    return 'categorical'
-  }
+  get TYPE() { return 'categorical' }
+
+  get scalarCategoricalBins() { return 9 }
+
   static get DISPLAY_SIZE() { return false }
 
   constructor(key, categories, nodes) {
     super(key)
-    this.categories = categories
-
-    if (nodes !== undefined && ! this.categories) {
-      this.defaultCategories(nodes)
-    }
+    this.categories = categories || this.extent(nodes)
   }
 
-  getLegendValuesAndText(rawValues, scaledValues, nodes) {
-    this.defaultCategories(nodes)
-    if (this.isScalarCategorical) {
-      // TODO:
-      // this might now work, unsure about how the scalarCategorical
-      // "is it an index, is it a string" is working
-      return this.makeBinnedLegend(scaledValues)
-    }
-    else {
-      return super.getLegendValuesAndText(rawValues, scaledValues, nodes)
-    }
+  hslFromIndex(index) {
+    return d3.hsl(0 + index * (this.hslMaxValue / this.scalarCategoricalBins), 0.7, 0.5)
   }
 
   getScaledColorValue(node, scale) {
-    let raw = this.getRawColorValue(node)
-    let scaled = scale(raw)
-    return scaled
-  }
-  set nodes(nodes) {
-    this._nodes = nodes
-    this.defaultCategories(nodes)
-  }
-
-  defaultCategories(nodes) {
-    this.categories = this.categories || this.extent(nodes)
-  }
-
-  isType(nodes) {
-    let valSet = this.extent(Object.values(nodes).filter((val) => val !== undefined))
-    if (valSet.some(isNaN)) {
-      return true
-    }
-    return false
-  }
-
-  // make sure there's enough categories even if there aren't
-  valueSetSize(nodes) {
-    let extentSize = this.extent(nodes).length
-    return extentSize == 1 ? 2 : extentSize
-  }
-
-  transformNode(node) {
+    const raw = this.getRawColorValue(node)
     if (this.isScalarCategorical) {
-      let categoryNumber = node[this.key]
+      return this.hslFromIndex(raw)
+    }
+    
+    return scale(raw)
+  }
 
-      if (isInt(categoryNumber)) {
-        node[this.key] = this.categories[categoryNumber]
-      }
+  colorExtent(nodes) {
+    if (this.isScalarCategorical) {
+      return [0, this.categories.length - 1]
     }
 
-    return node
+    return [... new Set(this.getRawColorValues(nodes))]
+  }
+
+  static isType(nodeValues) {
+    return Object.values(nodeValues).filter((val) => val !== undefined).some(isNaN)
+  }
+
+  transformNodeValue(nodeValue) {
+    return this.isScalarCategorical && isInt(nodeValue)
+      ? this.categories[categoryNumber]
+      : nodeValue
   }
 
   get isScalarCategorical() {
-    return this.categories.length >= 9 ? true : false
+    return this.categories.length >= this.scalarCategoricalBins
   }
 
   get colorScale() {
-    if (this.isScalarCategorical) {
-      return 'scalarColors'
-    }
-    else {
-      return 'categoricalColors'
-    }
+    return this.isScalarCategorical
+      ? 'scalarColors'
+      : 'categoricalColors'
   }
 
   getRawColorValue(node) {
@@ -497,26 +334,58 @@ export class CategoricalAttribute extends Attribute {
       return node[this.key]
     }
   }
+
+  // make sure there's enough categories even if there aren't
+  valueSetSize(nodes) {
+    const extentSize = this.extent(nodes).length
+    return extentSize == 1
+      ? 2
+      : extentSize
+  }
+
+  getLegendValuesAndText(rawValues, scaledValues) {
+    if (this.isScalarCategorical) {
+      return this.scalarCategoricalLegendValuesAndText(rawValues, scaledValues)
+    }
+
+    return super.getLegendValuesAndTextValuesAndText(rawValues, scaledValues)
+  }
+
+  scalarCategoricalLegendValuesAndText(rawValues, scaledValues) {
+    const [min, max] = [d3.min(rawValues), d3.max(rawValues)]
+    const step = (max - min) / this.scalarCategoricalBins
+
+    let values = []
+    let text = []
+    for (let i = 0; i < this.scalarCategoricalBins - 1; i++) {
+      const index = rounddown(min + i * step, 10)
+      values.push(this.hslFromIndex(index))
+      text.push(this.categories[index])
+    }
+    values.push(this.hslFromIndex(this.scalarCategoricalBins))
+    text.push(this.categories[this.scalarCategoricalBins])
+
+    return {
+      'values': values,
+      'text': text,
+    }
+  }
 }
 
 function isInt(n){
-    return Number(n) === n && n % 1 === 0;
+  return Number(n) === n && n % 1 === 0;
 }
 function allInts(vals) {
-    for (var i in vals) {
-        if (!isInt(vals[i])) {
-            return false;
-        }
-    }
-
-    return true;
+  return vals.filter(
+    (val) => isInt(val)
+  ).length == vals.length
 }
 function round(x, dec) {
-    return (Math.round(x * dec) / dec);
+  return (Math.round(x * dec) / dec);
 }
 function rounddown(x, dec) {
-    return (Math.floor(x * dec) / dec);
+  return (Math.floor(x * dec) / dec);
 }
 function roundup(x, dec) {
-    return (Math.ceil(x * dec) / dec);
+  return (Math.ceil(x * dec) / dec);
 }

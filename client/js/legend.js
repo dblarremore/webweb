@@ -59,12 +59,11 @@ export class Sublegend {
   }
 
   getValuesAndText(nodes) {
-    let rawValueKey = this.rawValueKey
-    let valueKey = this.valueKey
+    const rawValueKey = this.rawValueKey
+    const valueKey = this.valueKey
     return this.attribute.getLegendValuesAndText(
       nodes.map(node => node[rawValueKey]),
       nodes.map(node => node[valueKey]),
-      nodes,
     )
   }
 
@@ -110,12 +109,19 @@ export class Sublegend {
 
         objects.text.push(new Text(text, textPushRight, pushdown + 2.5, this.FONTSIZE))
 
+
         let node = new Node(-1)
         node.nonInteractive = true
         node.fixedRadius = value * this.r
         node.x = nodePushRight
         node.y = pushdown
-        node.__scaledColor = isNaN(value) ? value : this.colorFunction(value)
+
+        if (isNaN(value)) {
+          node.__scaledColor = value
+        }
+        else {
+          node.__scaledColor = this.colorFunction(value)
+        }
 
         objects.nodes.push(node)
       }

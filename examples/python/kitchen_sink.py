@@ -114,5 +114,10 @@ web.display.colorPalette = 'Greens'
 web.display.scaleLinkOpacity = False
 web.display.scaleLinkWidth = True
 
+
+web.display.showLegend = False
+web.display.width = 600
+web.display.height = 600
+
 # show the visualization
 web.show()

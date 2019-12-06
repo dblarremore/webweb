@@ -62,6 +62,9 @@ export class CanvasState {
 
   clear() {
     this.context.clearRect(0, 0, this.w, this.h)
+
+    this.context.fillStyle = 'white'
+    this.context.fillRect(0, 0, this.w, this.h)
   }
 
   redraw() {
@@ -110,8 +113,15 @@ export class CanvasState {
       })
     }
 
-    elementsToDraw = elementsToDraw.concat(this.legendNodes)
-    elementsToDraw = elementsToDraw.concat(this.legendText)
+    if (this.settings.showLegend) {
+      if ((this.legendNodes !== undefined) && (this.legendNodes.length)) {
+        elementsToDraw = elementsToDraw.concat(this.legendNodes)
+      }
+
+      if ((this.legendText !== undefined) && (this.legendText.length)) {
+        elementsToDraw = elementsToDraw.concat(this.legendText)
+      }
+    }
 
     return elementsToDraw
   }
@@ -166,9 +176,11 @@ export class CanvasState {
 
   setMouseState(event) {
     let box = this.HTML.getBoundingClientRect()
+    let date = new Date()
     this.mouseState = {
       x: event.clientX - box.left - this.padding,
       y: event.clientY - box.top - this.padding,
+      time: date.getTime(),
     }
     return this.mouseState
   }
@@ -208,6 +220,20 @@ export class CanvasState {
     if (this.dragging) {
       this.endDragging()
     }
+
+    const mouseState = this.mouseState
+
+    if (this.mouseStatesAreVeryClose(mouseState, this.mouseDownState)) {
+      for (let node of this.simulation.nodes) {
+        if (this.nodeContainsMouse(node, mouseState)) {
+          if (node.url !== undefined) {
+            window.open(node.url, '_blank')
+          }
+        }
+      }
+    }
+
+    this.mouseDownState = undefined
   }
 
   mouseMoveListener(event) {
@@ -226,6 +252,7 @@ export class CanvasState {
   }
   mouseDownListener() {
     const mouseState = this.mouseState
+    this.mouseDownState = this.mouseState
     this.endDragging()
 
     for (let node of this.simulation.nodes) {
@@ -237,5 +264,21 @@ export class CanvasState {
         this.updateDraggedNode(mouseState)
       }
     }
+  }
+
+  mouseStatesAreVeryClose(stateOne, stateTwo) {
+    const pxThreshold = 5
+    const timeThreshold = 100
+    if (Math.abs(stateOne.x - stateTwo.x) > pxThreshold) {
+      return false
+    }
+    else if (Math.abs(stateOne.y - stateTwo.y) > pxThreshold) {
+      return false
+    }
+    else if (Math.abs(stateOne.time - stateTwo.time) > timeThreshold) {
+      return false
+    }
+
+    return true
   }
 }
