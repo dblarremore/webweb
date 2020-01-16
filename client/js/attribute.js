@@ -181,7 +181,6 @@ export class NameAttribute extends Attribute {
 
   static get DISPLAY_COLOR() { return false }
   static get DISPLAY_SIZE() { return false }
-
 }
 export class ScalarAttribute extends Attribute {
   get TYPE() { return 'scalar' }
@@ -272,7 +271,22 @@ export class BinaryAttribute extends Attribute {
     }
   }
 }
+export class UserColorAttribute extends Attribute {
+  get TYPE() { return 'categorical' }
 
+  static get DISPLAY_COLOR() { return true }
+
+  static isType(nodeValues) {
+    const hexValues = Object.values(nodeValues).filter(
+      (val) => typeof val === 'string' && val.length == 7 && val[0] == '#'
+    )
+
+    return hexValues !== undefined && hexValues.length == nodeValues.length
+  }
+  getScaledColorValue(node, scale) {
+    return this.getRawColorValue(node)
+  }
+}
 export class CategoricalAttribute extends Attribute {
   get TYPE() { return 'categorical' }
 
@@ -348,7 +362,7 @@ export class CategoricalAttribute extends Attribute {
       return this.scalarCategoricalLegendValuesAndText(rawValues, scaledValues)
     }
 
-    return super.getLegendValuesAndTextValuesAndText(rawValues, scaledValues)
+    return super.getLegendValuesAndText(rawValues, scaledValues)
   }
 
   scalarCategoricalLegendValuesAndText(rawValues, scaledValues) {

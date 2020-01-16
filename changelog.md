@@ -1,10 +1,15 @@
 ## 20191207 - 0.0.38
 
-- can save as pngs
+- save as png
+- highlight multiple node names by comma separating them
 - added a `webweb` commandline tool. give it a file name and it'll try to open it up.
 - attempts to remember last state for networks
 - if a node has a `url` attribute, clicking it will open the link
+- add a `color` attribute to all nodes ('#11aa22' format) to define your own color scheme
 - unit tested (somewhat)
+
+new parameters:
+- `scales`: you can now supply a `min`/`max` value for how nodes will be scaled. The scales you can customize are: `nodeSize`; `scalarColors`; `linkWidth`; `linkOpacity`
 
 ## 20190607 - 0.0.37
 

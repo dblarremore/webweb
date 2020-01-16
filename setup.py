@@ -20,6 +20,10 @@ def read_requirements(filename):
 
 setup(
     name="webweb",
+    packages=list(find_packages('.')),
+    entry_points={
+        "console_scripts": ['webweb = webweb.cli']
+    },
     version="0.0.37",
     author="Daniel Larremore; Hunter Wapman",
     author_email="hunter.wapman@gmail.com",
@@ -30,7 +34,6 @@ setup(
     install_requires=read_requirements('requirements.txt'),
     url="https://webwebpage.github.io",
     include_package_data=True,
-    packages=list(find_packages('.')),
     keywords='webweb',
     classifiers=[
         "Programming Language :: Python :: 3",

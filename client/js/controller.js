@@ -27,8 +27,9 @@ export class AllSettings extends SettingsObject {
       'hideMenu' : false,
       'showLegend': true,
       'networkName' : undefined,
-      'width': undefined,
-      'height': undefined,
+      'w': undefined,
+      'h': undefined,
+      'attachWebwebToElementWithId': undefined,
     }
   }
 

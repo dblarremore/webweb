@@ -1,4 +1,5 @@
 import { colorbrewer } from './colors'
+import { UserColorAttribute } from './attribute'
 
 export class Widget {
   constructor(settings, attributes, callHandler) {
@@ -451,7 +452,10 @@ export class ColorPaletteSelectWidget extends SelectWidget {
       return false
     }
 
-    if (coloringAttribute.TYPE == 'binary') {
+    if (coloringAttribute instanceof UserColorAttribute) {
+      return false
+    }
+    else if (coloringAttribute.TYPE == 'binary') {
       return true
     }
     else if (coloringAttribute.TYPE == 'categorical') {

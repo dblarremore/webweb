@@ -1,9 +1,15 @@
 module.exports = {
+  target: 'node',
+  node: {
+      fs: 'empty'
+  },
   mode: 'development',
-  entry: './webweb.v5.js',
+  entry: './webweb.v6.js',
   output: {
     path: __dirname,
-    filename: 'webweb.bundle.js'
+    filename: 'webweb.bundle.js',
+    libraryTarget: 'var',
+    library: 'Webweb'
   },
   module: {
     rules: [
@@ -16,7 +22,11 @@ module.exports = {
             presets: ['@babel/preset-env']
           }
         }
-      }
+      },
+      {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
+      },
     ]
   }
 };

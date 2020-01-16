@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Node } from './node'
-import { Attribute, NameAttribute, ScalarAttribute, BinaryAttribute, DegreeAttribute, CategoricalAttribute } from './attribute'
+import { Attribute, NameAttribute, ScalarAttribute, UserColorAttribute, BinaryAttribute, DegreeAttribute, CategoricalAttribute } from './attribute'
 
 /*********************************************************************************
  * Layer
@@ -421,7 +421,7 @@ export class Layer {
 
     const nodeValues = Object.values(nodes).map(node => node[key])
 
-    for (let AttributeClass of [BinaryAttribute, CategoricalAttribute, ScalarAttribute]) {
+    for (let AttributeClass of [BinaryAttribute, UserColorAttribute, CategoricalAttribute, ScalarAttribute]) {
       let typeDefinedAndTypesEqual = false
       let typeUndefinedAndNodesOfType = false
       let typeUndefinedAndCategories = false

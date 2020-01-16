@@ -1,3 +1,13 @@
+/*
+ * webweb makes pretty interactive network diagrams in your browser
+ *
+ * Daniel Larremore + Contributors
+ * daniel.larremore@colorado.edu
+ * http://github.com/dblarremore/webweb
+ * Comments and suggestions always welcome.
+ *
+ */
+
 import { colorbrewer } from './colors'
 import { Menu } from './menu'
 import { GlobalListeners } from './listeners'
@@ -8,10 +18,11 @@ import { AllSettings } from './controller'
 import { Network } from './network'
 import { Simulation } from './simulation'
 import { CanvasState } from './canvas'
-import * as d3 from 'd3'
 
+import '../css/style.css'
+
+import * as d3 from 'd3'
 import { saveAs } from 'file-saver'
-import { Blob } from 'blob-polyfill'
 
 export class Webweb {
   constructor(webwebData) {
@@ -68,8 +79,7 @@ export class Webweb {
     // NODES
     this.nodes = []
     for (let i = 0; i < this.maxNodes; i++) {
-      let node = new Node(i)
-      this.nodes.push(node)
+      this.nodes.push(new Node(i))
     }
 
     this.nodesPersistence = []
@@ -125,15 +135,14 @@ export class Webweb {
           _this.canvas.redraw()
         },
         'save-svg': () => {
-          var svg = _this.canvas.svgDraw()
+          let svg = _this.canvas.svgDraw()
           const title = _this.state.global.settings.networkName
           svg.setAttribute("title", title)
           svg.setAttribute("version", 1.1)
           svg.setAttribute("xmlns", "http://www.w3.org/2000/svg")
 
           try {
-            var isFileSaverSupported = !!new Blob()
-            var blob = new Blob([svg.outerHTML], {type: "image/svg+xml"})
+            let blob = new Blob([svg.outerHTML], {type: "image/svg+xml"})
             saveAs(blob, title);
           } catch (e) {
             alert("can't save :(")
@@ -369,7 +378,6 @@ export class Webweb {
 
       if (name == sizeScaleName) {
         if ((settings.invertBinarySizes == true) && (sizeAttribute.TYPE == 'binary')) {
-          console.log(JSON.stringify('hiiii'));
           extent = extent.reverse()
         }
       }

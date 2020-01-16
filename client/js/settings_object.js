@@ -62,31 +62,28 @@ export class SettingsObject {
         : value
     })
 
-    // // apply the user settings to the scales.
-    if (this.scaleDefaults !== undefined) {
-      this.settings['scales'] = {}
+    this.settings['scales'] = {}
+    const userScales = settings['scales']
 
-      Object.entries(this.scaleDefaults).forEach(([name, scale]) => {
-        let userScales = settings['scales'];
+    // apply the user settings to the scales.
+    Object.entries(this.scaleDefaults).forEach(([name, scale]) => {
+      if (userScales !== undefined) {
+        const userScale = userScales[name]
 
-        if (userScales !== undefined) {
-          let userScale = userScales[name]
+        if (userScale !== undefined) {
+          const min = userScale['min']
+          if (min !== undefined) {
+            scale['min'] = min
+          }
 
-          if (userScale !== undefined) {
-            let min = userScale['min']
-            if (min !== undefined) {
-              scale['min'] = min
-            }
-
-            let max = userScale['max']
-            if (max !== undefined) {
-              scale['max'] = max
-            }
+          const max = userScale['max']
+          if (max !== undefined) {
+            scale['max'] = max
           }
         }
+      }
 
-        this.settings['scales'][name] = scale
-      })
-    }
+      this.settings['scales'][name] = scale
+    })
   }
 }

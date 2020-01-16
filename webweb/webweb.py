@@ -245,23 +245,19 @@ class Web(dict):
         return """
             <html>
                 <head>
-                    <style>{style}</style>
+                    <script type="text/javascript">{webwebbundlejs}</script>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
                 <body>
-                    <script type="text/javascript">window.wwdata = {json};</script>
-                    <script type="text/javascript">{webwebbundlejs}</script>
+                    <script type="text/javascript">
+                        window.onload = function() {{
+                            var web = new Webweb.Webweb({json});
+                        }}
+                    </script>
                 </body>
             </html>
         """.format(
-            title=self.title,
-            d3js=self.get_client_file_content('js', 'd3.v5.min.js'),
-            style=self.get_client_file_content('css', 'style.css'),
-            colorsjs=self.get_client_file_content('js', 'colors.js'),
-            blobjs=self.get_client_file_content('js', 'Blob.js'),
-            filesaverjs=self.get_client_file_content('js', 'FileSaver.min.js'),
             json=self.json,
-            webwebjs=self.get_client_file_content('js', 'webweb.v5.js'),
             webwebbundlejs=self.get_client_file_content('js', 'webweb.bundle.js'),
         )
 

@@ -20,7 +20,7 @@ export class Sublegend {
     this.text = map.text
     this.colorFunction = this.defaultColorFunction
     this.sizeFunction = this.defaultSizeFunction
-    this.shouldDraw = this.attributeKey !== 'none'
+    this.shouldDraw = this.attributeKey !== 'none' && this.attributeKey !== 'color'
   }
 
   get valueKey() {
