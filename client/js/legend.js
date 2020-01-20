@@ -58,7 +58,7 @@ export class Sublegend {
     this._colorFunction = colorFunction
   }
 
-  getValuesAndText(nodes) {
+  getValuesAndText(nodes, scales) {
     const rawValueKey = this.rawValueKey
     const valueKey = this.valueKey
     return this.attribute.getLegendValuesAndText(
@@ -166,6 +166,20 @@ export class SizeSublegend extends Sublegend {
 export class ColorSublegend extends Sublegend {
   static TYPE = 'color'
 
+  constructor(attributeKey, attribute, r, nodes, scales) {
+    super(attributeKey, attribute, r, nodes, scales)
+
+    if (this.attribute.colorScale == 'scalarColors') {
+      this.values = this.text.map(text => {
+        let fakeNode = {}
+        fakeNode[attributeKey] = text
+        return attribute.getScaledColorValue(fakeNode, scales[attribute.colorScale])
+      })
+
+    }
+
+  }
+
   get valueKey() {
     return '__scaledColor'
   }
@@ -185,7 +199,6 @@ export class ColorSublegend extends Sublegend {
       if (this.sizeLegendShown) {
         pushdown += 2.3 * Math.max(this.R, 7.5)
         this.pushdownState = pushdown
-        // pushdown += 3 * this.r
       }
       else {
         pushdown += 3.3 * this.r

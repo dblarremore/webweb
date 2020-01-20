@@ -43,7 +43,7 @@ export class Attribute {
   }
 
   colorExtent(nodes) {
-    return [... new Set(this.getRawColorValues(nodes))]
+    return this.extent(nodes)
   }
 
   valueSetSize(nodes) {
@@ -74,7 +74,7 @@ export class Attribute {
   }
 
   getScaledColorValue(node, scale) {
-    return d3.hsl(210 * (1 - this.getRawColorValue(node)), 0.7, 0.5);
+    return d3.hsl(210 * (1 - scale(this.getRawColorValue(node))), 0.7, 0.5)
   }
 
   getScaledColorValues(nodes, scale) {
@@ -153,25 +153,31 @@ export class Attribute {
   }
 
   // 'bins' a set of values so that we can display a finite legend.
-  makeBinnedLegend(rawValues, bins) {
-    if (bins == undefined || isNaN(bins)) {
+  makeBinnedLegend(rawValues, scaledValues, bins) {
+    if (bins === undefined || isNaN(bins)) {
       bins = 4
     }
 
-    const [min, max] = [d3.min(rawValues), d3.max(rawValues)]
-    const step = (max - min) / bins
+    const [scaledMin, scaledMax] = [d3.min(scaledValues), d3.max(scaledValues)]
+    const scaledStep = (scaledMax - scaledMin) / (bins - 1)
+    const [rawMin, rawMax] = [d3.min(rawValues), d3.max(rawValues)]
+    const rawStep = (rawMax - rawMin) / (bins - 1)
 
     let values = []
+    let text = []
     
-    values.push(rounddown(min, 10))
-    for (let i = 1; i < bins; i++) {
-      values.push(round(min + i * step, 10))
+    values.push(rounddown(scaledMin, 10))
+    text.push(rounddown(rawMin, 10))
+    for (let i = 1; i < bins - 1; i++) {
+      values.push(round(scaledMin + i * scaledStep, 10))
+      text.push(round(rawMin + i * rawStep, 10))
     }
-    values.push(roundup(max, 10))
+    values.push(rounddown(scaledMax, 10))
+    text.push(roundup(rawMax, 10))
 
     return {
       'values': values,
-      'text': values.slice(0),
+      'text': text,
     }
   }
 }
@@ -190,27 +196,10 @@ export class ScalarAttribute extends Attribute {
   get colorScale() { return 'scalarColors' }
 
   getLegendValuesAndText(rawValues, scaledValues) {
-    let values = []
-    let text = []
+    const rawValuesSet = [... new Set(rawValues)]
+    const bins = rawValuesSet.length < 5 ? rawValuesSet.length : 4
 
-    // if it is integer scalars:
-    if (allInts(scaledValues)) {
-      const [min, max] = [d3.min(scaledValues), d3.max(scaledValues)]
-
-      if (max - min <= 8) {
-        values = d3.range(min, max + 1)
-        text = values.slice(0)
-      }
-    }
-
-    if (values.length == 0) {
-      return this.makeBinnedLegend(scaledValues)
-    }
-
-    return {
-      'values': values,
-      'text': text,
-    }
+    return this.makeBinnedLegend(rawValues, scaledValues, bins)
   }
 }
 export class DegreeAttribute extends ScalarAttribute {
@@ -325,7 +314,6 @@ export class CategoricalAttribute extends Attribute {
   }
 
   transformNodeValue(nodeValue) {
-    console.log(this)
     return this.isScalarCategorical && isInt(nodeValue)
       ? this.categories[categoryNumber]
       : nodeValue

@@ -362,7 +362,7 @@ export class Webweb {
       'attribute': colorAttribute,
       'extent': colorAttribute.colorExtent(nodes),
     }
-
+    
     for (let [name, data] of Object.entries(scales)) {
       let extent = d3.extent(data.extent)
 
