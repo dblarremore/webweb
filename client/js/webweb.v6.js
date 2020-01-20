@@ -64,7 +64,7 @@ export class Webweb {
     this.networks = {}
     settings['networkLayers'] = {}
     for (let [networkName, networkData] of Object.entries(webwebData.networks)) {
-      let network = new Network(networkName, networkData, this.state.global, this.globalNodes)
+      let network = new Network(networkName, networkData, settings.metadata, this.globalNodes)
       this.networks[networkName] = network
 
       for (let layer of network.layers) {
@@ -88,10 +88,6 @@ export class Webweb {
 
     let box = this.getBox(this.title, settings)
     settings = this.setVizualizationDimensions(box, settings)
-
-    for (let networkName of Object.keys(this.networks)) {
-      this.networks[networkName].updateState(new AllSettings(settings))
-    }
 
     let layer = this.getLayerDisplayedBySettings(settings)
 

@@ -1,5 +1,4 @@
 import * as d3 from 'd3'
-import { AllSettings } from './controller'
 import { Layer } from './layer'
 import { Link } from './link'
 
@@ -11,11 +10,6 @@ export class Network {
     this.globalNodes = globalNodes || {}
 
     this.layers = this.makeLayers(data)
-
-  }
-
-  updateState(metadata) {
-    this.state = new AllSettings(metadata)
   }
 
   // if there are no layers, put things into layers
@@ -38,9 +32,4 @@ export class Network {
 
     return layers
   }
-    
-
-
-
-
 }

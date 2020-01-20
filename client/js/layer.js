@@ -27,7 +27,7 @@ export class Layer {
     let [attributes, newNodes] =  this.getAttributes(
       this.nodes,
       this.metadata,
-      this.isUnweighted(this.nodes)
+      this.isWeighted(this.nodes)
     )
 
     this.attributes = attributes
@@ -104,6 +104,13 @@ export class Layer {
       }
     }
 
+    // set the type of any key that has 'categories' to categorical
+    for (let [key, value] of Object.entries(newLayerMetadata)) {
+      if (value.categories !== undefined) {
+        newLayerMetadata[key].type = 'categorical'
+      }
+    }
+
     return newLayerMetadata;
   }
 
@@ -115,9 +122,13 @@ export class Layer {
 
     for (let [_id, node] of Object.entries(nodes)) {
       // default the node to this layer's nodes
-      let newNode = node
+      _id = isNaN(_id) ? _id : +_id
+      newNodes[_id] = node
+    }
 
-      let globalNode = globalNodes[_id] || {}
+    for (let [_id, globalNode] of Object.entries(globalNodes)) {
+      _id = isNaN(_id) ? _id : +_id
+      let newNode = newNodes[_id] || {}
 
       // if there is a global node, add its values, but don't overwrite
       for (let [attributeKey, attributeValue] of Object.entries(globalNode)) {
@@ -126,9 +137,9 @@ export class Layer {
         }
       }
 
-      _id = isNaN(_id) ? _id : +_id
       newNodes[_id] = newNode
     }
+
     return newNodes
   }
 
@@ -186,9 +197,20 @@ export class Layer {
         nodes[_name]['name'] = _name
       }
 
-      for (let [metadataKey, metadataValues] of Object.entries(metadata)) {
-        if (metadataValues.values !== undefined) {
-          nodes[_name][metadataKey] = metadataValues.values[_id]
+      for (let [key, keyMetadata] of Object.entries(metadata)) {
+        let nodeKeyValue = nodes[_name][key]
+
+        if (keyMetadata.values !== undefined) {
+          nodeKeyValue = keyMetadata.values[_id]
+        }
+
+        // apply categories here if they're present
+        if (keyMetadata.categories !== undefined) {
+          nodeKeyValue = keyMetadata.categories[nodeKeyValue]
+        }
+
+        if (nodeKeyValue !== undefined) {
+          nodes[_name][key] = nodeKeyValue
         }
       }
     }
@@ -255,15 +277,15 @@ export class Layer {
     return nodes
   }
 
-  isUnweighted(nodes) {
-    let networkIsUnweighted = true
+  isWeighted(nodes) {
+    let networkIsWeighted = false
     Object.values(nodes).forEach((node) => {
       if (node.strength !== node.degree) {
-        networkIsUnweighted = false
+        networkIsWeighted = true
       }
     })
 
-    return networkIsUnweighted
+    return networkIsWeighted
   }
 
   // retrieves the nodeNames. The ordering of these is important.
@@ -338,14 +360,14 @@ export class Layer {
   ********************************************************************************/
   // iterates over all of the nodes and identifies the set of metadata we can
   // include in the visualization.
-  getAttributes(nodes, metadata, isUnweighted) {
+  getAttributes(nodes, metadata, isWeighted) {
     let attributes = [
-      [Attribute, 'none', []],
-      [DegreeAttribute, 'degree', []],
+      [Attribute, 'none'],
+      [DegreeAttribute, 'degree'],
     ]
 
-    if (isUnweighted) {
-      attributes.push([DegreeAttribute, 'strength', []])
+    if (isWeighted === true) {
+      attributes.push([DegreeAttribute, 'strength'])
     }
 
     const metadataAttributes = this.getMetadataAttributes(nodes, metadata)
@@ -357,8 +379,8 @@ export class Layer {
       'noType': {},
     }
 
-    attributes.map(([attributeClass, key, categories]) => {
-      const attribute = new attributeClass(key, categories, nodes)
+    attributes.map(([attributeClass, key]) => {
+      const attribute = new attributeClass(key, nodes)
       let addedAttribute = false
 
       if (attributeClass.DISPLAY_COLOR) {
@@ -394,51 +416,37 @@ export class Layer {
     })
     allKeys = d3.set(allKeys).values().sort()
 
-    let cleanMetadata = []
+    let attributes = []
     allKeys.forEach((key) => {
       let keyMetadata = metadata !== undefined ? metadata[key] || {} : {}
       let type = keyMetadata.type
-      let categories = keyMetadata.categories
-      cleanMetadata.push([key, type, categories])
-    })
-
-    let attributes = []
-    for (let [key, type, categories] of cleanMetadata) {
-      const AttributeClass = this.getAttributeClassToAdd(key, type, nodes, categories)
+      const AttributeClass = this.getAttributeClassToAdd(key, type, nodes)
 
       if (AttributeClass !== undefined) {
-        attributes.push([AttributeClass, key, categories])
+        attributes.push([AttributeClass, key])
       }
-    }
+    })
 
     return attributes
   }
 
-  getAttributeClassToAdd(key, type, nodes, categories) {
-    if (key == 'name') {
+  getAttributeClassToAdd(key, type, nodes) {
+    if (key === 'name') {
       return NameAttribute
     }
 
     const nodeValues = Object.values(nodes).map(node => node[key])
+    if (key === 'color' && UserColorAttribute.isType(nodeValues)) {
+      return UserColorAttribute
+    }
 
-    for (let AttributeClass of [BinaryAttribute, UserColorAttribute, CategoricalAttribute, ScalarAttribute]) {
-      let typeDefinedAndTypesEqual = false
-      let typeUndefinedAndNodesOfType = false
-      let typeUndefinedAndCategories = false
-
-      if (type == undefined) {
-        if (AttributeClass.isType(nodeValues)) {
-          typeUndefinedAndNodesOfType = true
-        }
-        if (categories !== undefined && attribute.TYPE == 'categorical') {
-          typeUndefinedAndCategories = true
+    for (let AttributeClass of [BinaryAttribute, CategoricalAttribute, ScalarAttribute]) {
+      if (type !== undefined) {
+        if (type === AttributeClass.TYPE) {
+          return AttributeClass
         }
       }
-      else if (type == attribute.TYPE) {
-        typeDefinedAndTypesEqual = true
-      }
-
-      if (typeDefinedAndTypesEqual || typeUndefinedAndNodesOfType || typeUndefinedAndCategories) {
+      else if (AttributeClass.isType(nodeValues)) {
         return AttributeClass
       }
     }

@@ -26,6 +26,7 @@ export class AllSettings extends SettingsObject {
       'freezeNodeMovement' : false,
       'hideMenu' : false,
       'showLegend': true,
+      'showNodeNames': false,
       'networkName' : undefined,
       'w': undefined,
       'h': undefined,

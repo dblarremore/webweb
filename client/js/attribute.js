@@ -24,7 +24,7 @@ export class Attribute {
   static get DISPLAY_COLOR() { return true }
   static get DISPLAY_SIZE() { return true }
 
-  get TYPE() { return 'none' }
+  static get TYPE() { return 'none' }
 
   static isType(nodeValues) { return false }
 
@@ -177,13 +177,13 @@ export class Attribute {
 }
 
 export class NameAttribute extends Attribute {
-  get TYPE() { return 'name' }
+  static get TYPE() { return 'name' }
 
   static get DISPLAY_COLOR() { return false }
   static get DISPLAY_SIZE() { return false }
 }
 export class ScalarAttribute extends Attribute {
-  get TYPE() { return 'scalar' }
+  static get TYPE() { return 'scalar' }
 
   static isType(nodeValues) { return true }
 
@@ -214,7 +214,7 @@ export class ScalarAttribute extends Attribute {
   }
 }
 export class DegreeAttribute extends ScalarAttribute {
-  get TYPE() { return 'degree' }
+  static get TYPE() { return 'degree' }
 
   get colorScale() { return 'scalarColors' }
 
@@ -234,7 +234,7 @@ export class DegreeAttribute extends ScalarAttribute {
   getScaledSizeValue(node, scale) { return scale(Math.sqrt(this.getRawSizeValue(node))) }
 }
 export class BinaryAttribute extends Attribute {
-  get TYPE() { return 'binary' }
+  static get TYPE() { return 'binary' }
 
   get colorScale() { return 'categoricalColors' }
 
@@ -272,7 +272,7 @@ export class BinaryAttribute extends Attribute {
   }
 }
 export class UserColorAttribute extends Attribute {
-  get TYPE() { return 'categorical' }
+  static get TYPE() { return 'categorical' }
 
   static get DISPLAY_COLOR() { return true }
 
@@ -288,15 +288,15 @@ export class UserColorAttribute extends Attribute {
   }
 }
 export class CategoricalAttribute extends Attribute {
-  get TYPE() { return 'categorical' }
+  static get TYPE() { return 'categorical' }
 
   get scalarCategoricalBins() { return 9 }
 
   static get DISPLAY_SIZE() { return false }
 
-  constructor(key, categories, nodes) {
+  constructor(key, nodes) {
     super(key)
-    this.categories = categories || this.extent(nodes)
+    this.categories = this.extent(nodes)
   }
 
   hslFromIndex(index) {
@@ -325,6 +325,7 @@ export class CategoricalAttribute extends Attribute {
   }
 
   transformNodeValue(nodeValue) {
+    console.log(this)
     return this.isScalarCategorical && isInt(nodeValue)
       ? this.categories[categoryNumber]
       : nodeValue
