@@ -204,23 +204,6 @@ export class ScalarAttribute extends Attribute {
 }
 export class DegreeAttribute extends ScalarAttribute {
   static get TYPE() { return 'degree' }
-
-  get colorScale() { return 'scalarColors' }
-
-  getLegendValuesAndText(rawValues, scaledValues) {
-    let values = []
-    let text = []
-    for (let [rawValue, scaledValue] of zip(rawValues, scaledValues)) {
-      if (! text.includes(rawValue)) {
-        values.push(scaledValue)
-        text.push(rawValue)
-      }
-    }
-
-    return this.legendSort(values, text)
-  }
-
-  getScaledSizeValue(node, scale) { return scale(Math.sqrt(this.getRawSizeValue(node))) }
 }
 export class BinaryAttribute extends Attribute {
   static get TYPE() { return 'binary' }
