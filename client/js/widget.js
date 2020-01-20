@@ -384,7 +384,7 @@ export class InvertBinarySizesWidget extends CheckboxWidget {
       return false
     }
 
-    if (sizingAttribute.TYPE == 'binary') {
+    if (sizingAttribute.constructor.TYPE == 'binary') {
       return true
     }
 
@@ -493,7 +493,7 @@ export class InvertBinaryColorsWidget extends CheckboxWidget {
       let coloringAttribute = this.attributes.color[coloringBy]
 
       if (coloringAttribute !== undefined) {
-        if (coloringAttribute.TYPE == 'binary') {
+        if (coloringAttribute.constructor.TYPE === 'binary') {
           return true
         }
       }

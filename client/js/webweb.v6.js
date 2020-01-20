@@ -367,13 +367,13 @@ export class Webweb {
       let extent = d3.extent(data.extent)
 
       if (name == colorScaleName) {
-        if ((settings.invertBinaryColors == true) && (colorAttribute.TYPE == 'binary')) {
+        if ((settings.invertBinaryColors == true) && (colorAttribute.constructor.TYPE == 'binary')) {
           extent = extent.reverse()
         }
       }
 
       if (name == sizeScaleName) {
-        if ((settings.invertBinarySizes == true) && (sizeAttribute.TYPE == 'binary')) {
+        if ((settings.invertBinarySizes == true) && (sizeAttribute.constructor.TYPE == 'binary')) {
           extent = extent.reverse()
         }
       }

@@ -454,6 +454,7 @@ export class Layer {
     return undefined
   }
 }
+
 function allInts(vals) {
     for (var i in vals) {
         if (!isInt(vals[i])) {
