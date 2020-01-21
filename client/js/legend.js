@@ -7,6 +7,7 @@ export class Sublegend {
   get FONT_SIZE() { return "12px" }
   get JUSTIFY_UNIT() { return 5 }
   get MARGIN_TOP() { return 3 * this.JUSTIFY_UNIT }
+  static get TYPE() { return undefined }
 
   constructor(attributeKey, attribute, r, nodes, scales) {
     this.attributeKey = attributeKey
@@ -15,57 +16,25 @@ export class Sublegend {
     this.nodes = nodes
     this.scales = scales
 
-    let map = this.getValuesAndText(nodes)
-    this.values = map.values
-    this.text = map.text
-    this.colorFunction = this.defaultColorFunction
-    this.sizeFunction = this.defaultSizeFunction
+    const rawValueKey = this.rawValueKey
+    this.nodes = this.attribute.getLegendNodes(
+      nodes.map(node => node[rawValueKey]),
+      this.scales,
+      this.constructor.TYPE,
+    )
+
     this.shouldDraw = this.attributeKey !== 'none' && this.attributeKey !== 'color'
   }
 
-  get valueKey() {
-    return undefined
-  }
-
-  get rawValueKey() {
-    return undefined
-  }
-
-  get defaultSizeFunction() {
-    return ([i, x]) => this.r
-  }
-
-  get defaultColorFunction() {
-    return ([i, x]) => x
-  }
+  get valueKey() { return undefined }
+  get rawValueKey() { return undefined }
 
   get R() { return this._R }
   set R(R) { this._R = R }
 
-  get shouldDraw() {
-    return this._shouldDraw
-  }
+  get shouldDraw() { return this._shouldDraw }
 
-  set shouldDraw(shouldDraw) {
-    this._shouldDraw = shouldDraw
-  }
-
-  get colorFunction() {
-    return this._colorFunction
-  }
-
-  set colorFunction(colorFunction) {
-    this._colorFunction = colorFunction
-  }
-
-  getValuesAndText(nodes, scales) {
-    const rawValueKey = this.rawValueKey
-    const valueKey = this.valueKey
-    return this.attribute.getLegendValuesAndText(
-      nodes.map(node => node[rawValueKey]),
-      nodes.map(node => node[valueKey]),
-    )
-  }
+  set shouldDraw(shouldDraw) { this._shouldDraw = shouldDraw }
 
   get pushdownState() {
     return this._pushdownState
@@ -85,7 +54,7 @@ export class Sublegend {
   }
 
   getNodeAndTextObjects(initialPushdown) {
-    if (initialPushdown == undefined || isNaN(initialPushdown)) {
+    if (initialPushdown === undefined || isNaN(initialPushdown)) {
       initialPushdown = 0
     }
     initialPushdown += this.MARGIN_TOP
@@ -101,30 +70,18 @@ export class Sublegend {
     let nodePushRight = Math.max(this.R, this.JUSTIFY_UNIT) + this.JUSTIFY_UNIT
     let textPushRight = 2 * nodePushRight
 
-    for (let [i, value] of Object.entries(this.values)) {
-      // only draw text for as many values as there are
-      if (i < this.values.length && i < this.text.length) {
-        let pushdown = this.pushdown(i)
-        let text = this.text[i]
+    for (let [i, node] of Object.entries(this.nodes)) {
+      let pushdown = this.pushdown(i)
 
-        objects.text.push(new Text(text, textPushRight, pushdown + 2.5, this.FONTSIZE))
+      objects.text.push(new Text(node.__text, textPushRight, pushdown + 2.5, this.FONTSIZE))
 
+      node.nonInteractive = true
+      node.x = nodePushRight
+      node.y = pushdown
+      node.fixedRadius = (node.__scaledSize || 1) * this.r
+      node.__scaledColor = node.__scaledColor || d3.rgb(128, 128, 128)
 
-        let node = new Node(-1)
-        node.nonInteractive = true
-        node.fixedRadius = value * this.r
-        node.x = nodePushRight
-        node.y = pushdown
-
-        if (isNaN(value)) {
-          node.__scaledColor = value
-        }
-        else {
-          node.__scaledColor = this.colorFunction(value)
-        }
-
-        objects.nodes.push(node)
-      }
+      objects.nodes.push(node)
     }
 
     return objects
@@ -139,7 +96,7 @@ export class Sublegend {
 }
 
 export class SizeSublegend extends Sublegend {
-  static TYPE = 'size'
+  static get TYPE() { return 'size' }
 
   get valueKey() {
     return '__scaledSize'
@@ -149,36 +106,13 @@ export class SizeSublegend extends Sublegend {
     return '__rawSize'
   }
 
-  get defaultColorFunction() {
-    return () => d3.rgb(128, 128, 128)
-  }
-
   constructor(attributeKey, attribute, r, nodes, scales) {
     super(attributeKey, attribute, r, nodes, scales)
     this.R = this.r * scales.nodeSize.range()[1]
   }
-
-  get defaultSizeFunction() {
-    const scale = this.scales[this.attribute.sizeScale]
-    return ([i, value]) => scale(value)
-  }
 }
 export class ColorSublegend extends Sublegend {
-  static TYPE = 'color'
-
-  constructor(attributeKey, attribute, r, nodes, scales) {
-    super(attributeKey, attribute, r, nodes, scales)
-
-    if (this.attribute.colorScale == 'scalarColors') {
-      this.values = this.text.map(text => {
-        let fakeNode = {}
-        fakeNode[attributeKey] = text
-        return attribute.getScaledColorValue(fakeNode, scales[attribute.colorScale])
-      })
-
-    }
-
-  }
+  static get TYPE() { return 'color' }
 
   get valueKey() {
     return '__scaledColor'
@@ -188,11 +122,6 @@ export class ColorSublegend extends Sublegend {
     return '__rawColor'
   }
 
-  get defaultColorFunction() {
-    const scale = this.scales[this.attribute.colorScale]
-    return ([i, value]) => scale(value)
-  }
-  
   pushdown(i) {
     let pushdown = this.pushdownState
     if (i !== undefined) {
@@ -209,6 +138,17 @@ export class ColorSublegend extends Sublegend {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// draw legend(s) for size and color
+// 
+// If size and color are tied to the same attribute, make one legend
+// Otherwise, keep em separate
+//
+// prefer integer boundaries in our legends... but only if the values that are
+// getting passed in are integers... etc. (etc... etc...)
+//
+// steps through what we think of as standard human preference.
+////////////////////////////////////////////////////////////////////////////////
 export class Legend {
   constructor(sizingBy, sizeAttribute, coloringBy, colorAttribute, r, nodes, scales) {
     this.sizingBy = sizingBy
@@ -270,26 +210,4 @@ export class Legend {
 
     return objects
   }
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // draw legend(s) for size and color
-  // 
-  // If size and color are tied to the same attribute, make one legend
-  // Otherwise, keep em separate
-  //
-  // prefer integer boundaries in our legends... but only if the values that are
-  // getting passed in are integers... etc. (etc... etc...)
-  //
-  // steps through what we think of as standard human preference.
-  ////////////////////////////////////////////////////////////////////////////////
-}
-
-function allInts(vals) {
-    for (var i in vals) {
-        if (!isInt(vals[i])) {
-            return false;
-        }
-    }
-
-    return true;
 }

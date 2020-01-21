@@ -1,4 +1,5 @@
 import * as d3 from 'd3'
+import { Node } from './node'
 
 const zip = (arr, ...arrs) => {
   return arr.map((val, i) => arrs.reduce((a, arr) => [...a, arr[i]], [val]))
@@ -33,6 +34,17 @@ export class Attribute {
 
   constructor(key) {
     this.key = key
+  }
+  
+  setScaledValueOfType(node, scales, type) {
+    if (type === 'size') {
+      node.__scaledSize = this.getScaledSizeValue(node, scales[this.sizeScale])
+    }
+    else if (type === 'color') {
+      node.__scaledColor = this.getScaledColorValue(node, scales[this.colorScale])
+    }
+    
+    return node
   }
 
   /********************************************************************************
@@ -115,71 +127,21 @@ export class Attribute {
   /********************************************************************************
    * Legend Functions
   ********************************************************************************/
-  getLegendValuesAndText(text, values) {
-    return this.legendSort(values, text)
-  }
-
-  legendSort(rawValues, rawText) {
-    if (rawValues == undefined) {
-      rawValues = []
-    }
-    if (rawText == undefined) {
-      rawText = []
-    }
-
-    let length = rawValues.length < rawText.length ? rawValues.length : rawText.length
-    let pairList = []
-
-    let seenText = {}
-
-    for (let i = 0; i < length; i++) {
-      let text = rawText[i]
-      if (seenText[text] == undefined) {
-        seenText[text] = true
-        pairList.push({
-          'value': rawValues[i],
-          'text': text,
-        })
-      }
-    }
-
-    // sort by text element
-    pairList.sort((a, b) => a.text - b.text)
-
-    return {
-      'values': pairList.map(x => x.value),
-      'text': pairList.map(x => x.text),
-    }
-  }
-
-  // 'bins' a set of values so that we can display a finite legend.
-  makeBinnedLegend(rawValues, scaledValues, bins) {
-    if (bins === undefined || isNaN(bins)) {
-      bins = 4
-    }
-
-    const [scaledMin, scaledMax] = [d3.min(scaledValues), d3.max(scaledValues)]
-    const scaledStep = (scaledMax - scaledMin) / (bins - 1)
-    const [rawMin, rawMax] = [d3.min(rawValues), d3.max(rawValues)]
-    const rawStep = (rawMax - rawMin) / (bins - 1)
-
-    let values = []
-    let text = []
+  getLegendNodes(values, scales, legendType) {
+    const valuesSet = [... new Set(values)].sort((a, b) => a - b)
     
-    values.push(rounddown(scaledMin, 10))
-    text.push(rounddown(rawMin, 10))
-    for (let i = 1; i < bins - 1; i++) {
-      values.push(round(scaledMin + i * scaledStep, 10))
-      text.push(round(rawMin + i * rawStep, 10))
+    let nodes = []
+    for (let text of valuesSet) {
+      let node = new Node(-1)
+      node.__text = text
+      node[this.key] = text
+      node = this.setScaledValueOfType(node, scales, legendType)
+      nodes.push(node)
     }
-    values.push(rounddown(scaledMax, 10))
-    text.push(roundup(rawMax, 10))
 
-    return {
-      'values': values,
-      'text': text,
-    }
+    return nodes
   }
+
 }
 
 export class NameAttribute extends Attribute {
@@ -195,11 +157,24 @@ export class ScalarAttribute extends Attribute {
 
   get colorScale() { return 'scalarColors' }
 
-  getLegendValuesAndText(rawValues, scaledValues) {
-    const rawValuesSet = [... new Set(rawValues)]
-    const bins = rawValuesSet.length < 5 ? rawValuesSet.length : 4
+  getLegendNodes(values, scales, legendType) {
+    const valuesSet = [... new Set(values)]
+    const bins = valuesSet.length < 5 ? valuesSet.length : 4
 
-    return this.makeBinnedLegend(rawValues, scaledValues, bins)
+    if (bins === undefined || isNaN(bins)) {
+      bins = 4
+    }
+
+    const [min, max] = [d3.min(values), d3.max(values)]
+    const step = (max - min) / (bins - 1)
+
+    let binValues = []
+    for (let binValue = min; binValue < max; binValue += step) {
+      binValues.push(round(binValue, 10))
+    }
+    binValues.push(max)
+
+    return super.getLegendNodes(binValues, scales, legendType)
   }
 }
 export class DegreeAttribute extends ScalarAttribute {
@@ -220,6 +195,10 @@ export class BinaryAttribute extends Attribute {
     return this.trueValues.includes(value)
   }
 
+  valueSetSize(nodes) {
+    return 2
+  }
+
   static isType(nodeValues) {
     const validValues = this.trueValues.concat(this.falseValues)
     return [... new Set(nodeValues)].filter(
@@ -233,14 +212,20 @@ export class BinaryAttribute extends Attribute {
     return scale(this.getRawColorValue(node))
   }
 
-  getLegendValuesAndText(rawValues, scaledValues) {
-    return {
-      'values': [
-        scaledValues[rawValues.indexOf(false)],
-        scaledValues[rawValues.indexOf(true)]
-      ],
-      'text': ["false", "true"],
-    }
+  getLegendNodes(values, scales, legendType) {
+    let trueNode = new Node(-1)
+    trueNode.__text = 'true'
+    trueNode[this.key] = true
+    trueNode = this.setScaledValueOfType(trueNode, scales, legendType)
+
+    let falseNode = new Node(-1)
+    falseNode.__text = 'false'
+    falseNode[this.key] = false
+    falseNode = this.setScaledValueOfType(falseNode, scales, legendType)
+    return [
+      falseNode,
+      trueNode
+    ]
   }
 }
 export class UserColorAttribute extends Attribute {
@@ -329,32 +314,35 @@ export class CategoricalAttribute extends Attribute {
       : extentSize
   }
 
-  getLegendValuesAndText(rawValues, scaledValues) {
+  getLegendNodes(values, scales, legendType) {
     if (this.isScalarCategorical) {
-      return this.scalarCategoricalLegendValuesAndText(rawValues, scaledValues)
+      return this.scalarCategoricalLegendNodes(values)
     }
 
-    return super.getLegendValuesAndText(rawValues, scaledValues)
+    return super.getLegendNodes(values, scales, legendType)
   }
 
-  scalarCategoricalLegendValuesAndText(rawValues, scaledValues) {
-    const [min, max] = [d3.min(rawValues), d3.max(rawValues)]
+  scalarCategoricalLegendNodes(values) {
+    const [min, max] = [d3.min(values), d3.max(values)]
     const step = (max - min) / this.scalarCategoricalBins
 
-    let values = []
-    let text = []
+    let legendValues = []
     for (let i = 0; i < this.scalarCategoricalBins - 1; i++) {
       const index = rounddown(min + i * step, 10)
-      values.push(this.hslFromIndex(index))
-      text.push(this.categories[index])
+      let node = new Node(-1)
+      node.__text = this.categories[index]
+      node[this.key] = node.__text
+      node.__scaledcolor = this.hslfromindex(index)
+      nodes.push(node)
     }
-    values.push(this.hslFromIndex(this.scalarCategoricalBins))
-    text.push(this.categories[this.scalarCategoricalBins])
+    
+    let node = new Node(-1)
+    node.__text = this.categories[this.scalarCategoricalBins]
+    node[this.key] = node.__text
+    node.__scaledcolor = this.hslfromindex(this.scalarCategoricalBins)
+    nodes.push(node)
 
-    return {
-      'values': values,
-      'text': text,
-    }
+    return nodes
   }
 }
 

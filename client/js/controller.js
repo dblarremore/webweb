@@ -76,6 +76,9 @@ export class AllSettings extends SettingsObject {
       'linkLength': {
         'aliasOf': 'l',
       },
+      'charge': {
+        'aliasOf': 'c',
+      },
     }
   }
 
