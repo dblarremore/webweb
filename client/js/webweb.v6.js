@@ -219,6 +219,9 @@ export class Webweb {
     }
     let layer = network.layers[settings['networkLayer']]
 
+    settings = this.defaultDoByAttribute(settings, layer.attributes, 'size')
+    settings = this.defaultDoByAttribute(settings, layer.attributes, 'color')
+
     this.canvas.settings = settings
 
     if (! settings.hideMenu) {
@@ -227,9 +230,6 @@ export class Webweb {
 
     this.setVisibleNodes(layer.nodeCount)
     this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
-
-    settings = this.defaultDoByAttribute(settings, layer.attributes, 'size')
-    settings = this.defaultDoByAttribute(settings, layer.attributes, 'color')
 
     this.updateScales(settings)
 

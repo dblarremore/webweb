@@ -445,20 +445,22 @@ export class ColorPaletteSelectWidget extends SelectWidget {
     if (coloringBy == undefined) {
       return false
     }
+    console.log('here')
 
     let coloringAttribute = this.attributes.color[coloringBy]
 
     if (coloringAttribute == undefined) {
       return false
     }
+    console.log('there')
 
     if (coloringAttribute instanceof UserColorAttribute) {
       return false
     }
-    else if (coloringAttribute.TYPE == 'binary') {
+    else if (coloringAttribute.constructor.TYPE == 'binary') {
       return true
     }
-    else if (coloringAttribute.TYPE == 'categorical') {
+    else if (coloringAttribute.constructor.TYPE == 'categorical') {
       if (! coloringAttribute.isScalarCategorical) {
         return true
       }
