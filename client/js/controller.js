@@ -79,6 +79,9 @@ export class AllSettings extends SettingsObject {
       'charge': {
         'aliasOf': 'c',
       },
+      'radius': {
+        'aliasOf': 'r',
+      },
     }
   }
 

@@ -228,6 +228,9 @@ export class Webweb {
     this.setVisibleNodes(layer.nodeCount)
     this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
 
+    settings = this.defaultDoByAttribute(settings, layer.attributes, 'size')
+    settings = this.defaultDoByAttribute(settings, layer.attributes, 'color')
+
     this.updateScales(settings)
 
     this.simulation.links = this.getLinks(layer, this.simulation.nodes, this.scales)
@@ -237,7 +240,15 @@ export class Webweb {
     if (settings.freezeNodeMovement) {
       this.simulation.simulation.tick()
     }
+  }
 
+  defaultDoByAttribute(settings, attributes, doByType) {
+    let doByKey = doByType + 'By'
+    if (! Object.keys(attributes[doByType]).includes(settings[doByKey])) {
+      settings[doByKey] = 'none'
+    }
+
+    return settings
   }
 
   getLinks(layer, nodes, scales) {
