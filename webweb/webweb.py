@@ -250,9 +250,7 @@ class Web(dict):
                 </head>
                 <body>
                     <script type="text/javascript">
-                        window.onload = function() {{
-                            var web = new Webweb.Webweb({json});
-                        }}
+                        var web = new Webweb.Webweb({json});
                     </script>
                 </body>
             </html>

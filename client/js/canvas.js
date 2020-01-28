@@ -7,10 +7,10 @@ export class CanvasState {
     this.h = settings.h
     this.dpr = window.devicePixelRatio || 1
 
-    this.HTMLId = "webweb-vis-canvas"
+    this.HTMLClass = "webweb-vis-canvas"
     this.HTML = this.getHTML()
 
-    this.boxId = "webweb-visualization-container"
+    this.boxClass = "webweb-visualization-container"
     this.box = this.getBox()
 
     this.context = this.HTML.getContext('2d')
@@ -42,14 +42,14 @@ export class CanvasState {
 
   getBox() {
     let box = document.createElement("div")
-    box.setAttribute('id', this.boxId)
+    box.classList.add(this.boxClass)
     box.append(this.HTML)
     return box
   }
 
   getHTML() {
     let HTML = document.createElement("canvas")
-    HTML.id = this.HTMLId
+    HTML.classList.add(this.HTMLClass)
 
     HTML.style.width = this.w + "px"
     HTML.style.height = this.h + "px"

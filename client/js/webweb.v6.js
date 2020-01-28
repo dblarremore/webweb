@@ -26,6 +26,13 @@ import { saveAs } from 'file-saver'
 
 export class Webweb {
   constructor(webwebData) {
+    let _this = this
+    window.addEventListener("load", (event) => {
+      _this.init(webwebData)
+    })
+  }
+
+  init(webwebData) {
     this.title = webwebData.title || 'webweb'
 
     this.networkNames = Object.keys(webwebData.networks) || ['webweb']
@@ -304,7 +311,7 @@ export class Webweb {
     }
     else {
       box = document.createElement('div')
-      box.setAttribute('id', 'webweb-center')
+      box.classList.add('webweb-center')
       document.getElementsByTagName("body")[0].appendChild(box)
 
       if (title !== undefined) {

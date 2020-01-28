@@ -1,4 +1,4 @@
-#webweb-center { 
+.webweb-center { 
     margin-left: auto;
     margin-right: auto;
     background-color: white;
@@ -7,7 +7,7 @@
     width: 100%;
     height: 100%;
 }
-#webweb-menu {
+.webweb-menu {
     font-size: 10px;
     padding: 15px;
     /* flexbox stuff.. */
@@ -30,29 +30,29 @@
     -ms-flex-align: start;
     align-items: flex-start;
 }
-#webweb-menu-right {
+.webweb-menu-right {
     text-align: right;
 }
 
 @media (max-width: 600px) {
-    #webweb-menu {
+    .webweb-menu {
         -webkit-flex-direction: column;
         -ms-flex-direction: column;
         flex-direction: column;
     }
-    #webweb-menu-right {
+    .webweb-menu-right {
         text-align: left;
     }
 }
-#webweb-visualization-container {
+.webweb-visualization-container {
     overflow: hidden;
 }
-#webweb-visualization-container > svg {
+.webweb-visualization-container > svg {
     border: solid 3px #f5f6fa;
     display: block;
     margin: 0 auto;
 }
-#webweb-visualization-container > canvas {
+.webweb-visualization-container > canvas {
     border: solid 3px #f5f6fa;
     display: block;
     margin: 0 auto;

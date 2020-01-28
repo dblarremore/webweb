@@ -11,7 +11,7 @@ export class Menu {
 
   makeHTML() {
     this.HTML = document.createElement('div')
-    this.HTML.id = 'webweb-menu'
+    this.HTML.classList.add('webweb-menu')
     this.HTML.style.display = this.settings.hideMenu == true ? 'none' : 'flex'
   }
 
@@ -61,9 +61,9 @@ export class Menu {
     }
 
     this.widgets = []
-    for (let [sideId, sideWidgets] of Object.entries(rawWidgets)) {
+    for (let [sideClass, sideWidgets] of Object.entries(rawWidgets)) {
       let sideMenu = document.createElement('div')
-      sideMenu.id = sideId
+      sideMenu.classList.add(sideClass)
 
       Object.values(sideWidgets).forEach((widgetList) => {
         let subwidgets = []

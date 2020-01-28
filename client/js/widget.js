@@ -445,14 +445,12 @@ export class ColorPaletteSelectWidget extends SelectWidget {
     if (coloringBy == undefined) {
       return false
     }
-    console.log('here')
 
     let coloringAttribute = this.attributes.color[coloringBy]
 
     if (coloringAttribute == undefined) {
       return false
     }
-    console.log('there')
 
     if (coloringAttribute instanceof UserColorAttribute) {
       return false
