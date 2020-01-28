@@ -1,7 +1,11 @@
-export class CanvasState {
-  constructor(settings, simulation) {
+import { Legend } from './legend'
+import { Simulation } from './simulation'
+import { Link } from './link'
+import * as d3 from 'd3'
+
+export class WebwebCanvas {
+  constructor(settings) {
     this.settings = settings
-    this.simulation = simulation
 
     this.w = settings.w
     this.h = settings.h
@@ -19,32 +23,17 @@ export class CanvasState {
     this.padding = 3
     this.dragBoundary = 15
 
-    this.dragging = false
-    this.draggedNode = undefined
-
-    let _this = this
-    this.HTML.addEventListener("mousedown", (event) => {
-      _this.setMouseState(event)
-      _this.mouseDownListener()
-    })
-    this.HTML.addEventListener("mousemove", (event) => {
-      _this.setMouseState(event)
-      _this.mouseMoveListener()
-    })
-    this.HTML.addEventListener("mouseup", (event) => {
-      _this.setMouseState(event)
-      _this.mouseUpListener()
-    })
-
-    this.simulation.simulation.on('tick', this.redraw.bind(this))
-    this.simulation.simulation.alpha(1).restart()
+    for (let [event, eventFunction] of Object.entries(this.listeners)) {
+      this.HTML.addEventListener(event, eventFunction)
+    }
   }
 
-  getBox() {
-    let box = document.createElement("div")
-    box.classList.add(this.boxClass)
-    box.append(this.HTML)
-    return box
+  get listeners() {
+    return {
+      "mousedown": event => this.setMouseState(event),
+      "mousemove": event => this.setMouseState(event),
+      "mouseup": event => this.setMouseState(event),
+    }
   }
 
   getHTML() {
@@ -60,6 +49,13 @@ export class CanvasState {
     return HTML
   }
 
+  getBox() {
+    let box = document.createElement("div")
+    box.classList.add(this.boxClass)
+    box.append(this.HTML)
+    return box
+  }
+
   clear() {
     this.context.clearRect(0, 0, this.w, this.h)
 
@@ -68,7 +64,8 @@ export class CanvasState {
   }
 
   redraw() {
-    const redrawContent = this.getRedrawContent()
+    this.clear()
+    const redrawContent = this.visualization.getRedrawContent(this.mouseState)
     const ctx = this.context
 
     redrawContent.forEach((element) => {
@@ -78,7 +75,7 @@ export class CanvasState {
 
   svgDraw() {
     let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-    const redrawContent = this.getRedrawContent()
+    const redrawContent = this.visualization.getRedrawContent(this.mouseState)
 
     redrawContent.forEach((element) => {
       svg.appendChild(element.drawSVG())
@@ -87,8 +84,188 @@ export class CanvasState {
     return svg
   }
 
+  setMouseState(event) {
+    let box = this.HTML.getBoundingClientRect()
+    let date = new Date()
+    this.visualization.mouseState = {
+      x: event.clientX - box.left - this.padding,
+      y: event.clientY - box.top - this.padding,
+      time: date.getTime(),
+    }
+
+    this.redraw()
+  }
+
+  mouseIsWithinDragBoundary(mouseState) {
+    if (
+      mouseState.x < this.dragBoundary ||
+      mouseState.y < this.dragBoundary ||
+      mouseState.x > this.settings.w - this.dragBoundary ||
+      mouseState.y > this.settings.h - this.dragBoundary
+    ) {
+      return true
+    }
+    return false
+  }
+
+  visualizationConstructor(visualization) {
+    this.visualization = visualization
+    for (let [event, eventFunction] of Object.entries(visualization.listeners)) {
+      this.HTML.addEventListener(event, eventFunction)
+    }
+  }
+
+  visualizationDestructor() {
+    if (this.visualization !== undefined) {
+      for (let [event, eventFunction] of Object.entries(this.visualization.listeners)) {
+        this.HTML.removeEventListener(event, eventFunction)
+      }
+    }
+  }
+}
+
+class WebwebPlot {
+  constructor(settings, nodes, canvas) {
+    this.settings = settings
+    this.nodes = nodes
+    this.canvas = canvas
+  }
+
+  freezeNodesCaller(settings) {
+    if (! this.simulation) {
+      return
+    }
+
+    if (settings.freezeNodeMovement) {
+      this.simulation.freeze()
+    }
+    else {
+      this.simulation.unfreeze()
+    }
+    this.canvas.redraw()
+  }
+
+  simulationUpdateCaller(settings) {
+    if (! this.simulation) {
+      return
+    }
+
+    this.simulation.update(settings)
+  }
+}
+
+export class ChordDiagram extends WebwebPlot {
+  constructor(settings, nodes, canvas) {
+    super(settings, nodes, canvas)
+    let chord = d3.chord()
+      .padAngle(0.05)
+      .sortSubgroups(d3.descending)
+
+    const chords = chord(data);
+
+    let outerRadius = 290
+    let innerRadius = 270
+
+    let arc = d3.arc()
+      .innerRadius(innerRadius)
+      .outerRadius(outerRadius)
+
+    let ribbon = d3.ribbon()
+      .radius(innerRadius)
+
+    const group = svg.append("g")
+      .selectAll("g")
+      .data(chords.groups)
+      .join("g");
+
+    group.append("path")
+      .attr("fill", d => color(d.index))
+      .attr("stroke", d => d3.rgb(color(d.index)).darker())
+      .attr("d", arc);
+
+    svg.append("g")
+      .attr("fill-opacity", 0.67)
+      .selectAll("path")
+      .data(chords)
+      .join("path")
+        .attr("d", ribbon)
+        .attr("fill", d => color(d.target.index))
+        .attr("stroke", d => d3.rgb(color(d.target.index)).darker());
+  }
+}
+
+export class ForceDirectedPlot extends WebwebPlot {
+  constructor(settings, nodes, canvas) {
+    super(settings, nodes, canvas)
+    this.simulation = new Simulation(nodes, settings)
+
+    this.simulation.simulation.on('tick', this.canvas.redraw.bind(this.canvas))
+    this.simulation.simulation.alpha(1).restart()
+  }
+
+  get listeners() {
+    return {
+      "mousedown": event => this.mouseDownListener(),
+      "mousemove": event => this.mouseMoveListener(),
+      "mouseup": event => this.mouseUpListener(),
+    }
+  }
+
+  update(settings, nodes, layer, scales) {
+    this.settings = settings
+    this.layer = layer
+    this.scales = scales
+
+    this.simulation.links = this.getLinks(layer, nodes, this.scales)
+    this.simulation.update(settings)
+    this.createLegend()
+
+    // if we've frozen node movement manually tick so new edges are evaluated.
+    if (settings.freezeNodeMovement) {
+      this.canvas.redraw()
+    }
+  }
+
+  getLinks(layer, nodes, scales) {
+    return layer.links.map((edge) => {
+      const source = nodes[edge[0]]
+      const target = nodes[edge[1]]
+      const weight = edge[2]
+      const width = scales.linkWidth(weight)
+      const opacity = scales.linkOpacity(weight)
+
+      return new Link(source, target, weight, width, opacity)
+    })
+  }
+
+  createLegend() {
+    this.legendNodes = []
+    this.legendText = []
+
+    if (this.settings.showLegend) {
+      let legend = new Legend(
+        this.settings.sizeBy,
+        this.layer.attributes.size[this.settings.sizeBy],
+        this.settings.colorBy,
+        this.layer.attributes.color[this.settings.colorBy],
+        this.settings.r,
+        this.simulation.nodes,
+        this.scales,
+      )
+
+      let objects = legend.legendNodeAndText
+
+      objects.nodes = objects.nodes.map((node) => {
+        node.settings = this.settings
+        return node
+      }, this)
+
+      this.legendNodes = objects.nodes
+      this.legendText = objects.text
+    }
+  }
+
   getRedrawContent() {
-    this.clear()
     this.nodesMatchingString(this.settings.nameToMatch)
     this.nodesContainingMouse(this.mouseState)
 
@@ -174,29 +351,6 @@ export class CanvasState {
     return false
   }
 
-  setMouseState(event) {
-    let box = this.HTML.getBoundingClientRect()
-    let date = new Date()
-    this.mouseState = {
-      x: event.clientX - box.left - this.padding,
-      y: event.clientY - box.top - this.padding,
-      time: date.getTime(),
-    }
-    return this.mouseState
-  }
-
-  mouseIsWithinDragBoundary(mouseState) {
-    if (
-      mouseState.x < this.dragBoundary ||
-      mouseState.y < this.dragBoundary ||
-      mouseState.x > this.settings.w - this.dragBoundary ||
-      mouseState.y > this.settings.h - this.dragBoundary
-    ) {
-      return true
-    }
-    return false
-  }
-
   updateDraggedNode(mouseState) {
     this.draggedNode.x = mouseState.x
     this.draggedNode.y = mouseState.y
@@ -235,12 +389,11 @@ export class CanvasState {
 
     this.mouseDownState = undefined
   }
-
   mouseMoveListener(event) {
     const mouseState = this.mouseState
 
     if (this.dragging) {
-      if (this.mouseIsWithinDragBoundary(mouseState)) {
+      if (this.canvas.mouseIsWithinDragBoundary(mouseState)) {
         this.endDragging()
       }
       else {
@@ -248,7 +401,7 @@ export class CanvasState {
       }
     }
 
-    this.redraw()
+    this.canvas.redraw()
   }
   mouseDownListener() {
     const mouseState = this.mouseState

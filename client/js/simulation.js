@@ -6,7 +6,6 @@ export class Simulation {
     this.nodes = nodes
 
     this.simulation = d3.forceSimulation(this.nodes)
-      // .on('tick', this.tick)
 
     this.simulation.alphaDecay = 0.001
 
@@ -47,12 +46,6 @@ export class Simulation {
     }
 
     this.simulation.alpha(1).restart()
-  }
-
-  tick () {
-    if (this.canvas !== undefined) {
-      this.canvas.redraw.call(this.canvas)
-    }
   }
 
   freeze() {

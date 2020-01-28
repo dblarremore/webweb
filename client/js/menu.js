@@ -3,10 +3,17 @@ import * as widgetDefs from './widget'
 export class Menu {
   constructor(settings, attributes, callHandler) {
     this.settings = settings
-    this.attributes = attributes
-    this.callHandler = callHandler
-    this.makeHTML()
-    this.makeWidgets()
+
+    if (! this.settings.hideMenu) {
+      this.attributes = attributes
+      this.callHandler = callHandler
+      this.makeHTML()
+      this.makeWidgets()
+    }
+    else {
+      this.HTML = document.createElement('div')
+      this.HTML.style = "display: none;"
+    }
   }
 
   makeHTML() {
@@ -18,6 +25,10 @@ export class Menu {
   // when the network changes, we will re-inject the settings, and this should
   // percolate up to the html
   refresh(settings, attributes) {
+    if (settings.hideMenu) {
+      return
+    }
+
     this.settings = settings
     this.widgets.forEach((widget) => {
       widget.settings = this.settings

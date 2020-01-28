@@ -12,12 +12,9 @@ import { colorbrewer } from './colors'
 import { Menu } from './menu'
 import { GlobalListeners } from './listeners'
 import { Node } from './node'
-import { Link } from './link'
-import { Legend } from './legend'
 import { AllSettings } from './controller'
 import { Network } from './network'
-import { Simulation } from './simulation'
-import { CanvasState } from './canvas'
+import { WebwebCanvas, ForceDirectedPlot } from './canvas'
 
 import '../css/style.css'
 
@@ -26,10 +23,7 @@ import { saveAs } from 'file-saver'
 
 export class Webweb {
   constructor(webwebData) {
-    let _this = this
-    window.addEventListener("load", (event) => {
-      _this.init(webwebData)
-    })
+    window.addEventListener("load", () => this.init(webwebData))
   }
 
   init(webwebData) {
@@ -91,25 +85,20 @@ export class Webweb {
 
     this.nodesPersistence = []
 
-    this.simulation = new Simulation(this.nodes, settings)
-
     let box = this.getBox(this.title, settings)
     settings = this.setVizualizationDimensions(box, settings)
 
     let layer = this.getLayerDisplayedBySettings(settings)
 
-    if (! settings.hideMenu) {
-      this.menu = new Menu(settings, layer.attributes, this.getCallHandler())
-      box.appendChild(this.menu.HTML)
-    }
+    this.menu = new Menu(settings, layer.attributes, this.getCallHandler())
+    box.appendChild(this.menu.HTML)
 
-    let canvas = new CanvasState(settings, this.simulation)
-    box.append(canvas.box)
-    this.canvas = canvas
+    this.canvas = new WebwebCanvas(settings)
+    box.append(this.canvas.box)
 
     let listeners = new GlobalListeners(settings, this.getCallHandler())
 
-    this.displayNetwork(this.networkName, settings)
+    this.displayNetwork(settings)
   }
 
   // object that will hopefully make things nicer and give only restricted
@@ -119,19 +108,13 @@ export class Webweb {
     let handleFunction = (request, settings) => {
       const handler = {
         'display-network': function(settings) {
-          _this.displayNetwork(settings.networkName, settings)
+          _this.displayNetwork(settings)
         },
         'freeze-nodes':  function(settings) {
-          if (settings.freezeNodeMovement) {
-            _this.simulation.freeze()
-          }
-          else {
-            _this.simulation.unfreeze()
-          }
-          _this.simulation.simulation.tick()
+          _this.visualization.freezeNodesCaller(settings)
         },
         'update-sim': function(settings) {
-          _this.simulation.update(settings)
+          _this.visualization.simulationUpdateCaller(settings)
         },
         'redraw': (settings) => {
           _this.canvas.settings = settings
@@ -181,7 +164,7 @@ export class Webweb {
     let nodeNamesToPositions = {}
 
     // save coords & reset metadata
-    for (let node of this.simulation.nodes) {
+    for (let node of this.nodes) {
       let nodeName = node.name
       nodeNamesToPositions[nodeName] = {
         'x': node.x,
@@ -196,7 +179,7 @@ export class Webweb {
     }
 
     // set metadata of nodes in new network
-    for (let [_id, node] of Object.entries(this.simulation.nodes)) {
+    for (let [_id, node] of Object.entries(this.nodes)) {
       let _name = nodeIdToNameMap[_id]
 
       if (_name !== undefined) {
@@ -211,42 +194,43 @@ export class Webweb {
       let _id = nodeNameToIdMap[name]
       if (_id !== undefined) {
         Object.entries(coords).forEach(([key, val]) => {
-          this.simulation.nodes[_id][key] = val
+          this.nodes[_id][key] = val
         })
       }
     }
   }
 
-  displayNetwork(networkName, settings) {
-    let network = this.networks[networkName]
+  displayNetwork(settings) {
+    settings = this.defaultSettingsAfterNetworkChange(settings)
+    let layer = this.getLayerDisplayedBySettings(settings)
+
+    this.canvas.visualizationDestructor()
+    this.canvas.settings = settings
+
+    this.menu.refresh(settings, layer.attributes)
+    this.setVisibleNodes(layer.nodeCount)
+    this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
+    this.updateScales(settings)
+
+    this.visualization = new ForceDirectedPlot(settings, this.nodes, this.canvas)
+    this.canvas.visualizationConstructor(this.visualization)
+    this.visualization.update(settings, this.nodes, layer, this.scales)
+  }
+
+  defaultSettingsAfterNetworkChange(settings) {
+    let network = this.networks[settings.networkName]
 
     // would be nice to cache last network layer :|
     if ((settings['networkLayer'] < 0) || (network.layers.length <= settings['networkLayer'])) {
       settings['networkLayer'] = 0
     }
+
     let layer = network.layers[settings['networkLayer']]
 
     settings = this.defaultDoByAttribute(settings, layer.attributes, 'size')
     settings = this.defaultDoByAttribute(settings, layer.attributes, 'color')
 
-    this.canvas.settings = settings
-
-    if (! settings.hideMenu) {
-      this.menu.refresh(settings, layer.attributes)
-    }
-
-    this.setVisibleNodes(layer.nodeCount)
-    this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
-
-    this.updateScales(settings)
-
-    this.simulation.links = this.getLinks(layer, this.simulation.nodes, this.scales)
-    this.simulation.update(settings)
-
-    // if we've frozen node movement manually tick so new edges are evaluated.
-    if (settings.freezeNodeMovement) {
-      this.simulation.simulation.tick()
-    }
+    return settings
   }
 
   defaultDoByAttribute(settings, attributes, doByType) {
@@ -256,18 +240,6 @@ export class Webweb {
     }
 
     return settings
-  }
-
-  getLinks(layer, nodes, scales) {
-    return layer.links.map((edge) => {
-      const source = nodes[edge[0]]
-      const target = nodes[edge[1]]
-      const weight = edge[2]
-      const width = scales.linkWidth(weight)
-      const opacity = scales.linkOpacity(weight)
-
-      return new Link(source, target, weight, width, opacity)
-    })
   }
 
   getLayerDisplayedBySettings(settings) {
@@ -344,7 +316,7 @@ export class Webweb {
   ////////////////////////////////////////////////////////////////////////////////
   updateScales(settings) {
     let layer = this.getLayerDisplayedBySettings(settings)
-    let nodes = this.simulation.nodes
+    let nodes = this.nodes
 
     let sizeAttribute = layer.attributes.size[settings.sizeBy]
     let colorAttribute = layer.attributes.color[settings.colorBy]
@@ -419,30 +391,5 @@ export class Webweb {
       node.__rawColor = colorAttribute.getRawColorValue(node)
       node.__scaledColor = colorAttribute.getScaledColorValue(node, this.scales[colorScaleName])
     })
-
-    this.canvas.legendNodes = []
-    this.canvas.legendText = []
-
-    if (settings.showLegend) {
-      let legend = new Legend(
-      settings.sizeBy,
-        sizeAttribute,
-        settings.colorBy,
-        colorAttribute,
-        settings.r,
-        nodes,
-        this.scales,
-    )
-
-      let objects = legend.legendNodeAndText
-
-      objects.nodes = objects.nodes.map((node) => {
-        node.settings = settings
-        return node
-      })
-
-      this.canvas.legendNodes = objects.nodes
-      this.canvas.legendText = objects.text
-    }
   }
 }
