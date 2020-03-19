@@ -1,12 +1,11 @@
 import * as widgetDefs from './widget'
 
 export class Menu {
-  constructor(settings, attributes, callHandler) {
+  constructor(settings, attributes) {
     this.settings = settings
 
     if (! this.settings.hideMenu) {
       this.attributes = attributes
-      this.callHandler = callHandler
       this.makeHTML()
       this.makeWidgets()
     }
@@ -24,7 +23,7 @@ export class Menu {
 
   // when the network changes, we will re-inject the settings, and this should
   // percolate up to the html
-  refresh(settings, attributes) {
+  refresh(settings, attributes, callHandler) {
     if (settings.hideMenu) {
       return
     }
@@ -32,7 +31,7 @@ export class Menu {
     this.settings = settings
     this.widgets.forEach((widget) => {
       widget.settings = this.settings
-      widget.refresh(settings, attributes)
+      widget.refresh(settings, attributes, callHandler)
     }, this)
   }
 
@@ -80,7 +79,7 @@ export class Menu {
         let subwidgets = []
 
         for (let subwidgetConstructor of widgetList) {
-          let widget = new subwidgetConstructor(this.settings, this.attributes, this.callHandler)
+          let widget = new subwidgetConstructor(this.settings, this.attributes)
           this.widgets.push(widget)
           subwidgets.push(widget)
         }

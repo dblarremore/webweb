@@ -1,0 +1,15 @@
+- naming layer types
+- naming network types
+- naming layers
+- flip for all attributes
+
+- scale node arc lengths
+  - spacers
+  - degree
+- hover events
+  - state edge weights
+  - hide other arcs
+- arc drawing
+  - colorBy?
+  - self loops?
+- text angles

@@ -2,6 +2,8 @@ import * as d3 from 'd3'
 import { Node } from './node'
 import { Attribute, NameAttribute, ScalarAttribute, UserColorAttribute, BinaryAttribute, DegreeAttribute, CategoricalAttribute } from './attribute'
 
+import * as utils from './utils'
+
 /*********************************************************************************
  * Layer
  *
@@ -21,17 +23,10 @@ export class Layer {
     this.nodes = this.mergeMetadataWithNodes(this.nodes, this.metadata, this.nodeIdToNameMap)
 
     this.links = this.createLinks(this.edgeList, this.nodeNameToIdMap)
+    this.matrix = this.createMatrix(this.edgeList, this.nodeNameToIdMap)
 
     this.nodes = this.addEdgeMetadataToNodes(this.links, this.nodes, this.nodeIdToNameMap)
-
-    let [attributes, newNodes] =  this.getAttributes(
-      this.nodes,
-      this.metadata,
-      this.isWeighted(this.nodes)
-    )
-
-    this.attributes = attributes
-    this.nodes = newNodes
+    this.attributes =  this.getAttributes(this.nodes, this.metadata)
   }
 
   get nodeCount() {
@@ -158,7 +153,7 @@ export class Layer {
       if (node !== null && nodeNameToIdMap[node] == undefined) {
         nodeNameToIdMap[node] = nextId;
 
-        if (isInt(node)) {
+        if (utils.isInt(node)) {
           node = +node;
           nodeNameToIdMap[node] = nextId;
 
@@ -257,6 +252,25 @@ export class Layer {
     return links
   }
 
+  createMatrix(edgeList, nodeNameToIdMap) {
+    let matrix = []
+    for (let i = 0; i < this.nodeCount; i++) {
+      let row = []
+      for (let j = 0; j < this.nodeCount; j++) {
+        row.push(0)
+      }
+      matrix.push(row)
+    }
+
+    for (let [source, target, weight] of edgeList) {
+      const i = nodeNameToIdMap[source]
+      const j = nodeNameToIdMap[target]
+      matrix[i][j] += weight
+    }
+
+    return matrix
+  }
+
   // adds `degree`
   // if the network is weighted, adds `strength`
   addEdgeMetadataToNodes(links, nodes, nodeIdToNameMap) {
@@ -314,7 +328,7 @@ export class Layer {
     
     let unusedName = 'UNUSED_NAME'
 
-    if (allInts(nodeNames)) {
+    if (utils.allInts(nodeNames)) {
       nodeNames.sort(function(a, b){return a-b});
       unusedName = Math.max.apply(Math, nodeNames) + 1
     }
@@ -360,13 +374,13 @@ export class Layer {
   ********************************************************************************/
   // iterates over all of the nodes and identifies the set of metadata we can
   // include in the visualization.
-  getAttributes(nodes, metadata, isWeighted) {
+  getAttributes(nodes, metadata) {
     let attributes = [
       [Attribute, 'none'],
       [DegreeAttribute, 'degree'],
     ]
 
-    if (isWeighted === true) {
+    if (this.isWeighted(nodes) === true) {
       attributes.push([DegreeAttribute, 'strength'])
     }
 
@@ -376,36 +390,16 @@ export class Layer {
     let attributesByType = {
       'color': {},
       'size': {},
-      'noType': {},
     }
 
     attributes.map(([attributeClass, key]) => {
-      const attribute = new attributeClass(key, nodes)
-      let addedAttribute = false
-
-      if (attributeClass.DISPLAY_COLOR) {
-        attributesByType.color[key] = attribute
-        let addedAttribute = true
-      }
-
-      if (attributeClass.DISPLAY_SIZE) {
-        attributesByType.size[key] = attribute
-        let addedAttribute = true
-      }
-
-      if (! attributeClass.DISPLAY_COLOR && ! attributeClass.DISPLAY_SIZE) {
-        attributesByType.noType[key] = attribute
-        let addedAttribute = true
-      }
-
-      if (addedAttribute) {
-        for (let [nodeKey, node] of Object.entries(nodes)) {
-          nodes[nodeKey][key] = attribute.transformNodeValue(node[key])
-        }
+      for (let displayType of attributeClass.displays) {
+        attributesByType[displayType][key] = new attributeClass(key, nodes, displayType)
       }
     })
 
-    return [attributesByType, nodes]
+
+    return attributesByType
   }
 
   getMetadataAttributes(nodes, metadata) {
@@ -436,6 +430,7 @@ export class Layer {
     }
 
     const nodeValues = Object.values(nodes).map(node => node[key])
+
     if (key === 'color' && UserColorAttribute.isType(nodeValues)) {
       return UserColorAttribute
     }
@@ -453,18 +448,4 @@ export class Layer {
 
     return undefined
   }
-}
-
-function allInts(vals) {
-    for (var i in vals) {
-        if (!isInt(vals[i])) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function isInt(n){
-    return Number(n) === n && n % 1 === 0;
 }

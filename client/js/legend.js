@@ -9,25 +9,16 @@ export class Sublegend {
   get MARGIN_TOP() { return 3 * this.JUSTIFY_UNIT }
   static get TYPE() { return undefined }
 
-  constructor(attributeKey, attribute, r, nodes, scales) {
+  constructor(attributeKey, attribute, r, scales) {
     this.attributeKey = attributeKey
     this.attribute = attribute
     this.r = r
-    this.nodes = nodes
     this.scales = scales
 
-    const rawValueKey = this.rawValueKey
-    this.nodes = this.attribute.getLegendNodes(
-      nodes.map(node => node[rawValueKey]),
-      this.scales,
-      this.constructor.TYPE,
-    )
+    this.nodes = this.attribute.getLegendNodes(this.attribute.values, this.scales)
 
     this.shouldDraw = this.attributeKey !== 'none' && this.attributeKey !== 'color'
   }
-
-  get valueKey() { return undefined }
-  get rawValueKey() { return undefined }
 
   get R() { return this._R }
   set R(R) { this._R = R }
@@ -78,7 +69,10 @@ export class Sublegend {
       node.nonInteractive = true
       node.x = nodePushRight
       node.y = pushdown
-      node.fixedRadius = (node.__scaledSize || 1) * this.r
+      // node.fixedRadius = (node.__scaledSize || 1) * this.r
+      node.fixedRadius = (this.attribute.scaleValue(node[this.attribute.key])
+      node.__scaledSize || 1) * this.r
+
       node.__scaledColor = node.__scaledColor || d3.rgb(128, 128, 128)
 
       objects.nodes.push(node)
@@ -98,29 +92,13 @@ export class Sublegend {
 export class SizeSublegend extends Sublegend {
   static get TYPE() { return 'size' }
 
-  get valueKey() {
-    return '__scaledSize'
-  }
-
-  get rawValueKey() {
-    return '__rawSize'
-  }
-
-  constructor(attributeKey, attribute, r, nodes, scales) {
+  constructor(attributeKey, attribute, r, scales) {
     super(attributeKey, attribute, r, nodes, scales)
     this.R = this.r * scales.nodeSize.range()[1]
   }
 }
 export class ColorSublegend extends Sublegend {
   static get TYPE() { return 'color' }
-
-  get valueKey() {
-    return '__scaledColor'
-  }
-
-  get rawValueKey() {
-    return '__rawColor'
-  }
 
   pushdown(i) {
     let pushdown = this.pushdownState
@@ -159,8 +137,8 @@ export class Legend {
     this.nodes = nodes
     this.scales = scales
 
-    this.sizeSub = new SizeSublegend(this.sizingBy, this.sizeAttribute, this.r, this.nodes, this.scales)
-    this.colorSub = new ColorSublegend(this.coloringBy, this.colorAttribute, this.r, this.nodes, this.scales)
+    this.sizeSub = new SizeSublegend(this.sizingBy, this.sizeAttribute, this.r, this.scales)
+    this.colorSub = new ColorSublegend(this.coloringBy, this.colorAttribute, this.r, this.scales)
     this.colorSub.R = this.sizeSub.R
 
     if (this.sizeSub.shouldDraw == false && this.colorSub.shouldDraw == false) {

@@ -96,6 +96,8 @@ class Web(dict):
         self.display = Display(display)
         self.networks = Networks()
 
+        self.ipython_display = self.in_ipython_frontend()
+
         # if we have an adjacency, add it into the networks object
         if len(adjacency) or nx_G or gml_file:
             getattr(self.networks, self.title)(
@@ -115,6 +117,25 @@ class Web(dict):
                     metadata=metadata,
                     nx_G=g,
                 )
+
+    @staticmethod
+    def in_ipython_frontend():
+        """
+        Check if we're inside an an IPython zmq frontend.
+
+        Returns
+        -------
+        bool
+
+        CREDIT: PANDAS
+        """
+        try:
+            ip = get_ipython()  # noqa
+            return "zmq" in str(type(ip)).lower()
+        except NameError:
+            pass
+
+        return False
 
     @staticmethod
     def attempt_to_read(path):
@@ -192,7 +213,6 @@ class Web(dict):
     def html_path(unique=True):
         filename = str(uuid.uuid4()) + '-' if unique else ''
         filename += 'webweb.html'
-
         return Path(tempfile.gettempdir()).joinpath(filename)
 
     def show(self):
@@ -200,9 +220,17 @@ class Web(dict):
         - creates the html file
         - opens the web browser
         """
-        path = self.html_path()
-        path.write_text(self.html)
-        webbrowser.open_new("file://" + str(path))
+
+        if self.ipython_display:
+            path = Path.cwd().joinpath(self.html_path().name)
+            path.write_text(self.html)
+
+            import IPython.display
+            return IPython.display.IFrame(src=str(path.name), width=800, height=800)
+        else:
+            path = self.html_path()
+            path.write_text(self.html)
+            webbrowser.open_new("file://" + str(path))
 
     def save(self, path):
         """saves the webweb visualization to the specified path

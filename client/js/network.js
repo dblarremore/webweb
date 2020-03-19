@@ -32,4 +32,9 @@ export class Network {
 
     return layers
   }
+
+  get maxNodes() {
+    const layerNodeCounts = this.layers.map(layer => layer.nodeCount)
+    return Math.max(...layerNodeCounts)
+  }
 }

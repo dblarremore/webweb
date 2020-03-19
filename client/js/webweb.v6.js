@@ -12,9 +12,11 @@ import { colorbrewer } from './colors'
 import { Menu } from './menu'
 import { GlobalListeners } from './listeners'
 import { Node } from './node'
-import { AllSettings } from './controller'
+import { AllSettings } from './settings_object'
 import { Network } from './network'
-import { WebwebCanvas, ForceDirectedPlot } from './canvas'
+import { WebwebCanvas } from './canvas'
+import { ForceDirectedVisualization } from './visualizations/force_directed'
+import { ChordDiagramVisualization } from './visualizations/chord_diagram'
 
 import '../css/style.css'
 
@@ -90,31 +92,25 @@ export class Webweb {
 
     let layer = this.getLayerDisplayedBySettings(settings)
 
-    this.menu = new Menu(settings, layer.attributes, this.getCallHandler())
+    this.menu = new Menu(settings, layer.attributes)
     box.appendChild(this.menu.HTML)
 
     this.canvas = new WebwebCanvas(settings)
     box.append(this.canvas.box)
 
-    let listeners = new GlobalListeners(settings, this.getCallHandler())
+    let listeners = new GlobalListeners(settings, this.callHandler)
 
     this.displayNetwork(settings)
   }
 
   // object that will hopefully make things nicer and give only restricted
   // access to the widgets
-  getCallHandler() {
+  get callHandler() {
     let _this = this
     let handleFunction = (request, settings) => {
       const handler = {
         'display-network': function(settings) {
           _this.displayNetwork(settings)
-        },
-        'freeze-nodes':  function(settings) {
-          _this.visualization.freezeNodesCaller(settings)
-        },
-        'update-sim': function(settings) {
-          _this.visualization.simulationUpdateCaller(settings)
         },
         'redraw': (settings) => {
           _this.canvas.settings = settings
@@ -140,6 +136,10 @@ export class Webweb {
           link.href = _this.canvas.HTML.toDataURL()
           link.click()
         }
+      }
+
+      for (let [callKey, callFunction] of Object.entries(_this.visualization.callers)) {
+        handler[callKey] = callFunction
       }
 
       let fn = handler[request]
@@ -207,14 +207,20 @@ export class Webweb {
     this.canvas.visualizationDestructor()
     this.canvas.settings = settings
 
-    this.menu.refresh(settings, layer.attributes)
     this.setVisibleNodes(layer.nodeCount)
     this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
     this.updateScales(settings)
 
-    this.visualization = new ForceDirectedPlot(settings, this.nodes, this.canvas)
+    if (settings.plotType == 'ForceDirected') {
+      this.visualization = new ForceDirectedVisualization(settings, this.nodes, this.canvas, layer)
+    }
+    else if (settings.plotType == 'ChordDiagram') {
+      this.visualization = new ChordDiagramVisualization(settings, this.nodes, this.canvas, layer)
+    }
+
     this.canvas.visualizationConstructor(this.visualization)
     this.visualization.update(settings, this.nodes, layer, this.scales)
+    this.menu.refresh(settings, layer.attributes, this.callHandler)
   }
 
   defaultSettingsAfterNetworkChange(settings) {
@@ -328,9 +334,6 @@ export class Webweb {
       colorAttribute = layer.attributes.color.none
     }
 
-    sizeAttribute.nodes = nodes
-    colorAttribute.nodes = nodes
-
     let sizeScaleName = sizeAttribute.sizeScale
     let colorScaleName = colorAttribute.colorScale
 
@@ -350,7 +353,7 @@ export class Webweb {
 
     scales[colorScaleName] = {
       'attribute': colorAttribute,
-      'extent': colorAttribute.colorExtent(nodes),
+      'extent': colorAttribute.extent(nodes),
     }
     
     for (let [name, data] of Object.entries(scales)) {
@@ -370,8 +373,7 @@ export class Webweb {
 
       let range
       if (name == 'categoricalColors') {
-        let valueSetSize = colorAttribute.valueSetSize(nodes)
-        range = colorbrewer[settings.colorPalette][valueSetSize] 
+        range = colorbrewer[settings.colorPalette][colorAttribute.extentSize()] 
       }
       else {
         if (settings.scales[name] !== undefined) {
@@ -385,10 +387,8 @@ export class Webweb {
     }
 
     Object.entries(nodes).forEach(([i, node]) => {
-      node.__rawSize = sizeAttribute.getRawSizeValue(node)
       node.__scaledSize = sizeAttribute.getScaledSizeValue(node, this.scales[sizeScaleName])
 
-      node.__rawColor = colorAttribute.getRawColorValue(node)
       node.__scaledColor = colorAttribute.getScaledColorValue(node, this.scales[colorScaleName])
     })
   }

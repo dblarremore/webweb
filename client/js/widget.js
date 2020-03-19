@@ -2,10 +2,9 @@ import { colorbrewer } from './colors'
 import { UserColorAttribute } from './attribute'
 
 export class Widget {
-  constructor(settings, attributes, callHandler) {
+  constructor(settings, attributes) {
     this.settings = settings
     this.attributes = attributes
-    this.callHandler = callHandler
     this.id = 'NONE'
     this.inline = false
   }
@@ -25,13 +24,17 @@ export class Widget {
     return 'input'
   }
 
-  refresh(settings, attributes) {
+  refresh(settings, attributes, callHandler) {
     if (settings !== undefined) {
       this.settings = settings
     }
     if (attributes !== undefined) {
       this.attributes = attributes
     }
+    if (callHandler !== undefined) {
+      this.callHandler = callHandler
+    }
+
     this.HTMLValue = this.SettingValue
     this.showOrHide()
   }
@@ -162,13 +165,17 @@ export class Widget {
     return []
   }
 
-  refresh(settings, attributes) {
+  refresh(settings, attributes, callHandler) {
     if (settings !== undefined) {
       this.settings = settings
     }
     if (attributes !== undefined) {
       this.attributes = attributes
     }
+    if (callHandler !== undefined) {
+      this.callHandler = callHandler
+    }
+
     this.syncTo(this.SettingValue)
     this.showOrHide()
   }
@@ -211,13 +218,17 @@ export class SelectWidget extends Widget {
     return HTML
   }
 
-  refresh(settings, attributes) {
+  refresh(settings, attributes, callHandler) {
     if (settings !== undefined) {
       this.settings = settings
     }
     if (attributes !== undefined) {
       this.attributes = attributes
     }
+    if (callHandler !== undefined) {
+      this.callHandler = callHandler
+    }
+
     this.setSelectOptions(this.HTML, this.options)
     this.HTMLValue = this.SettingValue
     this.showOrHide()
@@ -266,8 +277,8 @@ export class ButtonWidget extends Widget {
 
 }
 export class NetworkSelectWidget extends SelectWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'networkSelect'
     this.text = "Display data from "
     this.inline = true
@@ -299,8 +310,8 @@ export class NetworkSelectWidget extends SelectWidget {
 }
 
 export class NetworkLayerSelectWidget extends SelectWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'layerSelect'
     this.text = " layer "
     this.inline = true
@@ -328,8 +339,8 @@ export class NetworkLayerSelectWidget extends SelectWidget {
 }
 
 export class SizeSelectWidget extends SelectWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'sizeSelect'
     this.text = "Scale node sizes by "
     this.inline = true
@@ -352,8 +363,8 @@ export class SizeSelectWidget extends SelectWidget {
   }
 }
 export class InvertBinarySizesWidget extends CheckboxWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'invertBinarySizes'
     this.text = "' invert '"
     this.inline = true
@@ -392,8 +403,8 @@ export class InvertBinarySizesWidget extends CheckboxWidget {
   }
 }
 export class ColorSelectWidget extends SelectWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'colorSelect'
     this.text = "Color nodes by "
     this.inline = true
@@ -417,8 +428,8 @@ export class ColorSelectWidget extends SelectWidget {
 }
                   
 export class ColorPaletteSelectWidget extends SelectWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'colorPaletteSelect'
     this.text = " with color palette "
     this.inline = true
@@ -468,8 +479,8 @@ export class ColorPaletteSelectWidget extends SelectWidget {
   }
 }
 export class InvertBinaryColorsWidget extends CheckboxWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'invertBinaryColors'
     this.text = ' invert '
     this.inline = true
@@ -503,8 +514,8 @@ export class InvertBinaryColorsWidget extends CheckboxWidget {
   }
 }
 export class ScaleLinkWidthWidget extends CheckboxWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'scaleLinkWidth'
     this.text = 'Scale link width '
     this.size = 10
@@ -528,8 +539,8 @@ export class ScaleLinkWidthWidget extends CheckboxWidget {
   }
 }
 export class ScaleLinkOpacityWidget extends CheckboxWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'scaleLinkOpacity'
     this.text = 'Scale link opacity '
     this.size = 10
@@ -554,8 +565,8 @@ export class ScaleLinkOpacityWidget extends CheckboxWidget {
 }
 
 export class FreezeNodesWidget extends CheckboxWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'freezeNodes'
     this.text = 'Freeze nodes '
     this.size = 10
@@ -574,8 +585,8 @@ export class FreezeNodesWidget extends CheckboxWidget {
   }
 }
 export class SaveSVGWidget extends ButtonWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'saveSVG'
     this.size = 10
     this.text = 'Save as'
@@ -590,8 +601,8 @@ export class SaveSVGWidget extends ButtonWidget {
   }
 }
 export class SaveCanvasWidget extends ButtonWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'saveCanvas'
     this.size = 10
     this.value = 'PNG'
@@ -606,8 +617,8 @@ export class SaveCanvasWidget extends ButtonWidget {
 }
 
 export class ChargeWidget extends Widget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'charge'
     this.text = 'Node charge: '
 
@@ -637,8 +648,8 @@ export class ChargeWidget extends Widget {
   }
 }
 export class LinkLengthWidget extends Widget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'linkLength'
     this.text = 'Link length: '
     this.inline = false
@@ -670,8 +681,8 @@ export class LinkLengthWidget extends Widget {
 }
 
 export class LinkStrengthWidget extends Widget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'linkStrength'
     this.text = 'Link strength: '
 
@@ -701,8 +712,8 @@ export class LinkStrengthWidget extends Widget {
   }
 }
 export class GravityWidget extends Widget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'gravity'
     this.text = 'Gravity: '
 
@@ -716,8 +727,6 @@ export class GravityWidget extends Widget {
   set SettingValue(value) {
     this.settings.g = value
 
-    // this.updateSimulation("gravity-x");
-    // this.updateSimulation("gravity-y");
     this.callHandler('update-sim', this.settings)
     this.refresh()
 
@@ -734,8 +743,8 @@ export class GravityWidget extends Widget {
   }
 }
 export class RadiusWidget extends Widget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'radius'
     this.text = 'Node radius: '
     this.inline = false
@@ -764,8 +773,8 @@ export class RadiusWidget extends Widget {
   }
 }
 export class ShowNodeNamesWidget extends CheckboxWidget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'showNodeNames'
     this.text = 'Show node names '
     this.size = 10
@@ -786,8 +795,8 @@ export class ShowNodeNamesWidget extends CheckboxWidget {
   }
 }
 export class NameToMatchWidget extends Widget {
-  constructor(settings, attributes, callHandler) {
-    super(settings, attributes, callHandler)
+  constructor(settings, attributes) {
+    super(settings, attributes)
     this.id = 'nameToMatch'
     this.text = 'Highlight nodes named: '
     this.size = 10
