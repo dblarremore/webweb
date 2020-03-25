@@ -1,101 +1,66 @@
 import * as widgetDefs from './widget'
 
 export class Menu {
-  constructor(settings, attributes) {
-    this.settings = settings
-
-    if (! this.settings.hideMenu) {
-      this.attributes = attributes
-      this.makeHTML()
-      this.makeWidgets()
-    }
-    else {
-      this.HTML = document.createElement('div')
-      this.HTML.style = "display: none;"
-    }
-  }
-
-  makeHTML() {
+  constructor(hideMenu) {
     this.HTML = document.createElement('div')
     this.HTML.classList.add('webweb-menu')
-    this.HTML.style.display = this.settings.hideMenu == true ? 'none' : 'flex'
+    this.HTML.style = 'display: ' + hideMenu ? 'none' : 'flex' + ';'
+    this.sides = {}
+    this.hideMenu = hideMenu
+    this.widgets = {
+      'left': {},
+      'right': {},
+    }
   }
 
-  // when the network changes, we will re-inject the settings, and this should
-  // percolate up to the html
-  refresh(settings, attributes, callHandler) {
-    if (settings.hideMenu) {
+  addWidgets(store_key, side, widgetsToAdd, settings, callHandler, attributes) {
+    if (this.hideMenu) {
       return
     }
 
-    this.settings = settings
-    this.widgets.forEach((widget) => {
-      widget.settings = this.settings
-      widget.refresh(settings, attributes, callHandler)
-    }, this)
-  }
+    const sideElement = this.getSideElement(side)
+    let widgets = []
+    for (let [category, widgetList] of Object.entries(widgetsToAdd)) {
+      let subwidgets = widgetList.map(Constructor => new Constructor(settings, callHandler, attributes))
 
-  makeWidgets(){
-    let rawWidgets = {
-      'webweb-menu-left': {
-        'network': [
-          widgetDefs.NetworkSelectWidget,
-          widgetDefs.NetworkLayerSelectWidget
-        ],
-        'size': [
-          widgetDefs.SizeSelectWidget,
-          widgetDefs.InvertBinarySizesWidget
-        ],
-        'colors': [
-          widgetDefs.ColorSelectWidget,
-          widgetDefs.ColorPaletteSelectWidget,
-          widgetDefs.InvertBinaryColorsWidget
-        ],
-        'scaleLinkWidth': [widgetDefs.ScaleLinkWidthWidget],
-        'scaleLinkOpacity': [widgetDefs.ScaleLinkOpacityWidget],
-        'freezeNodes': [widgetDefs.FreezeNodesWidget],
-        'save': [
-          widgetDefs.SaveSVGWidget,
-          widgetDefs.SaveCanvasWidget
-        ],
-      },
-      'webweb-menu-right': {
-        'charge': [widgetDefs.ChargeWidget],
-        'linkLength': [widgetDefs.LinkLengthWidget],
-        'linkStrength': [widgetDefs.LinkStrengthWidget],
-        'gravity' : [widgetDefs.GravityWidget],
-        'radius': [widgetDefs.RadiusWidget],
-        'showNodeNames': [widgetDefs.ShowNodeNamesWidget],
-        'nameToMatch': [widgetDefs.NameToMatchWidget],
+      let container = document.createElement('div')
+
+      subwidgets.forEach(subwidget => {
+        container.append(subwidget.container)
+      })
+
+      sideElement.append(container)
+
+      widgets = widgets.concat(subwidgets)
+    }
+
+    this.widgets[side][store_key] = widgets
+
+    let widgetSettings = new Map()
+    for (let widget of widgets) {
+      if (widget.settingName) {
+        widgetSettings.set(widget.settingName, widget.HTMLValue)
+        settings[widget.settingName] = widget.HTMLValue
       }
     }
+  }
 
-    this.widgets = []
-    for (let [sideClass, sideWidgets] of Object.entries(rawWidgets)) {
-      let sideMenu = document.createElement('div')
-      sideMenu.classList.add(sideClass)
+  removeWidgets(store_key) {
+    this.widgets.left[store_key].forEach(w => w.HTML.remove())
+    delete this.widgets.left[store_key]
 
-      Object.values(sideWidgets).forEach((widgetList) => {
-        let subwidgets = []
+    this.widgets.right[store_key].forEach(w => w.HTML.remove())
+    delete this.widgets.right[store_key]
+  }
 
-        for (let subwidgetConstructor of widgetList) {
-          let widget = new subwidgetConstructor(this.settings, this.attributes)
-          this.widgets.push(widget)
-          subwidgets.push(widget)
-        }
-
-        let container = subwidgets[0].container
-        if (subwidgets.length > 1) {
-          container = document.createElement('div')
-
-          subwidgets.map((subwidget) => {
-            container.append(subwidget.container)
-          })
-        }
-
-        sideMenu.append(container)
-      })
-      this.HTML.append(sideMenu)
+  getSideElement(side) {
+    if (this.sides[side] == undefined) {
+      let element = document.createElement('div')
+      element.classList.add('webweb-side-' + side)
+      this.sides[side] = element
+      this.HTML.append(element)
     }
+
+    return this.sides[side]
   }
 }

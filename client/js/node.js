@@ -1,4 +1,5 @@
 import * as d3 from 'd3'
+import * as svgUtils from './svg_utils'
 import { Text } from './text'
 
 export class Node {
@@ -25,7 +26,6 @@ export class Node {
       'vy',
       'x',
       'y',
-      'nodeKeyer',
       'settings',
     ]
   }
@@ -78,7 +78,7 @@ export class Node {
       return this.fixedRadius
     }
 
-    let radius = this.__scaledSize * this.settings.r || this.settings.r
+    let radius = this.settings.radius * (this.__scaledSize || 1)
     if (this.matchesString || this.containsMouse) {
       radius *= 1.3;
     }
@@ -109,24 +109,19 @@ export class Node {
   }
 
   draw(ctx) {
+    this.staticDraw(this.x, this.y, this.radius, this.outline, d3.rgb(this.__scaledColor || 0), ctx)
+  }
+
+  drawSVG() {
+    return svgUtils.drawCircleSVG(this.x, this.y, this.radius, this.outline, this.__scaledColor)
+  }
+
+  static staticDraw(x, y, radius, outline, color, ctx) {
     ctx.beginPath()
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
-    ctx.strokeStyle = this.outline
+    ctx.arc(x, y, radius, 0, Math.PI * 2, false)
+    ctx.strokeStyle = outline
     ctx.stroke()
-    ctx.fillStyle = d3.rgb(this.__scaledColor || 0)
+    ctx.fillStyle = d3.rgb(color || 0)
     ctx.fill()
   }
-  drawSVG() {
-    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-    circle.setAttributeNS(null, 'cx', this.x)
-    circle.setAttributeNS(null, 'cy', this.y)
-    circle.setAttributeNS(null, 'r', this.radius)
-    circle.setAttributeNS(null, 'style', 'fill: ' + d3.rgb(this.__scaledColor) + '; stroke: ' + this.outline + ';' )
-
-    return circle
-  }
-}
-
-function isInt(n){
-    return Number(n) === n && n % 1 === 0;
 }

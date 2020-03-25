@@ -7,25 +7,16 @@ export class Sublegend {
   get FONT_SIZE() { return "12px" }
   get JUSTIFY_UNIT() { return 5 }
   get MARGIN_TOP() { return 3 * this.JUSTIFY_UNIT }
-  static get TYPE() { return undefined }
 
-  constructor(attributeKey, attribute, r, scales) {
-    this.attributeKey = attributeKey
+  constructor(attribute, r, scales) {
     this.attribute = attribute
     this.r = r
     this.scales = scales
-
-    this.nodes = this.attribute.getLegendNodes(this.attribute.values, this.scales)
-
-    this.shouldDraw = this.attributeKey !== 'none' && this.attributeKey !== 'color'
+    this.shouldDraw = this.attribute.key !== 'none' && this.attribute.key !== 'color'
   }
 
   get R() { return this._R }
   set R(R) { this._R = R }
-
-  get shouldDraw() { return this._shouldDraw }
-
-  set shouldDraw(shouldDraw) { this._shouldDraw = shouldDraw }
 
   get pushdownState() {
     return this._pushdownState
@@ -54,14 +45,16 @@ export class Sublegend {
     let objects = {
       'nodes': [],
       'text': [
-        this.getLegendTitleText(this.attributeKey)
+        this.getLegendTitleText(this.attribute.key)
       ],
     }
 
     let nodePushRight = Math.max(this.R, this.JUSTIFY_UNIT) + this.JUSTIFY_UNIT
     let textPushRight = 2 * nodePushRight
 
-    for (let [i, node] of Object.entries(this.nodes)) {
+    let nodes = this.attribute.getLegendNodes(this.attribute.values)
+
+    for (let [i, node] of Object.entries(nodes)) {
       let pushdown = this.pushdown(i)
 
       objects.text.push(new Text(node.__text, textPushRight, pushdown + 2.5, this.FONTSIZE))
@@ -69,11 +62,8 @@ export class Sublegend {
       node.nonInteractive = true
       node.x = nodePushRight
       node.y = pushdown
-      // node.fixedRadius = (node.__scaledSize || 1) * this.r
-      node.fixedRadius = (this.attribute.scaleValue(node[this.attribute.key])
-      node.__scaledSize || 1) * this.r
-
-      node.__scaledColor = node.__scaledColor || d3.rgb(128, 128, 128)
+      node.fixedRadius = (this.attribute.getNodeNumericalValue(node) || 1) * this.r
+      node.__scaledColor = this.attribute.getNodeColorValue(node)
 
       objects.nodes.push(node)
     }
@@ -90,16 +80,12 @@ export class Sublegend {
 }
 
 export class SizeSublegend extends Sublegend {
-  static get TYPE() { return 'size' }
-
-  constructor(attributeKey, attribute, r, scales) {
-    super(attributeKey, attribute, r, nodes, scales)
+  constructor(attribute, r, scales) {
+    super(attribute, r, nodes, scales)
     this.R = this.r * scales.nodeSize.range()[1]
   }
 }
 export class ColorSublegend extends Sublegend {
-  static get TYPE() { return 'color' }
-
   pushdown(i) {
     let pushdown = this.pushdownState
     if (i !== undefined) {
@@ -134,11 +120,10 @@ export class Legend {
     this.coloringBy = coloringBy
     this.colorAttribute = colorAttribute
     this.r = r
-    this.nodes = nodes
     this.scales = scales
 
-    this.sizeSub = new SizeSublegend(this.sizingBy, this.sizeAttribute, this.r, this.scales)
-    this.colorSub = new ColorSublegend(this.coloringBy, this.colorAttribute, this.r, this.scales)
+    this.sizeSub = new SizeSublegend(this.sizeAttribute, this.r, this.scales)
+    this.colorSub = new ColorSublegend(this.colorAttribute, this.r, this.scales)
     this.colorSub.R = this.sizeSub.R
 
     if (this.sizeSub.shouldDraw == false && this.colorSub.shouldDraw == false) {
@@ -152,7 +137,11 @@ export class Legend {
     this.colorSub.sizeLegendShown = this.sizeSub.shouldDraw
   }
 
-  get legendNodeAndText() {
+  getObjectsToDraw(showLegend) {
+    if (showLegend == false) {
+      return []
+    }
+
     let pushdown = 0
 
     let sizeSubObjects = this.sizeSub.getNodeAndTextObjects()
@@ -163,11 +152,8 @@ export class Legend {
 
     let colorSubObjects = this.colorSub.getNodeAndTextObjects(pushdown)
 
-    let objects = {
-      'nodes': [],
-      'text': [],
-    }
-
+    let nodes = []
+    let text = []
     if (this.sizeSub.shouldDraw) {
       // set the node colors to the computed ones
       if (this.sizingBy == this.coloringBy) {
@@ -177,15 +163,15 @@ export class Legend {
         }
       }
 
-      objects.nodes = objects.nodes.concat(sizeSubObjects.nodes)
-      objects.text = objects.text.concat(sizeSubObjects.text)
+      nodes = nodes.concat(sizeSubObjects.nodes)
+      text = text.concat(sizeSubObjects.text)
     }
 
     if (this.colorSub.shouldDraw) {
-      objects.nodes = objects.nodes.concat(colorSubObjects.nodes)
-      objects.text = objects.text.concat(colorSubObjects.text)
+      nodes = nodes.concat(colorSubObjects.nodes)
+      text = text.concat(colorSubObjects.text)
     }
 
-    return objects
+    return nodes.concat(text)
   }
 }

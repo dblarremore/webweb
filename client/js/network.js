@@ -1,6 +1,4 @@
-import * as d3 from 'd3'
 import { Layer } from './layer'
-import { Link } from './link'
 
 export class Network {
   constructor(name, data, globalMetadata, globalNodes) {

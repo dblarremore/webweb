@@ -8,6 +8,16 @@ export function allInts(vals) {
     return true;
 }
 
+export function allNumbers(values) {
+  for (let value of values) {
+    if (isNaN(value)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 export function isInt(n){
     return Number(n) === n && n % 1 === 0;
 }

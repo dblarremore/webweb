@@ -1,15 +1,34 @@
 import { AbstractVisualization } from './abstract_visualization'
 import { Simulation } from './force_directed/simulation'
+import { Link } from './force_directed/link'
+import { ForceDirectedSettings } from './force_directed/settings'
+import * as widgets  from './force_directed/widgets'
 import { Legend } from '../legend'
-import { Link } from '../link'
 
 export class ForceDirectedVisualization extends AbstractVisualization {
-  constructor(settings, nodes, canvas, layer) {
-    super(settings, nodes, canvas, layer)
+  constructor(settings, menu, canvas, layer, nodes) {
+    super(settings, menu, canvas, layer, nodes)
     this.simulation = new Simulation(nodes, settings)
 
     this.simulation.simulation.on('tick', this.canvas.redraw.bind(this.canvas))
     this.simulation.simulation.alpha(1).restart()
+  }
+
+  static get settingsObject() {
+    return ForceDirectedSettings
+  }
+
+  get attributes() {
+    const scales = {
+      'linkWidth': {
+        'extent': d3.extent(this.layer.edgeWeights),
+      },
+      'linkOpacity': {
+        'extent': d3.extent(this.layer.edgeWeights),
+      },
+    }
+
+    return scales
   }
 
   get listeners() {
@@ -20,17 +39,53 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
   }
 
-  get callers() {
+  get handlers() {
     return {
       'freeze-nodes': settings => this.freezeNodesCaller(settings),
       'update-sim': settings => this.simulationUpdateCaller(settings),
     }
   }
 
-  update(settings, nodes, layer, scales) {
-    this.settings = settings
+  get widgets() {
+    return {
+      'left': {
+        'size': [
+          widgets.SizeSelectWidget,
+          widgets.InvertBinarySizesWidget
+        ],
+        'colors': [
+          widgets.ColorSelectWidget,
+          widgets.ColorPaletteSelectWidget,
+          widgets.InvertBinaryColorsWidget
+        ],
+      },
+      'right': {
+        'names': [
+          widgets.ShowNodeNamesWidget,
+          widgets.NameToMatchWidget,
+        ],
+        'scaleLink': [
+          widgets.ScaleLinkWidthWidget,
+          widgets.ScaleLinkOpacityWidget,
+        ],
+        'nodeProperties': [
+          widgets.ChargeWidget,
+          widgets.RadiusWidget,
+        ],
+        'linkLength': [widgets.LinkLengthWidget],
+        'freezeNodes': [widgets.FreezeNodesWidget],
+        'gravity' : [widgets.GravityWidget],
+      }
+    }
+  }
+
+  update(settings, layer, nodes) {
+    this.settings = this.formatSettings(settings)
+
     this.layer = layer
-    this.scales = scales
+    console.log('handle nodes over here111')
+    console.log('no more scales')
+    // this.scales = scales
 
     this.simulation.links = this.getLinks(layer, nodes, this.scales)
     this.simulation.update(settings)
@@ -43,14 +98,11 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   }
 
   getLinks(layer, nodes, scales) {
-    return layer.links.map((edge) => {
-      const source = nodes[edge[0]]
-      const target = nodes[edge[1]]
-      const weight = edge[2]
+    return layer.links.map(([source, target, weight]) => {
       const width = scales.linkWidth(weight)
       const opacity = scales.linkOpacity(weight)
 
-      return new Link(source, target, weight, width, opacity)
+      return new Link(nodes[source], nodes[target], weight, width, opacity)
     })
   }
 
@@ -64,67 +116,38 @@ export class ForceDirectedVisualization extends AbstractVisualization {
         this.layer.attributes.size[this.settings.sizeBy],
         this.settings.colorBy,
         this.layer.attributes.color[this.settings.colorBy],
-        this.settings.r,
+        this.settings.radius,
         this.simulation.nodes,
         this.scales,
       )
-
-      let objects = legend.legendNodeAndText
-
-      objects.nodes = objects.nodes.map((node) => {
-        node.settings = this.settings
-        return node
-      }, this)
 
       this.legendNodes = objects.nodes
       this.legendText = objects.text
     }
   }
 
-  draw(mouseState) {
-    this.mouseState = mouseState
-    this.nodesMatchingString(this.settings.nameToMatch)
-    this.nodesContainingMouse(this.mouseState)
-
-    let elementsToDraw = []
-
-    if (this.simulation.links !== undefined) {
-      elementsToDraw = elementsToDraw.concat(this.simulation.links)
-    }
-
-    elementsToDraw = elementsToDraw.concat(this.simulation.nodes)
-
-    if (this.simulation.simulation.alpha() < .05 || this.settings.freezeNodeMovement) {
-      this.simulation.nodes.forEach((node) => {
-        if (node.matchesString || node.containsMouse || this.settings.showNodeNames) {
-          let nodeText = node.nodeText
-
-          if (nodeText !== undefined) {
-            elementsToDraw.push(nodeText)
-          }
-        }
-      })
-    }
-
-    if (this.settings.showLegend) {
-      if ((this.legendNodes !== undefined) && (this.legendNodes.length)) {
-        elementsToDraw = elementsToDraw.concat(this.legendNodes)
-      }
-
-      if ((this.legendText !== undefined) && (this.legendText.length)) {
-        elementsToDraw = elementsToDraw.concat(this.legendText)
-      }
-    }
-    
-    let context = this.canvas.context
-
-    elementsToDraw.forEach((element) => {
-      element.draw(context)
-    }, this)
-    return elementsToDraw
+  annotateNodes() {
+    this.markNodesMatchingString(this.settings.nameToMatch)
+    this.markNodesContainingMouse(this.mouseState)
   }
 
-  nodesMatchingString(matchString) {
+  getObjectsToDraw() {
+    this.annotateNodes()
+    
+    let simulationObjectsToDraw = this.simulation.getObjectsToDraw(this.settings.showNodeNames)
+    let legendObjectsToDraw = this.legend.getObjectsToDraw(this.settings.showLegend)
+
+    let objects = simulationObjectsToDraw.concat(legendObjectsToDraw)
+
+    return objects
+  }
+
+  draw(mouseState) {
+    this.mouseState = mouseState
+    this.getObjectsToDraw().forEach(object => object.draw(this.canvas.context), this)
+  }
+
+  markNodesMatchingString(matchString) {
     let namesToMatch
     if (matchString.indexOf(',') >= 0) {
       namesToMatch = matchString.split(',')
@@ -149,7 +172,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     })
   }
 
-  nodesContainingMouse(mouseState) {
+  markNodesContainingMouse(mouseState) {
     this.simulation.nodes.forEach((node) => {
       node.containsMouse = this.nodeContainsMouse(node, mouseState)
     })
@@ -224,6 +247,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
     this.canvas.redraw()
   }
+
   mouseDownListener() {
     const mouseState = this.mouseState
     this.mouseDownState = this.mouseState

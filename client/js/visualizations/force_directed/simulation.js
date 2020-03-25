@@ -9,23 +9,26 @@ export class Simulation {
 
     this.simulation.alphaDecay = 0.001
 
+    const width = this.settings.width / 2
+    const height = this.settings.height / 2
+
     this.forces = {
       "center" : () => {
-        return d3.forceCenter(this.settings.w / 2, this.settings.h / 2)
+        return d3.forceCenter(width / 2, height / 2)
       },
       "gravity-x" : () => {
-        return d3.forceX(this.settings.w / 2).strength(this.settings.g)
+        return d3.forceX(width / 2).strength(this.settings.gravity)
       },
       "gravity-y" : () => {
-        return d3.forceY(this.settings.h / 2).strength(this.settings.g)
+        return d3.forceY(height/ 2).strength(this.settings.gravity)
       },
       "charge" : () => {
-        return d3.forceManyBody().strength(-this.settings.c)
+        return d3.forceManyBody().strength(-this.settings.charge)
       },
       "link" : () => {
         return d3.forceLink()
           .links(this.links)
-          .distance(this.settings.l)
+          .distance(this.settings.linkLegnth)
           .strength(this.settings.linkStrength)
       },
     }
@@ -50,6 +53,7 @@ export class Simulation {
 
   freeze() {
     this.simulation.stop()
+    this.isFrozen = true
     for (let node of this.nodes) {
       node.fx = node.x
       node.fy = node.y
@@ -57,10 +61,31 @@ export class Simulation {
   }
 
   unfreeze() {
+    this.isFrozen = false
     for (let node of this.nodes) {
       node.fx = undefined
       node.fy = undefined
     }
     this.update()
+  }
+
+  getObjectsToDraw(showNodeNames) {
+    const links = this.links || []
+    const nodes = this.nodes
+    const text = []
+
+    if (this.simulation.alpha() < .05 || this.isFrozen) {
+      nodes.forEach((node) => {
+        if (node.matchesString || node.containsMouse || showNodeNames) {
+          let nodeText = node.nodeText
+
+          if (nodeText !== undefined) {
+            text.push(nodeText)
+          }
+        }
+      })
+    }
+
+    return [].concat(...[links, nodes, text])
   }
 }

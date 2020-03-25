@@ -1,6 +1,7 @@
-import * as d3 from 'd3'
 import * as utils from './utils'
 import { Node } from './node'
+import * as d3 from 'd3'
+import * as coloror from './coloror'
 
 /********************************************************************************
  * Attribute object
@@ -15,82 +16,84 @@ import { Node } from './node'
  *    - slapping them onto the nodes
 ********************************************************************************/
 export class Attribute {
-  get hslMaxValue() { return 330 }
+  get defaultColor() { return d3.rgb(128, 128, 128) }
+  get colororClass() { return coloror.MultiHueColoror }
 
   static get displays() { return ['color', 'size'] }
-
-  static get TYPE() { return 'none' }
-
   static isType(nodeValues) { return false }
-
-  get sizeScale() { return 'nodeSize' }
-
-  get colorScale() { return 'none' }
 
   constructor(key, nodes, displayType) {
     this.key = key
     this.displayType = displayType
 
-    this.nodes = {}
     this.values = []
 
-    // this could get weird if it's all by reference, with multiple attributes
-    for (let [i, node] of Object.entries(nodes)) {
-      const value = this.transformValue(node[this.key])
-      this.nodes[i] = value
-      this.values.push(value)
-
+    if (nodes !== undefined) {
+      this.values = Object.values(nodes).map(node => this.transformValue(node[this.key]))
     }
+
+    // we'd later like to pass through the palette here
+    this.coloror = new this.colororClass()
+
+    this.setScale()
   }
   
-  setScaledValueOfType(node, scales) {
-    if (this.displayType === 'size') {
-      node.__scaledSize = this.getScaledSizeValue(node, scales[this.sizeScale])
+  get valuesSet() {
+    let valuesSet = [... new Set(this.values)]
+    if (utils.allNumbers(valuesSet)) {
+      valuesSet = valuesSet.sort((a, b) => a - b)
     }
-    else if (this.displayType === 'color') {
-      node.__scaledColor = this.getScaledColorValue(node, scales[this.colorScale])
+
+    return valuesSet
+  }
+
+  get extent() {
+    let extent = this.valuesSet
+
+    if (extent.length == 1) {
+      if (! extent.includes(0)) {
+        extent = [0] + extent
+      }
+      else {
+        extent.push(1)
+      }
     }
-    
-    return node
+
+    return [Math.min(...extent), Math.max(...extent)]
   }
 
-  extent() {
-    return [... new Set(this.values)]
+  transformValue(value) {
+    return value
   }
 
-  extentSize() {
-    return this.extent().length
+  getNodeNumericalValue(node) {
+    return this.getNumericalValue(node[this.key])
   }
 
-  /********************************************************************************
-   * makes the input stuff nicer (eg, turns 0 into false for binary attributes)
-  ********************************************************************************/
-  transformValue(val) { return val }
-
-  getRawColorValue(node) {
-    return node[this.key]
+  getNumericalValue(value) {
+    return value
   }
 
-  // TODO:
-  // THIS IS HOPEFUL!
-  // by which I mean, the interface for other things to color stuff should be:
-  // scaleValue
-  scaleValue(value) {
-    return 1
+  getNodeColorValue(node) {
+    return this.getColorValue(node[this.key])
   }
 
-  getScaledColorValue(node, scale) {
-    return d3.hsl(210 * (1 - scale(this.getRawColorValue(node))), 0.7, 0.5)
+  getColorValue(value) {
+    return d3.rgb(this.coloror.color(this.scale(value)))
   }
 
-  getScaledSizeValue(node, scale) {
-    return scale(node[this.key])
+  setScale() { return }
+
+  setScaleRange(range) {
+    if ((this.scale !== undefined) && (this.scale.range !== undefined)) {
+      this.scale.range(range)
+    }
   }
 
   /********************************************************************************
    * Legend Functions
   ********************************************************************************/
-  getLegendNodes(values, scales) {
+  getLegendNodes(values) {
     const valuesSet = [... new Set(values)].sort((a, b) => a - b)
     
     let nodes = []
@@ -98,103 +101,48 @@ export class Attribute {
       let node = new Node(-1)
       node.__text = text
       node[this.key] = text
-      node = this.setScaledValueOfType(node, scales)
+      node = this.setScaledValueOfType(node)
       nodes.push(node)
     }
 
     return nodes
   }
 
-  get colorScales() {
-    // there's no scale by default
-    return []
-  }
-
-  get divergingColorScales() {
-    return [
-      "BuGn",
-      "BuPu",
-      "GnBu",
-      "OrRd",
-      "PuBuGn",
-      "PuBu",
-      "PuRd",
-      "RdPu",
-      "YlGnBu",
-      "YlGn",
-      "YlOrBr",
-      "YlOrRd"
-    ]
-  }
-
-  get singleHueColorScales() {
-    return [
-      "Blues",
-      "Greens",
-      "Greys",
-      "Oranges",
-      "Purples",
-      "Reds"
-    ]
-  }
-
-  get multiHueColorScales(){
-    return [
-      "Viridis",
-      "Inferno",
-      "Magma",
-      "Plasma",
-      "Warm",
-      "Cool",
-      "Rainbow",
-      "CubehelixDefault",
-    ]
-  }
-
-  get categoricalColorScales() {
-    const scalesWithSizes = {
-      "schemeAccent": 8,
-      "schemeDark2": 8,
-      "schemePastel2": 8,
-      "schemeSet2": 8,
-      "schemeSet1": 9,
-      "schemePastel1": 9,
-      "schemeCategory10": 10,
-      "schemeSet3": 12,
-      "schemePaired": 12,
-      "schemeCategory20": 20,
-      "schemeCategory20b": 20,
-      "schemeCategory20c": 20
+  setScaledValueOfType(node) {
+    if (this.displayType === 'size') {
+      node.__scaledSize = this.getNodeNumericalValue(node)
     }
-
-    const scales = []
-    for (const [scale, size] of scalesWithSizes.entries()) {
-      if (size === 20) || (size > this.extentSize) {
-        scales.push(scale)
-      }
+    else if (this.displayType === 'color') {
+      node.__scaledSize = this.getNodeColorValue(node)
     }
-
-    return scales
+    
+    return node
   }
 }
 
-export class NameAttribute extends Attribute {
-  static get TYPE() { return 'name' }
-
+export class NoneAttribute extends Attribute {
   static get displays() { return [] }
+
+  get colororClass() { return coloror.NoneColoror }
+
+  setScale() { this.scale = x => x }
 }
 
 export class ScalarAttribute extends Attribute {
-  static get TYPE() { return 'scalar' }
+  static get displays() { return ['color', 'size'] }
 
-  static isType(nodeValues) { return true }
+  static isType() { return true }
 
-  get colorScales() { return this.singleHueColorScales }
+  get colororClass() { return coloror.SingleHueColoror }
 
-  get colorScale() { return 'scalarColors' }
+  setScale() {
+    this.scale = d3.scaleLinear()
+    this.scale.domain(this.extent)
+    this.scale.range([0, 1])
+  }
 
-  getLegendNodes(values, scales) {
-    const valuesSet = [... new Set(values)]
+  getLegendNodes(values) {
+    const valuesSet = this.valuesSet
     const bins = valuesSet.length < 5 ? valuesSet.length : 4
 
     if (bins === undefined || isNaN(bins)) {
@@ -210,24 +158,27 @@ export class ScalarAttribute extends Attribute {
     }
     binValues.push(max)
 
-    return super.getLegendNodes(binValues, scales)
+    return super.getLegendNodes(binValues)
   }
 }
 
-export class DegreeAttribute extends ScalarAttribute {
-  static get TYPE() { return 'degree' }
+export class DivergingScalarAttribute extends ScalarAttribute {
+  get colororClass() { return coloror.DiveringColoror }
 }
 
 export class BinaryAttribute extends Attribute {
-  static get TYPE() { return 'binary' }
-
-  get colorScales() { return this.multiHueColorScales }
-  get colorScale() { return 'categoricalColors' }
+  get colororClass() { return coloror.DiveringColoror }
 
   static get trueValues() { return [true, 'true', 1] }
   static get falseValues() { return [false, 'false', 0, undefined, null] }
 
-  extent() { return [true, false] }
+  get extent() { return [true, false] }
+
+  setScale() {
+    this.scale = d3.scaleLinear()
+    this.scale.domain(this.extent)
+    this.scale.range([0, 1])
+  }
 
   transformValue(value) {
     return this.trueValues.includes(value)
@@ -242,20 +193,17 @@ export class BinaryAttribute extends Attribute {
     ).length == 0
   }
 
-  getScaledColorValue(node, scale) {
-    return scale(this.getRawColorValue(node))
-  }
-
-  getLegendNodes(values, scales) {
+  getLegendNodes() {
     let trueNode = new Node(-1)
     trueNode.__text = 'true'
     trueNode[this.key] = true
-    trueNode = this.setScaledValueOfType(trueNode, scales)
+    trueNode = this.setScaledValueOfType(trueNode)
 
     let falseNode = new Node(-1)
     falseNode.__text = 'false'
     falseNode[this.key] = false
-    falseNode = this.setScaledValueOfType(falseNode, scales)
+    falseNode = this.setScaledValueOfType(falseNode)
+
     return [
       falseNode,
       trueNode
@@ -264,12 +212,9 @@ export class BinaryAttribute extends Attribute {
 }
 
 export class UserColorAttribute extends Attribute {
-  static get TYPE() { return 'categorical' }
+  static get NAME() { return 'color' }
+  get colororClass() { return coloror.NoneColoror }
 
-  get colorScales() {
-    console.log('this is wrong here')
-    return this.multiHueColorScales
-  }
   static get displays () { return ['color'] }
 
   static isType(nodeValues) {
@@ -280,101 +225,100 @@ export class UserColorAttribute extends Attribute {
     return hexValues !== undefined && hexValues.length == nodeValues.length
   }
 
-  getScaledColorValue(node, scale) {
-    return this.getRawColorValue(node)
+  getNodeColorValue(node) {
+    return node['color']
+  }
+
+  getColorValue(value) {
+    return value
   }
 }
 
 export class CategoricalAttribute extends Attribute {
-  static get TYPE() { return 'categorical' }
-
-  get scalarCategoricalBins() { return 9 }
-  get colorScales() { return this.categoricalColorScales }
-
   static get displays () { return ['color'] }
+  get colororClass() { return coloror.CategoricalColoror }
 
-  hslFromIndex(index) {
-    return d3.hsl(0 + index * (this.hslMaxValue / this.scalarCategoricalBins), 0.7, 0.5)
-  }
+  get colorScales() {
+    console.log('this doesnt work')
+    let scalesWithSizes = this.constructor.categoricalScalesWithSizes
 
-  getScaledColorValue(node, scale) {
-    const raw = this.getRawColorValue(node)
-    if (this.isScalarCategorical) {
-      return this.hslFromIndex(raw)
+    const scales = []
+    for (const [scale, size] of scalesWithSizes.entries()) {
+      if ((size === 20) || (size > this.valuesSet.length)) {
+        scales.push(scale)
+      }
     }
-    
-    return scale(raw)
-  }
 
-  extent() {
-    if (this.isScalarCategorical) {
-      return [0, this.extentSize() - 1]
-    }
-    return super.extent()
+    return scales
   }
 
   static isType(nodeValues) {
     return Object.values(nodeValues).filter((val) => val !== undefined).some(isNaN)
   }
 
-  transformValue(nodeValue) {
-    return this.isScalarCategorical && utils.isInt(nodeValue)
-      ? this.extent()[categoryNumber]
-      : nodeValue
-  }
-
-  get isScalarCategorical() {
-    return this.extentSize() >= this.scalarCategoricalBins
-  }
-
-  get colorScale() {
-    return this.isScalarCategorical
-      ? 'scalarColors'
-      : 'categoricalColors'
-  }
-
-  getRawColorValue(node) {
-    if (this.isScalarCategorical) {
-      return this.extent().indexOf(node[this.key])
-    }
-    else {
-      return node[this.key]
-    }
+  getColorValue(value) {
+    // TODO: STILL TRUE console.log('this is almost certainly not an index right now, but could be?')
+    return this.scale(this.valuesSet.indexOf(value))
   }
 
   // make sure there's enough categories even if there aren't
-  extentSize() {
-    return super.extentSize() == 1
-      ? 2
-      : super.extentSize()
+  // get uniqueCount() {
+  //   return Math.max(...[super.uniqueCount, 2])
+  // }
+}
+
+
+export class ScalarCategoricalAttribute extends Attribute {
+  static get NAME() { return 'categorical' }
+  static get displays () { return ['color'] }
+
+  get colororClass() { return coloror.CyclicalColoror }
+
+  get scalarCategoricalBins() { return 9 }
+
+  static isType(values) {
+    const isCategorical = CategoricalAttribute.isType(values)
+    const valueCount = [... new Set(this.values)].length
+
+    return isCategorical && valueCount > this.scalarCategoricalBins
   }
 
-  getLegendNodes(values, scales) {
-    if (this.isScalarCategorical) {
-      return this.scalarCategoricalLegendNodes(values)
-    }
-
-    return super.getLegendNodes(values, scales)
+  setScale(colorPalette) {
+    this.scale = d3.scaleLinear()
+    this.scale.domain(this.extent).range([0, 1])
   }
 
-  scalarCategoricalLegendNodes(values) {
-    const [min, max] = [d3.min(values), d3.max(values)]
+  getColorValue(value) {
+    const colorValue = this.extent.indexOf(value)
+    return this.coloror.color(this.scale(colorValue))
+  }
+
+  get extent() {
+    return [0, this.valuesSet.length - 1]
+  }
+
+  transformValue(value) {
+    return utils.isInt(value) ? this.extent[value] : value
+  }
+
+  getLegendNodes() {
+    const [min, max] = this.extent
     const step = (max - min) / this.scalarCategoricalBins
 
     let legendValues = []
     for (let i = 0; i < this.scalarCategoricalBins - 1; i++) {
       const index = utils.rounddown(min + i * step, 10)
       let node = new Node(-1)
-      node.__text = this.extent()[index]
+      node.__text = this.extent[index]
       node[this.key] = node.__text
-      node.__scaledcolor = this.hslfromindex(index)
+      node.__scaledcolor = this.getColorValue(this.extent[index])
       nodes.push(node)
     }
     
     let node = new Node(-1)
-    node.__text = this.extent()[this.scalarCategoricalBins]
+    node.__text = this.transform(this.scalarCategoricalBins)
     node[this.key] = node.__text
-    node.__scaledcolor = this.hslfromindex(this.scalarCategoricalBins)
+    node.__scaledcolor = this.getColorValue(this.extent[this.scalarCategoricalBins])
     nodes.push(node)
 
     return nodes

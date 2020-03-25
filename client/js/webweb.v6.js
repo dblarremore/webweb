@@ -12,11 +12,12 @@ import { colorbrewer } from './colors'
 import { Menu } from './menu'
 import { GlobalListeners } from './listeners'
 import { Node } from './node'
-import { AllSettings } from './settings_object'
+import { WebwebSettings, AllSettings } from './settings_object'
 import { Network } from './network'
 import { WebwebCanvas } from './canvas'
 import { ForceDirectedVisualization } from './visualizations/force_directed'
 import { ChordDiagramVisualization } from './visualizations/chord_diagram'
+import  * as widgets  from './widget'
 
 import '../css/style.css'
 
@@ -31,52 +32,32 @@ export class Webweb {
   init(webwebData) {
     this.title = webwebData.title || 'webweb'
 
-    this.networkNames = Object.keys(webwebData.networks) || ['webweb']
-    this.globalNodes = webwebData.display.nodes
+    const networkNames = Object.keys(webwebData.networks) || ['webweb']
+    const globalNodes = webwebData.display.nodes
 
     this.scales = {
       'nodeSize' : d3.scaleLinear(),
       'scalarColors' : d3.scaleLinear(),
-      'categoricalColors' : d3.scaleOrdinal(),
-      'linkWidth' : d3.scaleLinear(),
-      'linkOpacity' : d3.scaleLinear(),
-      'none': x => x,
     }
 
-    // STATE
-    this.state = {
-      'global': {},
-      'on_display': {},
-    }
+    this.globalSettings = webwebData.display
 
-    this.state.global = new AllSettings(webwebData.display)
-    let settings = this.state.global.settings
+    this.settings = WebwebSettings.getSettings(webwebData.display)
+    this.settings['networkNames'] = networkNames
 
-    if (settings['networkName'] == undefined) {
-      settings['networkName'] = this.networkNames[0]
-      this.networkName = this.networkNames[0]
+    if (this.settings['networkName'] === undefined) {
+      this.settings['networkName'] = networkNames[0]
     }
-    else {
-      this.networkName = settings['networkName']
-    }
-
-    settings['networkNames'] = this.networkNames
 
     // NETWORKS
     this.maxNodes = 0
     this.networks = {}
-    settings['networkLayers'] = {}
+    this.settings['networkLayers'] = {}
     for (let [networkName, networkData] of Object.entries(webwebData.networks)) {
-      let network = new Network(networkName, networkData, settings.metadata, this.globalNodes)
+      let network = new Network(networkName, networkData, this.settings.metadata, globalNodes)
       this.networks[networkName] = network
-
-      for (let layer of network.layers) {
-        if (layer.nodeCount > this.maxNodes) {
-          this.maxNodes = layer.nodeCount
-        }
-      }
-
-      settings['networkLayers'][networkName] = network.layers.length
+      this.maxNodes = Math.max(this.maxNodes, network.maxNodes)
+      this.settings['networkLayers'][networkName] = network.layers.length
     }
 
     // NODES
@@ -87,20 +68,33 @@ export class Webweb {
 
     this.nodesPersistence = []
 
-    let box = this.getBox(this.title, settings)
-    settings = this.setVizualizationDimensions(box, settings)
+    let box = this.getBox(this.title, this.settings)
+    this.settings = this.setVizualizationDimensions(box, this.settings)
 
-    let layer = this.getLayerDisplayedBySettings(settings)
-
-    this.menu = new Menu(settings, layer.attributes)
+    this.menu = new Menu(this.settings.hideMenu)
     box.appendChild(this.menu.HTML)
 
-    this.canvas = new WebwebCanvas(settings)
+    this.menu.addWidgets('webweb-all', 'left', this.defaultMenuWidgets, this.settings, this.callHandler)
+
+    this.canvas = new WebwebCanvas(this.settings)
     box.append(this.canvas.box)
 
-    let listeners = new GlobalListeners(settings, this.callHandler)
+    let listeners = new GlobalListeners(this.callHandler)
 
-    this.displayNetwork(settings)
+    this.displayNetwork(this.settings)
+  }
+
+  get defaultMenuWidgets() {
+    return {
+      'network': [
+        widgets.NetworkSelectWidget,
+        widgets.NetworkLayerSelectWidget
+      ],
+      'save': [
+        widgets.SaveSVGWidget,
+        widgets.SaveCanvasWidget
+      ]
+    }
   }
 
   // object that will hopefully make things nicer and give only restricted
@@ -118,7 +112,7 @@ export class Webweb {
         },
         'save-svg': () => {
           let svg = _this.canvas.svgDraw()
-          const title = _this.state.global.settings.networkName
+          const title = _this.settings.networkName
           svg.setAttribute("title", title)
           svg.setAttribute("version", 1.1)
           svg.setAttribute("xmlns", "http://www.w3.org/2000/svg")
@@ -136,10 +130,6 @@ export class Webweb {
           link.href = _this.canvas.HTML.toDataURL()
           link.click()
         }
-      }
-
-      for (let [callKey, callFunction] of Object.entries(_this.visualization.callers)) {
-        handler[callKey] = callFunction
       }
 
       let fn = handler[request]
@@ -204,23 +194,37 @@ export class Webweb {
     settings = this.defaultSettingsAfterNetworkChange(settings)
     let layer = this.getLayerDisplayedBySettings(settings)
 
-    this.canvas.visualizationDestructor()
+    if ((settings.colorPalette == undefined) && (settings.colorBy !== 'none')) {
+      settings.colorPalette = layer.attributes.color[settings.colorBy].colorScales[0]
+    }
+
+    console.log('this is going to fuck everyting up. what this is is: changing settings')
+    settings = this.globalSettings
+
+    if (this.visualization !== undefined) {
+      this.canvas.removeListeners(this.visualization.listeners)
+    }
+
+    this.canvas.context.restore()
     this.canvas.settings = settings
 
     this.setVisibleNodes(layer.nodeCount)
     this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
-    this.updateScales(settings)
 
+    let Visualizer = undefined
     if (settings.plotType == 'ForceDirected') {
-      this.visualization = new ForceDirectedVisualization(settings, this.nodes, this.canvas, layer)
+      Visualizer = ForceDirectedVisualization
     }
     else if (settings.plotType == 'ChordDiagram') {
-      this.visualization = new ChordDiagramVisualization(settings, this.nodes, this.canvas, layer)
+      Visualizer = ChordDiagramVisualization
     }
+    
+    this.canvas.context.save()
+    this.visualization = new Visualizer(settings, this.menu, this.canvas, layer, this.nodes)
+    this.canvas.visualization = this.visualization
 
-    this.canvas.visualizationConstructor(this.visualization)
-    this.visualization.update(settings, this.nodes, layer, this.scales)
-    this.menu.refresh(settings, layer.attributes, this.callHandler)
+    // this.visualization.update(settings, layer, this.nodes)
+    this.visualization.draw(this.canvas.mouseState)
   }
 
   defaultSettingsAfterNetworkChange(settings) {
@@ -301,17 +305,17 @@ export class Webweb {
   }
 
   setVizualizationDimensions(box, settings) {
-    if (settings.w == undefined) {
+    if (settings.width == undefined) {
         let heuristic = box.clientWidth - 3 * 20
 
         if (heuristic <= 0) {
             heuristic = 1000
         }
-        settings.w = Math.min.apply(null, [heuristic, 1000])
+        settings.width = Math.min.apply(null, [heuristic, 1000])
     }
 
-    if (settings.h == undefined) {
-        settings.h = Math.min.apply(null, [settings.w, 600])
+    if (settings.height == undefined) {
+        settings.height = Math.min.apply(null, [settings.width, 600])
     }
 
     return settings
@@ -330,66 +334,42 @@ export class Webweb {
     if (sizeAttribute == undefined) {
       sizeAttribute = layer.attributes.size.none
     }
+
     if (colorAttribute == undefined) {
       colorAttribute = layer.attributes.color.none
     }
 
-    let sizeScaleName = sizeAttribute.sizeScale
-    let colorScaleName = colorAttribute.colorScale
+    // const scales = {
+    //   'linkWidth': {
+    //     'extent': layer.edgeWeights,
+    //   },
+    //   'linkOpacity': {
+    //     'extent': layer.edgeWeights,
+    //   },
+    // }
 
-    const scales = {
-      'linkWidth': {
-        'extent': layer.edgeWeights,
-      },
-      'linkOpacity': {
-        'extent': layer.edgeWeights,
-      },
-    }
+    // for (let [name, data] of Object.entries(scales)) {
+    //   let range = []
+    //   if (settings.scales[name] !== undefined) {
+    //     range = [settings.scales[name].min, settings.scales[name].max]
+    //   }
 
-    scales[sizeScaleName] = {
-      'attribute': sizeAttribute,
-      'extent': sizeAttribute.extent(nodes),
-    }
+    //   let extent = d3.extent(data.extent)
 
-    scales[colorScaleName] = {
-      'attribute': colorAttribute,
-      'extent': colorAttribute.extent(nodes),
-    }
-    
-    for (let [name, data] of Object.entries(scales)) {
-      let extent = d3.extent(data.extent)
+    //   if (name !== 'none' && this.scales[name] !== undefined) {
+    //     if (extent !== undefined) {
+    //       this.scales[name].domain(extent)
+    //     }
 
-      if (name == colorScaleName) {
-        if ((settings.invertBinaryColors == true) && (colorAttribute.constructor.TYPE == 'binary')) {
-          extent = extent.reverse()
-        }
-      }
-
-      if (name == sizeScaleName) {
-        if ((settings.invertBinarySizes == true) && (sizeAttribute.constructor.TYPE == 'binary')) {
-          extent = extent.reverse()
-        }
-      }
-
-      let range
-      if (name == 'categoricalColors') {
-        range = colorbrewer[settings.colorPalette][colorAttribute.extentSize()] 
-      }
-      else {
-        if (settings.scales[name] !== undefined) {
-          range = [settings.scales[name].min, settings.scales[name].max]
-        }
-      }
-
-      if (name !== 'none' && this.scales[name] !== undefined) {
-        this.scales[name].domain(extent).range(range)
-      }
-    }
+    //     if (range) {
+    //       this.scales[name].range(range)
+    //     }
+    //   }
+    // }
 
     Object.entries(nodes).forEach(([i, node]) => {
-      node.__scaledSize = sizeAttribute.getScaledSizeValue(node, this.scales[sizeScaleName])
-
-      node.__scaledColor = colorAttribute.getScaledColorValue(node, this.scales[colorScaleName])
+      node.__scaledSize = sizeAttribute.getNodeNumericalValue(node)
+      node.__scaledColor = colorAttribute.getNodeColorValue(node)
     })
   }
 }

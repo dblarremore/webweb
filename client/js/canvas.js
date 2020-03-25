@@ -4,9 +4,16 @@ export class WebwebCanvas {
   constructor(settings) {
     this.settings = settings
 
-    this.w = settings.w
-    this.h = settings.h
+    this.width = settings.width
+    this.height = settings.height
+
+    this.w = this.width
+    this.h = this.height
+
     this.dpr = window.devicePixelRatio || 1
+
+    this.canvasWidth = this.width * this.dpr
+    this.canvasHeight = this.height * this.dpr
 
     this.HTMLClass = "webweb-vis-canvas"
     this.HTML = this.getHTML()
@@ -37,11 +44,11 @@ export class WebwebCanvas {
     let HTML = document.createElement("canvas")
     HTML.classList.add(this.HTMLClass)
 
-    HTML.style.width = this.w + "px"
-    HTML.style.height = this.h + "px"
+    HTML.style.width = this.width + "px"
+    HTML.style.height = this.height + "px"
 
-    HTML.width = this.w * this.dpr
-    HTML.height = this.h * this.dpr
+    HTML.width = this.canvasWidth
+    HTML.height = this.canvasHeight
 
     return HTML
   }
@@ -54,10 +61,12 @@ export class WebwebCanvas {
   }
 
   clear() {
-    this.context.clearRect(0, 0, this.w, this.h)
-
+    this.context.save()
+    this.context.setTransform(1, 0, 0, 1, 0, 0)
+    this.context.clearRect(0, 0, this.HTML.width, this.HTML.height)
     this.context.fillStyle = 'white'
-    this.context.fillRect(0, 0, this.w, this.h)
+    this.context.fillRect(0, 0, this.HTML.width, this.HTML.height)
+    this.context.restore()
   }
 
   redraw() {
@@ -79,39 +88,36 @@ export class WebwebCanvas {
   setMouseState(event) {
     let box = this.HTML.getBoundingClientRect()
     let date = new Date()
-    this.visualization.mouseState = {
+    this.mouseState = {
       x: event.clientX - box.left - this.padding,
       y: event.clientY - box.top - this.padding,
       time: date.getTime(),
     }
-
-    this.redraw()
+    
+    this.visualization.mouseState = this.mouseState
   }
 
   mouseIsWithinDragBoundary(mouseState) {
     if (
       mouseState.x < this.dragBoundary ||
       mouseState.y < this.dragBoundary ||
-      mouseState.x > this.settings.w - this.dragBoundary ||
-      mouseState.y > this.settings.h - this.dragBoundary
+      mouseState.x > this.settings.width - this.dragBoundary ||
+      mouseState.y > this.settings.height - this.dragBoundary
     ) {
       return true
     }
     return false
   }
 
-  visualizationConstructor(visualization) {
-    this.visualization = visualization
-    for (let [event, eventFunction] of Object.entries(visualization.listeners)) {
+  addListeners(listeners) {
+    for (let [event, eventFunction] of Object.entries(listeners)) {
       this.HTML.addEventListener(event, eventFunction)
     }
   }
 
-  visualizationDestructor() {
-    if (this.visualization !== undefined) {
-      for (let [event, eventFunction] of Object.entries(this.visualization.listeners)) {
-        this.HTML.removeEventListener(event, eventFunction)
-      }
+  removeListeners(listeners) {
+    for (let [event, eventFunction] of Object.entries(listeners)) {
+      this.HTML.removeEventListener(event, eventFunction)
     }
   }
 }

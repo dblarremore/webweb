@@ -1,7 +1,6 @@
 export class GlobalListeners {
-  constructor(settings, callHandler) {
+  constructor(callHandler) {
     const _this = this
-    this.settings = settings
     this.callHandler = callHandler
 
     const eventKeyCodeListeners = {

@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Node } from './node'
-import { Attribute, NameAttribute, ScalarAttribute, UserColorAttribute, BinaryAttribute, DegreeAttribute, CategoricalAttribute } from './attribute'
+import { Attribute, NoneAttribute, ScalarAttribute, UserColorAttribute, BinaryAttribute, CategoricalAttribute, ScalarCategoricalAttribute } from './attribute'
 
 import * as utils from './utils'
 
@@ -39,6 +39,21 @@ export class Layer {
 
   get nodeIdToNameMap() {
     return Object.fromEntries(Object.entries(this.nodeNameToIdMap).map(([k, v]) => ([v, k])))
+  }
+
+  static outDegrees(matrix) {
+    return matrix.map(row => row.reduce((a, b) => a + b, 0))
+  }
+
+  static inDegrees(matrix) {
+    let inDegrees = []
+    for (let i = 0; i < matrix.length; i++) {
+      inDegrees.push(0)
+      for (let j = 0; j < matrix.length; j++) {
+        inDegrees[i] += matrix[j][i]
+      }
+    }
+    return inDegrees
   }
 
   /*********************************************************************************
@@ -376,20 +391,23 @@ export class Layer {
   // include in the visualization.
   getAttributes(nodes, metadata) {
     let attributes = [
-      [Attribute, 'none'],
-      [DegreeAttribute, 'degree'],
+      [ScalarAttribute, 'degree'],
     ]
 
     if (this.isWeighted(nodes) === true) {
-      attributes.push([DegreeAttribute, 'strength'])
+      attributes.push([ScalarAttribute, 'strength'])
     }
 
     const metadataAttributes = this.getMetadataAttributes(nodes, metadata)
     attributes = attributes.concat(metadataAttributes)
 
     let attributesByType = {
-      'color': {},
-      'size': {},
+      'color': {
+        'none': new NoneAttribute(),
+      },
+      'size': {
+        'none': new NoneAttribute(),
+      },
     }
 
     attributes.map(([attributeClass, key]) => {
@@ -397,7 +415,6 @@ export class Layer {
         attributesByType[displayType][key] = new attributeClass(key, nodes, displayType)
       }
     })
-
 
     return attributesByType
   }
@@ -426,22 +443,33 @@ export class Layer {
 
   getAttributeClassToAdd(key, type, nodes) {
     if (key === 'name') {
-      return NameAttribute
+      return NoneAttribute
     }
-
-    const nodeValues = Object.values(nodes).map(node => node[key])
 
     if (key === 'color' && UserColorAttribute.isType(nodeValues)) {
       return UserColorAttribute
     }
 
-    for (let AttributeClass of [BinaryAttribute, CategoricalAttribute, ScalarAttribute]) {
-      if (type !== undefined) {
-        if (type === AttributeClass.TYPE) {
-          return AttributeClass
-        }
+    const nodeValues = Object.values(nodes).map(node => node[key])
+
+    if ((type !== undefined) && (type === 'categorical')) {
+      if (ScalarCategoricalAttribute.isType(nodeValues)) {
+        return ScalarCategoricalAttribute
       }
-      else if (AttributeClass.isType(nodeValues)) {
+      else {
+        return CategoricalAttribute
+      }
+    }
+
+    const orderedAttributes = [
+      BinaryAttribute,
+      ScalarCategoricalAttribute,
+      CategoricalAttribute,
+      ScalarAttribute
+    ]
+
+    for (let AttributeClass of orderedAttributes) {
+      if (AttributeClass.isType(nodeValues)) {
         return AttributeClass
       }
     }
