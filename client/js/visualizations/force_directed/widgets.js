@@ -1,19 +1,75 @@
 import { BinaryAttribute } from '../../attribute'
 import { Widget, CheckboxWidget, SelectWidget } from '../../widget'
 
+////////////////////////////////////////////////////////////////////////////////
+// Node Coloring
+////////////////////////////////////////////////////////////////////////////////
+export class ColorNodesSelectWidget extends SelectWidget {
+  setProperties() {
+    this.text = "Color nodes by "
+    this.settingName = 'colorNodesBy'
+    this.setHandler = 'redraw'
+  }
+  
+  get options() { return Object.keys(this.attributes.color) }
+}
+                  
+export class NodeColorPaletteSelectWidget extends SelectWidget {
+  setProperties() {
+    this.text = " with color palette "
+    this.settingName = 'nodeColorPalette'
+    this.setHandler = 'redraw'
+  }
+
+  get options() {
+    const attribute = this.attributes.color[this.settings.colorNodesBy]
+
+    // this won't work with categorical
+    return attribute.coloror.constructor.palettes
+  }
+}
+
+export class FlipNodeColorScaleWidget extends CheckboxWidget {
+  setProperties() {
+    this.text = " flip colors "
+    this.settingName = 'flipNodeColorScale'
+    this.setHandler = 'redraw'
+  }
+
+  get visible() { return super.visible && this.settings.colorNodesBy !== 'none' }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Node Sizing
+////////////////////////////////////////////////////////////////////////////////
+export class SizeNodesSelectWidget extends SelectWidget {
+  setProperties() {
+    this.text = "Scale node sizes by "
+    this.settingName = 'sizeNodesBy'
+    this.setHandler = 'redraw'
+  }
+
+  get options() { return Object.keys(this.attributes.size) }
+}
+
+export class FlipNodeSizeScaleWidget extends CheckboxWidget {
+  setProperties() {
+    this.text = " flip sizes "
+    this.settingName = 'flipNodeSizeScale'
+    this.setHandler = 'redraw'
+  }
+
+  get visible() { return super.visible && this.settings.sizeNodesBy !== 'none' }
+}
+
+
+
 export class ScaleLinkWidthWidget extends CheckboxWidget {
   setProperties() {
     this.text = 'Scale link width '
     this.size = 10
     this.settingName = 'scaleLinkWidth'
-    this.setHandler = 'display-network'
-  }
-
-  postValueSet() {
-    let [min, max] = this.SettingValue ? [0.5, 2] : [1, 1]
-
-    this.settings.scales.linkWidth.min = min
-    this.settings.scales.linkWidth.max = max
+    this.setHandler = 'redraw'
   }
 }
 
@@ -22,14 +78,7 @@ export class ScaleLinkOpacityWidget extends CheckboxWidget {
     this.text = 'Scale link opacity '
     this.size = 10
     this.settingName = 'scaleLinkOpacity'
-    this.setHandler = 'display-network'
-  }
-
-  postValueSet() {
-    let [min, max] = this.SettingValue ? [0.3, 0.9] : [1, 1]
-
-    this.settings.scales.linkOpacity.min = min
-    this.settings.scales.linkOpacity.max = max
+    this.setHandler = 'redraw'
   }
 }
 
@@ -76,7 +125,7 @@ export class RadiusWidget extends Widget {
   setProperties() {
     this.text = 'Node radius: '
     this.settingName = 'radius'
-    this.setHandler = 'display-network'
+    this.setHandler = 'redraw'
   }
 
   change(value) {
@@ -92,7 +141,7 @@ export class RadiusWidget extends Widget {
 export class LinkLengthWidget extends Widget {
   setProperties() {
     this.text = 'Link length: '
-    this.settingName = 'l'
+    this.settingName = 'linkLength'
     this.setHandler = 'update-sim'
   }
 
@@ -133,89 +182,3 @@ export class GravityWidget extends Widget {
   }
 }
 
-
-export class SizeSelectWidget extends SelectWidget {
-  setProperties() {
-    this.text = "Scale node sizes by "
-    this.settingName = 'sizeBy'
-    this.setHandler = 'display-network'
-  }
-
-  get options() { return Object.keys(this.attributes.size) }
-}
-
-export class InvertBinarySizesWidget extends CheckboxWidget {
-  setProperties() {
-    this.text = "' invert '"
-    this.settingName = 'invertBinarySizes'
-    this.setHandler = 'display-network'
-  }
-
-  // only show this widget when we're sizing by something binary
-  get visible() {
-    let sizingBy = this.settings.sizeBy
-    if (sizingBy == undefined) {
-      return false
-    }
-
-    let sizingAttribute = this.attributes.size[sizingBy]
-
-    if (sizingAttribute == undefined) {
-      return false
-    }
-
-    if (sizingAttribute instanceof BinaryAttribute) {
-      return true
-    }
-
-    return false
-  }
-}
-
-export class ColorSelectWidget extends SelectWidget {
-  setProperties() {
-    this.text = "Color nodes by "
-    this.settingName = 'colorBy'
-    this.setHandler = 'display-network'
-  }
-  
-  get options() { return Object.keys(this.attributes.color) }
-}
-                  
-export class ColorPaletteSelectWidget extends SelectWidget {
-  setProperties() {
-    this.text = " with color palette "
-    this.settingName = 'colorPalette'
-    this.setHandler = 'display-network'
-  }
-
-  get options() {
-    const attributeName = this.settings.colorBy
-    const attribute = this.attributes.color[attributeName]
-
-    return attribute.colorScales
-  }
-}
-
-export class InvertBinaryColorsWidget extends CheckboxWidget {
-  setProperties() {
-    this.text = ' invert '
-    this.settingName = 'invertBinaryColors'
-    this.setHandler = 'display-network'
-  }
-
-  get visible() {
-    let coloringBy = this.settings.colorBy
-    if (coloringBy !== undefined) {
-      let coloringAttribute = this.attributes.color[coloringBy]
-
-      if (coloringAttribute !== undefined) {
-        if (coloringAttribute instanceof BinaryAttribute) {
-          return true
-        }
-      }
-
-    }
-    return false
-  }
-}

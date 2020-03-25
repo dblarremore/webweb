@@ -78,7 +78,7 @@ export class Layer {
 
       source = isNaN(source) ? source : +source
       target = isNaN(target) ? target : +target
-      regularizedEdgeList.push([source, target, weight])
+      regularizedEdgeList.push(new Link(source, target, weight))
     }
 
     return regularizedEdgeList
@@ -241,11 +241,9 @@ export class Layer {
 
     // essentially this sums up repeated/directed edges.
     edgeList.forEach((edge) => {
-      let source = nodeNameToIdMap[edge[0]]
-      let target = nodeNameToIdMap[edge[1]]
-      let weight = edge.length == 3
-        ? parseFloat(edge[2])
-        : 1
+      let source = nodeNameToIdMap[edge.source]
+      let target = nodeNameToIdMap[edge.target]
+      let weight = edge.weight !== undefined ? parseFloat(edge.weight) : 1
 
       if (source <= target) {
         linkMatrix[source][target] += weight
@@ -257,9 +255,9 @@ export class Layer {
 
     let links = []
     for (let [source, targets] of Object.entries(linkMatrix)) {
-      for (let [target, edgeWeight] of Object.entries(targets)) {
-        if (edgeWeight) {
-          links.push([source, target, edgeWeight])
+      for (let [target, weight] of Object.entries(targets)) {
+        if (weight) {
+          links.push(new Link(source, target, weight))
         }
       }
     }
@@ -277,10 +275,10 @@ export class Layer {
       matrix.push(row)
     }
 
-    for (let [source, target, weight] of edgeList) {
-      const i = nodeNameToIdMap[source]
-      const j = nodeNameToIdMap[target]
-      matrix[i][j] += weight
+    for (let edge of edgeList) {
+      const i = nodeNameToIdMap[edge.source]
+      const j = nodeNameToIdMap[edge.target]
+      matrix[i][j] += edge.weight
     }
 
     return matrix
@@ -295,12 +293,12 @@ export class Layer {
     })
 
     links.forEach((l) => {
-      let source = nodeIdToNameMap[l[0]]
-      let target = nodeIdToNameMap[l[1]]
+      let source = nodeIdToNameMap[l.source]
+      let target = nodeIdToNameMap[l.target]
       nodes[source].degree += 1
       nodes[target].degree += 1
-      nodes[source].strength += l[2]
-      nodes[target].strength += l[2]
+      nodes[source].strength += l.weight
+      nodes[target].strength += l.weight
     })
 
     return nodes
@@ -326,8 +324,8 @@ export class Layer {
     let nodeNames = [];
 
     edgeList.forEach(function(edge) {
-      nodeNames.push(edge[0]);
-      nodeNames.push(edge[1]);
+      nodeNames.push(edge.source);
+      nodeNames.push(edge.target);
     });
 
     Object.keys(nodes).forEach(function(node) {
@@ -475,5 +473,13 @@ export class Layer {
     }
 
     return undefined
+  }
+}
+
+class Link {
+  constructor(source, target, weight) {
+    this.source = source
+    this.target = target
+    this.weight = weight
   }
 }

@@ -56,7 +56,7 @@ export class Menu {
   getSideElement(side) {
     if (this.sides[side] == undefined) {
       let element = document.createElement('div')
-      element.classList.add('webweb-side-' + side)
+      element.classList.add('webweb-menu-' + side)
       this.sides[side] = element
       this.HTML.append(element)
     }

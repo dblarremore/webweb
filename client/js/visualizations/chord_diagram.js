@@ -57,8 +57,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       },
     }
 
-    this.canvas.context.translate(canvas.width / 2, canvas.height / 2)
-
     this.chordFunction = d3.chord()
       .padAngle(0.03)
       .sortSubgroups(d3.descending)
@@ -76,13 +74,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
     this.noneAttribute = new NoneAttribute()
     this.updateAttributes()
-  }
-
-  translateMouseState(mouseState) {
-    return [
-      this.mouseState.x - (this.canvas.width / 2),
-      this.mouseState.y - (this.canvas.height / 2)
-    ]
   }
 
   get edgeColorAttribute() {
@@ -191,7 +182,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       return false
     }
 
-    return d3.polygonContains(points, this.translateMouseState(this.mouseState))
+    return d3.polygonContains(points, this.mouseState)
   }
 
   getChordsToDraw() {
@@ -241,14 +232,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   drawObjectSVG(path, color) {
     const opacity = this.constructor.opacity
     const outline = d3.rgb(color).darker().hex()
-    return svgUtils.drawPathSVG(path, opacity, color, outline)
-  }
-
-  redraw(settings) {
-    this.settings = this.formatSettings(settings)
-    this.updateWidgets()
-    this.updateAttributes()
-    this.canvas.redraw()
+    return svgUtils.drawPath(path, opacity, color, outline)
   }
 
   setPathsToDrawByColor() {
@@ -266,9 +250,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     }
   }
 
-  draw(mouseState) {
-    this.mouseState = mouseState
-
+  draw() {
     for (let [color, path] of Object.entries(this.pathsToDrawByColor)) {
       this.drawObjects(this.canvas.context, color, path)
     }

@@ -8,7 +8,6 @@
  *
  */
 
-import { colorbrewer } from './colors'
 import { Menu } from './menu'
 import { GlobalListeners } from './listeners'
 import { Node } from './node'
@@ -34,11 +33,6 @@ export class Webweb {
 
     const networkNames = Object.keys(webwebData.networks) || ['webweb']
     const globalNodes = webwebData.display.nodes
-
-    this.scales = {
-      'nodeSize' : d3.scaleLinear(),
-      'scalarColors' : d3.scaleLinear(),
-    }
 
     this.globalSettings = webwebData.display
 
@@ -89,6 +83,9 @@ export class Webweb {
       'network': [
         widgets.NetworkSelectWidget,
         widgets.NetworkLayerSelectWidget
+      ],
+      'plotType': [
+        widgets.VisualizationSelectWidget,
       ],
       'save': [
         widgets.SaveSVGWidget,
@@ -189,6 +186,7 @@ export class Webweb {
   }
 
   displayNetwork(settings) {
+    console.log(settings)
     settings = this.defaultSettingsAfterNetworkChange(settings)
     let layer = this.getLayerDisplayedBySettings(settings)
 
@@ -197,6 +195,8 @@ export class Webweb {
     }
 
     console.log('this is going to fuck everyting up. what this is is: changing settings')
+    const Visualizer = this.getVisualizer(settings)
+    
     settings = this.globalSettings
 
     if (this.visualization !== undefined) {
@@ -209,20 +209,21 @@ export class Webweb {
     this.setVisibleNodes(layer.nodeCount)
     this.applyNodeMetadata(settings, layer.nodes, layer.nodeNameToIdMap, layer.nodeIdToNameMap)
 
-    let Visualizer = undefined
-    if (settings.plotType == 'ForceDirected') {
-      Visualizer = ForceDirectedVisualization
-    }
-    else if (settings.plotType == 'ChordDiagram') {
-      Visualizer = ChordDiagramVisualization
-    }
-    
     this.canvas.context.save()
     this.visualization = new Visualizer(settings, this.menu, this.canvas, layer, this.nodes)
     this.canvas.visualization = this.visualization
+    this.visualization.draw()
+  }
 
-    // this.visualization.update(settings, layer, this.nodes)
-    this.visualization.draw(this.canvas.mouseState)
+  getVisualizer(settings) {
+    let Visualizer = undefined
+    if (settings.plotType == 'Force Directed') {
+      Visualizer = ForceDirectedVisualization
+    }
+    else if (settings.plotType == 'Chord Diagram') {
+      Visualizer = ChordDiagramVisualization
+    }
+    return Visualizer
   }
 
   defaultSettingsAfterNetworkChange(settings) {

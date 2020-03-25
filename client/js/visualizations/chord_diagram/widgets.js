@@ -58,6 +58,7 @@ export class NodeColorPaletteSelectWidget extends SelectWidget {
   get options() {
     const attribute = this.attributes.color[this.settings.colorNodesBy]
 
+    // this won't work with categorical
     return attribute.coloror.constructor.palettes
   }
 }

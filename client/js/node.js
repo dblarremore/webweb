@@ -31,7 +31,7 @@ export class Node {
   }
 
   static isNonMetadataKey(key) {
-    return this.nonMetadataKeys.indexOf(key) >= 0 ? true : false
+    return this.nonMetadataKeys.indexOf(key) >= 0
   }
 
   static isMetadataKey(key, obj) {
@@ -52,16 +52,8 @@ export class Node {
     return false
   }
 
-  /********************************************************************************
-   *
-   *
-   * static Methods
-   *
-   *
-   ********************************************************************************/
-  constructor(idx, settings) {
+  constructor(idx) {
     this.idx = idx
-    this.settings = settings
   }
 
   resetMetadata() {
@@ -86,14 +78,14 @@ export class Node {
     return radius
   }
 
-  get outline() {
-    if (this.matchesString || this.containsMouse) {
-      return "black"
-    }
-    else {
-      return d3.rgb(255, 255, 255)
-    }
-  }
+  // get outline() {
+  //   if (this.matchesString || this.containsMouse) {
+  //     return "black"
+  //   }
+  //   else {
+  //     return d3.rgb(255, 255, 255)
+  //   }
+  // }
 
   get nodeText() {
     let radius = this.radius
@@ -106,22 +98,5 @@ export class Node {
     const textY = this.y - 1.1 * radius
     const font = "12px"
     return new Text(text, textX, textY, font)
-  }
-
-  draw(ctx) {
-    this.staticDraw(this.x, this.y, this.radius, this.outline, d3.rgb(this.__scaledColor || 0), ctx)
-  }
-
-  drawSVG() {
-    return svgUtils.drawCircleSVG(this.x, this.y, this.radius, this.outline, this.__scaledColor)
-  }
-
-  static staticDraw(x, y, radius, outline, color, ctx) {
-    ctx.beginPath()
-    ctx.arc(x, y, radius, 0, Math.PI * 2, false)
-    ctx.strokeStyle = outline
-    ctx.stroke()
-    ctx.fillStyle = d3.rgb(color || 0)
-    ctx.fill()
   }
 }

@@ -71,7 +71,7 @@ export class WebwebCanvas {
 
   redraw() {
     this.clear()
-    this.visualization.draw(this.mouseState)
+    this.visualization.draw()
   }
 
   svgDraw() {

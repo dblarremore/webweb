@@ -14,13 +14,13 @@ export class Simulation {
 
     this.forces = {
       "center" : () => {
-        return d3.forceCenter(width / 2, height / 2)
+        return d3.forceCenter(0)
       },
       "gravity-x" : () => {
-        return d3.forceX(width / 2).strength(this.settings.gravity)
+        return d3.forceX(0).strength(this.settings.gravity)
       },
       "gravity-y" : () => {
-        return d3.forceY(height/ 2).strength(this.settings.gravity)
+        return d3.forceY(0).strength(this.settings.gravity)
       },
       "charge" : () => {
         return d3.forceManyBody().strength(-this.settings.charge)
@@ -28,7 +28,7 @@ export class Simulation {
       "link" : () => {
         return d3.forceLink()
           .links(this.links)
-          .distance(this.settings.linkLegnth)
+          .distance(this.settings.linkLength)
           .strength(this.settings.linkStrength)
       },
     }
@@ -38,7 +38,7 @@ export class Simulation {
     if (this.settings !== undefined) {
       this.settings = settings
     }
-    let forcesToUpdate = Object.keys(this.forces);
+    let forcesToUpdate = Object.keys(this.forces)
 
     for (let [forceName, forceFunction] of Object.entries(this.forces)) {
       try {
@@ -70,6 +70,7 @@ export class Simulation {
   }
 
   getObjectsToDraw(showNodeNames) {
+    console.log('links dont have their scale attributes here')
     const links = this.links || []
     const nodes = this.nodes
     const text = []

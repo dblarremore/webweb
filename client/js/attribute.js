@@ -71,7 +71,7 @@ export class Attribute {
   }
 
   getNumericalValue(value) {
-    return value
+    return this.scale(value)
   }
 
   getNodeColorValue(node) {
@@ -126,6 +126,11 @@ export class NoneAttribute extends Attribute {
   get colororClass() { return coloror.NoneColoror }
 
   setScale() { this.scale = x => x }
+
+  getNumericalValue(value) {
+    return 1
+  }
+
 }
 
 export class ScalarAttribute extends Attribute {

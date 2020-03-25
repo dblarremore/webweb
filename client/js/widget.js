@@ -1,4 +1,3 @@
-import { colorbrewer } from './colors'
 import { UserColorAttribute } from './attribute'
 
 export class Widget {
@@ -283,5 +282,17 @@ export class SaveCanvasWidget extends ButtonWidget {
 
   click() {
     this.callHandler('save-canvas', this.settings)
+  }
+}
+
+export class VisualizationSelectWidget extends SelectWidget {
+  setProperties() {
+    this.text = "Visualization type "
+    this.settingName = 'plotType'
+    this.setHandler = 'display-network'
+  }
+
+  get options() {
+    return ['Force Directed', 'Chord Diagram']
   }
 }

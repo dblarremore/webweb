@@ -96,7 +96,7 @@ export class WebwebSettings extends SettingsObject {
       'width': undefined,
       'height': undefined,
       'attachWebwebToElementWithId': undefined,
-      'plotType': 'ForceDirected',
+      'plotType': 'Force Directed',
     }
   }
 

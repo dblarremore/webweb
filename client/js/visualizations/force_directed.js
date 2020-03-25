@@ -1,34 +1,77 @@
 import { AbstractVisualization } from './abstract_visualization'
 import { Simulation } from './force_directed/simulation'
-import { Link } from './force_directed/link'
+import { Line, Circle } from '../shapes'
 import { ForceDirectedSettings } from './force_directed/settings'
 import * as widgets  from './force_directed/widgets'
 import { Legend } from '../legend'
+import { ScalarAttribute } from '../attribute'
+import { Coloror } from '../coloror'
+
+import * as d3 from 'd3'
 
 export class ForceDirectedVisualization extends AbstractVisualization {
+  static get HighlightRadiusMultiplier() { return 1.3 }
   constructor(settings, menu, canvas, layer, nodes) {
     super(settings, menu, canvas, layer, nodes)
-    this.simulation = new Simulation(nodes, settings)
+    this.simulation = new Simulation(this.nodes, this.settings)
 
     this.simulation.simulation.on('tick', this.canvas.redraw.bind(this.canvas))
-    this.simulation.simulation.alpha(1).restart()
+
+    this.makeLinkAttributes()
+    this.updateAttributes()
   }
 
-  static get settingsObject() {
-    return ForceDirectedSettings
+  static get settingsObject() { return ForceDirectedSettings }
+
+  get nodeColorAttribute() {
+    const attributeName = this.settings.colorNodesBy
+    return this.layer.attributes.color[attributeName]
   }
 
-  get attributes() {
-    const scales = {
-      'linkWidth': {
-        'extent': d3.extent(this.layer.edgeWeights),
-      },
-      'linkOpacity': {
-        'extent': d3.extent(this.layer.edgeWeights),
-      },
-    }
+  get nodeSizeAttribute() {
+    const attributeName = this.settings.sizeNodesBy
+    return this.layer.attributes.size[attributeName]
+  }
 
-    return scales
+  get simulationLinks() {
+    return this.layer.links.map(link => {
+      return {
+        'source': this.nodes[link.source],
+        'target': this.nodes[link.target],
+      }
+    })
+  }
+
+  updateAttributes() {
+    this.linkWidthAttribute.setScaleRange(this.settings.scaleLinkWidth ? [0.5, 2] : [1, 1])
+    this.linkOpacityAttribute.setScaleRange(this.settings.scaleLinkOpacity ? [0.3, 1] : [1, 1])
+
+    this.nodeSizeAttribute.setScaleRange(this.settings.flipNodeSizeScale ? [1.5, 0.5] : [0.5, 1.5])
+
+    this.nodeColorAttribute.coloror.setPalette(this.settings.nodeColorPalette)
+
+    // this won't work for categorical
+    this.nodeColorAttribute.setScaleRange(this.settings.flipNodeColorScale ? [1, 0] : [0, 1])
+
+    this.simulation.links = this.simulationLinks
+    this.simulation.update(this.settings)
+
+    // if we've frozen node movement manually tick so new edges are evaluated.
+    // if (settings.freezeNodeMovement) {
+    //   this.canvas.redraw()
+    // }
+  }
+
+  makeLinkAttributes() {
+    const weights = this.layer.links.map(link => link.weight)
+
+    this.edgeWeights = {}
+    Object.entries(weights).forEach(
+      ([i, weight]) => this.edgeWeights[i] = { 'edgeWeight': weight }
+    )
+
+    this.linkWidthAttribute = new ScalarAttribute('edgeWeight', this.edgeWeights)
+    this.linkOpacityAttribute = new ScalarAttribute('edgeWeight', this.edgeWeights)
   }
 
   get listeners() {
@@ -41,6 +84,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
   get handlers() {
     return {
+      'redraw': settings => this.redraw(settings),
       'freeze-nodes': settings => this.freezeNodesCaller(settings),
       'update-sim': settings => this.simulationUpdateCaller(settings),
     }
@@ -50,13 +94,13 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     return {
       'left': {
         'size': [
-          widgets.SizeSelectWidget,
-          widgets.InvertBinarySizesWidget
+          widgets.SizeNodesSelectWidget,
+          widgets.FlipNodeSizeScaleWidget,
         ],
         'colors': [
-          widgets.ColorSelectWidget,
-          widgets.ColorPaletteSelectWidget,
-          widgets.InvertBinaryColorsWidget
+          widgets.ColorNodesSelectWidget,
+          widgets.NodeColorPaletteSelectWidget,
+          widgets.FlipNodeColorScaleWidget
         ],
       },
       'right': {
@@ -79,33 +123,6 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
   }
 
-  update(settings, layer, nodes) {
-    this.settings = this.formatSettings(settings)
-
-    this.layer = layer
-    console.log('handle nodes over here111')
-    console.log('no more scales')
-    // this.scales = scales
-
-    this.simulation.links = this.getLinks(layer, nodes, this.scales)
-    this.simulation.update(settings)
-    this.createLegend()
-
-    // if we've frozen node movement manually tick so new edges are evaluated.
-    if (settings.freezeNodeMovement) {
-      this.canvas.redraw()
-    }
-  }
-
-  getLinks(layer, nodes, scales) {
-    return layer.links.map(([source, target, weight]) => {
-      const width = scales.linkWidth(weight)
-      const opacity = scales.linkOpacity(weight)
-
-      return new Link(nodes[source], nodes[target], weight, width, opacity)
-    })
-  }
-
   createLegend() {
     this.legendNodes = []
     this.legendText = []
@@ -126,61 +143,92 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
   }
 
-  annotateNodes() {
-    this.markNodesMatchingString(this.settings.nameToMatch)
-    this.markNodesContainingMouse(this.mouseState)
+  getLinksToDraw() {
+    let linksToDraw = []
+    for (let link of this.layer.links) {
+
+      const width = this.linkWidthAttribute.getNumericalValue(link.weight)
+      const opacity = this.linkOpacityAttribute.getNumericalValue(link.weight)
+      const source = this.nodes[link.source]
+      const target = this.nodes[link.target]
+
+      linksToDraw.push(
+        new Line(source.x, source.y, target.x, target.y, width, opacity, Coloror.defaultColor)
+      )
+    }
+
+    return linksToDraw
+  }
+
+  getNodesToDraw() {
+    let nodesToDraw = []
+    for (let [i, node] of Object.entries(this.nodes)) {
+      const sizeScale = this.nodeSizeAttribute.getNodeNumericalValue(node)
+      let radius = this.settings.radius * sizeScale
+
+      const matchesString = this.nodeMatchesNames(node, this.namesToMatch)
+      const containsMouse = this.nodeContainsMouse(node, radius, this.mouseState)
+      const highlight = matchesString || containsMouse
+
+      const outline = highlight ? 'black' : Coloror.defaultColor
+
+      if (highlight) {
+        radius *= this.constructor.HighlightRadiusMultiplier
+      }
+
+      const color = this.nodeColorAttribute.getNodeColorValue(node)
+
+      nodesToDraw.push(new Circle(node.x, node.y, radius, outline, color))
+    }
+
+    return nodesToDraw
   }
 
   getObjectsToDraw() {
-    this.annotateNodes()
-    
-    let simulationObjectsToDraw = this.simulation.getObjectsToDraw(this.settings.showNodeNames)
-    let legendObjectsToDraw = this.legend.getObjectsToDraw(this.settings.showLegend)
+    const linksToDraw = this.getLinksToDraw()
+    const nodesToDraw = this.getNodesToDraw()
 
-    let objects = simulationObjectsToDraw.concat(legendObjectsToDraw)
+    // let simulationObjectsToDraw = this.simulation.getObjectsToDraw(this.settings.showNodeNames)
+    // let legendObjectsToDraw = this.legend.getObjectsToDraw(this.settings.showLegend)
 
+    // let objects = simulationObjectsToDraw.concat(legendObjectsToDraw)
+
+    let objects = linksToDraw.concat(nodesToDraw)
     return objects
   }
 
-  draw(mouseState) {
-    this.mouseState = mouseState
+  draw() {
+    let objects = this.getObjectsToDraw()
     this.getObjectsToDraw().forEach(object => object.draw(this.canvas.context), this)
   }
 
-  markNodesMatchingString(matchString) {
-    let namesToMatch
-    if (matchString.indexOf(',') >= 0) {
-      namesToMatch = matchString.split(',')
-    }
-    else {
-      namesToMatch = [matchString]
-    }
+  get namesToMatch() {
+    let matchString = this.settings.namesToMatch || ''
+    let namesToMatch = matchString.indexOf(',') >= 0
+      ? matchString.split(',')
+      : [matchString]
 
     namesToMatch = namesToMatch.filter(name => name.length)
 
-    this.simulation.nodes.forEach((node) => {
-      node.matchesString = false
-      for (let nameToMatch of namesToMatch) {
-        if (nameToMatch.length > 0) {
-          if (node.name !== undefined) {
-            if (node.name.indexOf(nameToMatch) >= 0) {
-              node.matchesString = true
-            }
+    return namesToMatch
+  }
+
+  nodeMatchesNames(node, namesToMatch) {
+    for (let nameToMatch of namesToMatch) {
+      if (nameToMatch.length > 0) {
+        if (node.name !== undefined) {
+          if (node.name.indexOf(nameToMatch) >= 0) {
+            return true
           }
         }
       }
-    })
+    }
+    return false
   }
 
-  markNodesContainingMouse(mouseState) {
-    this.simulation.nodes.forEach((node) => {
-      node.containsMouse = this.nodeContainsMouse(node, mouseState)
-    })
-  }
-
-  nodeContainsMouse(node, mouseState) {
+  nodeContainsMouse(node, radius, mouseState) {
     if (mouseState !== undefined) {
-      let radius = 1.3 * node.radius
+      radius *= this.constructor.HighlightRadiusMultiplier
 
       if (
         node.x + radius >= mouseState.x &&
@@ -202,7 +250,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.draggedNode.fy = mouseState.y
   }
 
-  // don't really understand the dragging logic atm
+  // I don't really understand the dragging logic
   endDragging() {
     this.simulation.simulation.alphaTarget(0)
 
@@ -233,11 +281,10 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
     this.mouseDownState = undefined
   }
-  mouseMoveListener(event) {
-    const mouseState = this.mouseState
 
+  mouseMoveListener(event) {
     if (this.dragging) {
-      if (this.canvas.mouseIsWithinDragBoundary(mouseState)) {
+      if (this.canvas.mouseIsWithinDragBoundary(this.mouseState)) {
         this.endDragging()
       }
       else {
