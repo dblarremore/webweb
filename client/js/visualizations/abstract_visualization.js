@@ -1,16 +1,22 @@
+import * as utils from '../utils'
+
 export class AbstractVisualization {
-  constructor(settings, menu, canvas, layer, nodes) {
+  constructor(settings, menu, canvas, layer, previousNodePositions) {
     this.settings = this.formatSettings(settings)
     this.menu = menu
     this.canvas = canvas
     this.layer = layer
-    this.nodes = nodes
+    this.previousNodePositions = previousNodePositions || {}
 
+    this.canvas.reset()
     this.canvas.context.translate(canvas.width / 2, canvas.height / 2)
     this.canvas.addListeners(this.listeners)
-    this.addWidgets()
+    this.canvas.visualization = this
 
+    this.addWidgets()
   }
+
+  get nodePositions() { return {} }
 
   set mouseState(mouseState) {
     this._mouseState = mouseState
@@ -39,17 +45,7 @@ export class AbstractVisualization {
     }
   }
 
-  get callHandler() {
-    const handlers = this.handlers
-    let handleFunction = (handlerRequest, settings) => {
-      let fn = handlers[handlerRequest]
-      if (fn !== undefined) {
-        fn(settings)
-      }
-    }
-
-    return handleFunction
-  }
+  get callHandler() { return utils.getCallHandler(this.handlers) }
 
   addWidgets() {
     for (let [side, widgets] of Object.entries(this.widgets)) {

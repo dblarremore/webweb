@@ -1,19 +1,25 @@
 import { AbstractVisualization } from './abstract_visualization'
 import { Simulation } from './force_directed/simulation'
-import { Line, Circle } from '../shapes'
 import { ForceDirectedSettings } from './force_directed/settings'
 import * as widgets  from './force_directed/widgets'
 import { Legend } from '../legend'
 import { ScalarAttribute } from '../attribute'
 import { Coloror } from '../coloror'
+import * as shapes from '../shapes'
 
 import * as d3 from 'd3'
 
 export class ForceDirectedVisualization extends AbstractVisualization {
   static get HighlightRadiusMultiplier() { return 1.3 }
-  constructor(settings, menu, canvas, layer, nodes) {
-    super(settings, menu, canvas, layer, nodes)
-    this.simulation = new Simulation(this.nodes, this.settings)
+  static get TextRadiusMultiplier() { return 1.1 }
+  static get settingsObject() { return ForceDirectedSettings }
+
+  constructor(settings, menu, canvas, layer, previousNodePositions) {
+    super(settings, menu, canvas, layer, previousNodePositions)
+
+    this.simulationNodes = this.createSimulationNodes(this.previousNodePositions)
+
+    this.simulation = new Simulation(this.simulationNodes, this.settings)
 
     this.simulation.simulation.on('tick', this.canvas.redraw.bind(this.canvas))
 
@@ -21,7 +27,60 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.updateAttributes()
   }
 
-  static get settingsObject() { return ForceDirectedSettings }
+  /* nodes persist between layers (for the simulation's sake), so when the
+   * network changes:
+   * - reset the node metadata
+   *    - save those nodes' x/y positions under their name, for later layer-coherence
+   * - for all the nodes in the layer metadata, use the nodeNameToIdMap to set
+   *   corresponding node's values
+   * - for any node in the old network that also exists in the new one:
+   *    - set that new node's x/y positions to the old one's
+    * */
+  get nodePositions() {
+    let nodePositions = {}
+    for (let node of this.simulation.nodes) {
+      nodePositions[node.name] = {
+        'x': node.x,
+        'y': node.y,
+        'fx': node.fx,
+        'fy': node.fy,
+        'vx': node.vx,
+        'vy': node.vy,
+      }
+    }
+
+    return nodePositions
+  }
+
+  /*
+   * previousNodePositions is a dictionary where:
+   * - keys are node names
+   * - values are node positions
+    * */
+  createSimulationNodes(previousNodePositions) {
+    let simulationNodes = []
+    for (let [i, node] of Object.entries(this.layer.nodes)) {
+      const simulationNode = {
+        'name': node.name
+      }
+
+      const previousPosition = previousNodePositions[node.name] || {}
+      Object.entries(previousPosition).forEach(([key, value]) => simulationNode[key] = value)
+
+      simulationNodes.push(node)
+    }
+
+    return simulationNodes
+  }
+
+  get simulationLinks() {
+    return this.layer.links.map(link => {
+      return {
+        'source': this.simulationNodes[link.source],
+        'target': this.simulationNodes[link.target],
+      }
+    })
+  }
 
   get nodeColorAttribute() {
     const attributeName = this.settings.colorNodesBy
@@ -31,15 +90,6 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   get nodeSizeAttribute() {
     const attributeName = this.settings.sizeNodesBy
     return this.layer.attributes.size[attributeName]
-  }
-
-  get simulationLinks() {
-    return this.layer.links.map(link => {
-      return {
-        'source': this.nodes[link.source],
-        'target': this.nodes[link.target],
-      }
-    })
   }
 
   updateAttributes() {
@@ -65,13 +115,8 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   makeLinkAttributes() {
     const weights = this.layer.links.map(link => link.weight)
 
-    this.edgeWeights = {}
-    Object.entries(weights).forEach(
-      ([i, weight]) => this.edgeWeights[i] = { 'edgeWeight': weight }
-    )
-
-    this.linkWidthAttribute = new ScalarAttribute('edgeWeight', this.edgeWeights)
-    this.linkOpacityAttribute = new ScalarAttribute('edgeWeight', this.edgeWeights)
+    this.linkWidthAttribute = new ScalarAttribute('edgeWeight', weights)
+    this.linkOpacityAttribute = new ScalarAttribute('edgeWeight', weights)
   }
 
   get listeners() {
@@ -149,61 +194,57 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
       const width = this.linkWidthAttribute.getNumericalValue(link.weight)
       const opacity = this.linkOpacityAttribute.getNumericalValue(link.weight)
-      const source = this.nodes[link.source]
-      const target = this.nodes[link.target]
+      const source = this.simulationNodes[link.source]
+      const target = this.simulationNodes[link.target]
 
       linksToDraw.push(
-        new Line(source.x, source.y, target.x, target.y, width, opacity, Coloror.defaultColor)
+        new shapes.Line(source.x, source.y, target.x, target.y, width, opacity, Coloror.defaultColor)
       )
     }
 
     return linksToDraw
   }
 
-  getNodesToDraw() {
+  getNodesAndTextToDraw() {
     let nodesToDraw = []
-    for (let [i, node] of Object.entries(this.nodes)) {
-      const sizeScale = this.nodeSizeAttribute.getNodeNumericalValue(node)
-      let radius = this.settings.radius * sizeScale
-
-      const matchesString = this.nodeMatchesNames(node, this.namesToMatch)
-      const containsMouse = this.nodeContainsMouse(node, radius, this.mouseState)
-      const highlight = matchesString || containsMouse
-
-      const outline = highlight ? 'black' : Coloror.defaultColor
-
-      if (highlight) {
-        radius *= this.constructor.HighlightRadiusMultiplier
-      }
-
+    let nodeTexts = []
+    for (let [i, node] of Object.entries(this.simulationNodes)) {
+      const [radius, highlightNode] = this.getNodeRadiusAndIsHighlighted(node)
+      const outline = highlightNode ? 'black' : Coloror.defaultColor
       const color = this.nodeColorAttribute.getNodeColorValue(node)
 
-      nodesToDraw.push(new Circle(node.x, node.y, radius, outline, color))
+      nodesToDraw.push(new shapes.Circle(node.x, node.y, radius, outline, color))
+
+      if (this.simulation.isStable) {
+        if (highlightNode || this.settings.showNodeNames) {
+          const annotationRadius = radius * this.constructor.TextRadiusMultiplier
+          nodeTexts.push(
+            new shapes.Text(node.name, node.x + annotationRadius, node.y - annotationRadius)
+          )
+        }
+      }
     }
 
-    return nodesToDraw
+    return nodesToDraw.concat(nodeTexts)
   }
 
-  getObjectsToDraw() {
-    const linksToDraw = this.getLinksToDraw()
-    const nodesToDraw = this.getNodesToDraw()
+  getNodeRadiusAndIsHighlighted(node) {
+    const sizeScale = this.nodeSizeAttribute.getNodeNumericalValue(node)
+    let radius = this.settings.radius * sizeScale
 
-    // let simulationObjectsToDraw = this.simulation.getObjectsToDraw(this.settings.showNodeNames)
-    // let legendObjectsToDraw = this.legend.getObjectsToDraw(this.settings.showLegend)
+    const matchesString = this.nodeMatchesNames(node, this.namesToMatch)
+    const containsMouse = this.nodeContainsMouse(node, radius, this.mouseState)
+    const highlightNode = matchesString || containsMouse
 
-    // let objects = simulationObjectsToDraw.concat(legendObjectsToDraw)
+    if (highlightNode) {
+      radius *= this.constructor.HighlightRadiusMultiplier
+    }
 
-    let objects = linksToDraw.concat(nodesToDraw)
-    return objects
-  }
-
-  draw() {
-    let objects = this.getObjectsToDraw()
-    this.getObjectsToDraw().forEach(object => object.draw(this.canvas.context), this)
+    return [radius, highlightNode]
   }
 
   get namesToMatch() {
-    let matchString = this.settings.namesToMatch || ''
+    let matchString = this.settings.nameToMatch || ''
     let namesToMatch = matchString.indexOf(',') >= 0
       ? matchString.split(',')
       : [matchString]
@@ -241,6 +282,23 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
 
     return false
+  }
+
+  getObjectsToDraw() {
+    const linksToDraw = this.getLinksToDraw()
+    const nodesAndTextToDraw = this.getNodesAndTextToDraw()
+
+    // let legendObjectsToDraw = this.legend.getObjectsToDraw(this.settings.showLegend)
+
+    // let objects = simulationObjectsToDraw.concat(legendObjectsToDraw)
+
+    let objects = linksToDraw.concat(nodesAndTextToDraw)
+    return objects
+  }
+
+  draw() {
+    let objects = this.getObjectsToDraw()
+    this.getObjectsToDraw().forEach(object => object.draw(this.canvas.context), this)
   }
 
   updateDraggedNode(mouseState) {
@@ -288,7 +346,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
         this.endDragging()
       }
       else {
-        this.updateDraggedNode(mouseState)
+        this.updateDraggedNode(this.mouseState)
       }
     }
 
@@ -301,7 +359,8 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.endDragging()
 
     for (let node of this.simulation.nodes) {
-      if (this.nodeContainsMouse(node, mouseState)) {
+      const [radius, highlightNode] = this.getNodeRadiusAndIsHighlighted(node)
+      if (this.nodeContainsMouse(node, radius, mouseState)) {
         this.dragging = true
         this.draggedNode = node
 

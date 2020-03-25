@@ -22,14 +22,18 @@ export class Attribute {
   static get displays() { return ['color', 'size'] }
   static isType(nodeValues) { return false }
 
-  constructor(key, nodes, displayType) {
+  constructor(key, values) {
     this.key = key
-    this.displayType = displayType
+
+    // move the values into an array if it's in dictionary format
+    if ((values !== undefined) && (values[0][this.key] !== undefined)) {
+      values = Object.values(values).map(value => value[this.key])
+    }
 
     this.values = []
 
-    if (nodes !== undefined) {
-      this.values = Object.values(nodes).map(node => this.transformValue(node[this.key]))
+    if (values !== undefined) {
+      this.values = values.map(value => this.transformValue(value))
     }
 
     // we'd later like to pass through the palette here

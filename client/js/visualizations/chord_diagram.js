@@ -3,7 +3,7 @@ import { NoneAttribute, DivergingScalarAttribute } from '../attribute'
 import { ChordDiagramSettings } from './chord_diagram/settings'
 import * as widgets  from './chord_diagram/widgets'
 import * as svgUtils from '../svg_utils'
-import { Text } from '../text'
+import * as shapes from '../shapes'
 
 import * as d3 from 'd3'
 
@@ -45,8 +45,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     }
   }
 
-  constructor(settings, menu, canvas, layer, nodes) {
-    super(settings, menu, canvas, layer, nodes)
+  constructor(settings, menu, canvas, layer) {
+    super(settings, menu, canvas, layer)
 
     // FIX SETTINGS
     this.objectSettings = {
@@ -115,16 +115,17 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       }
     }
 
-    const edgeRatios = this.chords.map(chord => this.convertEdgesToRatios(this.matrix, chord))
+    this.edgeRatios = this.chords.map(chord => this.convertEdgesToRatios(this.matrix, chord))
+    this.edgeColor = new DivergingScalarAttribute('edgeRatio', this.edgeRatios)
 
-    this.edgeRatios = {}
-    for (let [i, ratio] of Object.entries(edgeRatios)) {
-      this.edgeRatios[i] = {
-        'edgeRatio': ratio
-      }
-    }
+    // this.edgeRatios = {}
+    // for (let [i, ratio] of Object.entries(edgeRatios)) {
+    //   this.edgeRatios[i] = {
+    //     'edgeRatio': ratio
+    //   }
+    // }
 
-    this.edgeColor = new DivergingScalarAttribute('edgeRatio', this.edgeRatios, 'color')
+    // this.edgeColor = new DivergingScalarAttribute('edgeRatio', this.edgeRatios, 'color')
 
     this.texts = this.nodeTexts
   }
@@ -135,7 +136,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       let [x, y] = this.annotationsArc.centroid(arc)
 
       const textAlign = x > 0 ? 'left' : 'right'
-      texts.push(new Text(this.nodes[i].name, x, y, undefined, undefined, textAlign))
+      texts.push(new shapes.Text(this.nodes[i].name, x, y, undefined, undefined, textAlign))
     }
     return texts
   }
@@ -188,7 +189,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   getChordsToDraw() {
     let chords = []
     for (const [i, chord] of Object.entries(this.chords)) {
-      const color = this.edgeColorAttribute.getNodeColorValue(this.edgeRatios[i])
+      // const color = this.edgeColorAttribute.getNodeColorValue(this.edgeRatios[i])
+      const color = this.edgeColorAttribute.getColorValue(this.edgeRatios[i])
       const path = this.ribbon(chord)
 
       chords.push([color, path])

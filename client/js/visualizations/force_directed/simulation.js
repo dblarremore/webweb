@@ -69,24 +69,7 @@ export class Simulation {
     this.update()
   }
 
-  getObjectsToDraw(showNodeNames) {
-    console.log('links dont have their scale attributes here')
-    const links = this.links || []
-    const nodes = this.nodes
-    const text = []
-
-    if (this.simulation.alpha() < .05 || this.isFrozen) {
-      nodes.forEach((node) => {
-        if (node.matchesString || node.containsMouse || showNodeNames) {
-          let nodeText = node.nodeText
-
-          if (nodeText !== undefined) {
-            text.push(nodeText)
-          }
-        }
-      })
-    }
-
-    return [].concat(...[links, nodes, text])
+  get isStable() {
+    return this.simulation.alpha() < .05 || this.isFrozen
   }
 }

@@ -1,5 +1,4 @@
 import * as d3 from 'd3'
-import { Node } from './node'
 import { Attribute, NoneAttribute, ScalarAttribute, UserColorAttribute, BinaryAttribute, CategoricalAttribute, ScalarCategoricalAttribute } from './attribute'
 
 import * as utils from './utils'
@@ -11,6 +10,16 @@ import * as utils from './utils'
  *
 *********************************************************************************/
 export class Layer {
+  static get nonMetadataKeys() {
+    return [
+      'idx', 'index',
+      'degree', 'strength',
+      'x', 'y',
+      'vx', 'vy',
+      'fx', 'fy',
+    ]
+  }
+
   constructor(edgeList, nodes, metadata, display, globalMetadata, globalNodes) {
     this.edgeList = this.regularizeEdgeList(edgeList || [])
     this.metadata = this.regularizeMetadata(metadata || {}, globalMetadata, {})
@@ -410,7 +419,7 @@ export class Layer {
 
     attributes.map(([attributeClass, key]) => {
       for (let displayType of attributeClass.displays) {
-        attributesByType[displayType][key] = new attributeClass(key, nodes, displayType)
+        attributesByType[displayType][key] = new attributeClass(key, nodes)
       }
     })
 
@@ -420,7 +429,14 @@ export class Layer {
   getMetadataAttributes(nodes, metadata) {
     let allKeys = [] 
     Object.values(nodes).map((node) => {
-      let keys = Node.filterMetadataKeys(node)
+      let keys = Object.keys(
+        node
+      ).filter(
+        key => utils.keyIsObjectAttribute(key, node)
+      ).filter(
+        key => this.constructor.nonMetadataKeys.indexOf(key) == -1
+      )
+        
       allKeys = allKeys.concat(keys)
     })
     allKeys = d3.set(allKeys).values().sort()

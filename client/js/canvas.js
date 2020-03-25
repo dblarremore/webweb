@@ -1,11 +1,9 @@
 import * as d3 from 'd3'
 
 export class WebwebCanvas {
-  constructor(settings) {
-    this.settings = settings
-
-    this.width = settings.width
-    this.height = settings.height
+  constructor(width, height) {
+    this.width = width
+    this.height = height
 
     this.w = this.width
     this.h = this.height
@@ -30,6 +28,12 @@ export class WebwebCanvas {
     for (let [event, eventFunction] of Object.entries(this.listeners)) {
       this.HTML.addEventListener(event, eventFunction)
     }
+  }
+
+  reset() {
+    this.context.restore()
+    this.context.save()
+    this.clear()
   }
 
   get listeners() {
@@ -98,11 +102,14 @@ export class WebwebCanvas {
   }
 
   mouseIsWithinDragBoundary(mouseState) {
+    const widthMargin = this.width / 2
+    const heightMargin = this.height / 2
+
     if (
-      mouseState.x < this.dragBoundary ||
-      mouseState.y < this.dragBoundary ||
-      mouseState.x > this.settings.width - this.dragBoundary ||
-      mouseState.y > this.settings.height - this.dragBoundary
+      mouseState.x < this.dragBoundary - widthMargin ||
+      mouseState.y < this.dragBoundary - heightMargin ||
+      mouseState.x > widthMargin - this.dragBoundary ||
+      mouseState.y > heightMargin - this.dragBoundary
     ) {
       return true
     }

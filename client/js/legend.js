@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 
-import { Text } from './text'
+import { Text } from './shapes'
 import { Node } from './node'
 
 export class Sublegend {

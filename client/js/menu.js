@@ -13,7 +13,7 @@ export class Menu {
     }
   }
 
-  addWidgets(store_key, side, widgetsToAdd, settings, callHandler, attributes) {
+  addWidgets(storeKey, side, widgetsToAdd, settings, callHandler, attributes) {
     if (this.hideMenu) {
       return
     }
@@ -34,7 +34,7 @@ export class Menu {
       widgets = widgets.concat(subwidgets)
     }
 
-    this.widgets[side][store_key] = widgets
+    this.widgets[side][storeKey] = widgets
 
     let widgetSettings = new Map()
     for (let widget of widgets) {
@@ -45,12 +45,12 @@ export class Menu {
     }
   }
 
-  removeWidgets(store_key) {
-    this.widgets.left[store_key].forEach(w => w.HTML.remove())
-    delete this.widgets.left[store_key]
-
-    this.widgets.right[store_key].forEach(w => w.HTML.remove())
-    delete this.widgets.right[store_key]
+  removeWidgets(storeKey) {
+    for (let side of ['left', 'right']) {
+      const sideWidgets = this.widgets[side][storeKey] || []
+      sideWidgets.forEach(widget => widget.container.remove())
+      delete this.widgets[side][storeKey]
+    }
   }
 
   getSideElement(side) {

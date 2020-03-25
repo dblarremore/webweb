@@ -1,3 +1,35 @@
+export function getCallHandler(handlers) {
+  let handleFunction = (handlerRequest, settings) => {
+    let fn = handlers[handlerRequest]
+    if (fn !== undefined) {
+      fn(settings)
+    }
+  }
+
+  return handleFunction
+}
+
+/*
+ * Checks to make sure that a given key on an object is real
+  * */
+export function keyIsObjectAttribute(key, object) {
+  if (object == undefined) {
+    return false
+  }
+
+  let attribute = object[key]
+
+  if (attribute == undefined) {
+    return false
+  }
+
+  if ({}.toString.call(attribute) == '[object Function]') {
+    return false
+  }
+
+  return true
+}
+
 export function allInts(vals) {
     for (var i in vals) {
         if (!isInt(vals[i])) {

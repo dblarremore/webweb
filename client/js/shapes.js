@@ -9,7 +9,6 @@ export class Circle {
     this.color = color
   }
 
-
   draw(context) {
     context.beginPath()
     context.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
@@ -53,5 +52,34 @@ export class Line {
       this.target.x, this.target.y, this.source.x, this.source.y,
       this.color, this.opacity, this.width
     )
+  }
+}
+
+export class Text {
+  constructor(value, x, y, font, rotation, align) {
+    this.value = value
+    this.x = x
+    this.y = y
+    this.font = font || '12px'
+    this.rotation = rotation || 0
+    this.align = align || 'left'
+  }
+
+  draw(context) {
+    context.save()
+    context.fillStyle = "black"
+    context.font = this.font
+    context.translate(this.x, this.y)
+    context.rotate(this.rotation)
+    context.textAlign = this.align
+    context.textBaseline = 'middle'
+    context.fillText(this.value, 0, 0)
+    context.restore()
+  }
+
+  drawSVG() {
+    // rotation is currently in radians, which isn't how it's expected to be
+    // also currently doesn't deal with textAlign
+    return svgUtils.drawText(this.value, x, y, this.font, this.rotation)
   }
 }
