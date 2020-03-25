@@ -103,9 +103,7 @@ export class Webweb {
     let _this = this
     let handleFunction = (request, settings) => {
       const handler = {
-        'display-network': function(settings) {
-          _this.displayNetwork(settings)
-        },
+        'display-network': settings => _this.displayNetwork(settings),
         'redraw': (settings) => {
           _this.canvas.settings = settings
           _this.canvas.redraw()
@@ -319,57 +317,5 @@ export class Webweb {
     }
 
     return settings
-  }
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // Scales
-  ////////////////////////////////////////////////////////////////////////////////
-  updateScales(settings) {
-    let layer = this.getLayerDisplayedBySettings(settings)
-    let nodes = this.nodes
-
-    let sizeAttribute = layer.attributes.size[settings.sizeBy]
-    let colorAttribute = layer.attributes.color[settings.colorBy]
-
-    if (sizeAttribute == undefined) {
-      sizeAttribute = layer.attributes.size.none
-    }
-
-    if (colorAttribute == undefined) {
-      colorAttribute = layer.attributes.color.none
-    }
-
-    // const scales = {
-    //   'linkWidth': {
-    //     'extent': layer.edgeWeights,
-    //   },
-    //   'linkOpacity': {
-    //     'extent': layer.edgeWeights,
-    //   },
-    // }
-
-    // for (let [name, data] of Object.entries(scales)) {
-    //   let range = []
-    //   if (settings.scales[name] !== undefined) {
-    //     range = [settings.scales[name].min, settings.scales[name].max]
-    //   }
-
-    //   let extent = d3.extent(data.extent)
-
-    //   if (name !== 'none' && this.scales[name] !== undefined) {
-    //     if (extent !== undefined) {
-    //       this.scales[name].domain(extent)
-    //     }
-
-    //     if (range) {
-    //       this.scales[name].range(range)
-    //     }
-    //   }
-    // }
-
-    Object.entries(nodes).forEach(([i, node]) => {
-      node.__scaledSize = sizeAttribute.getNodeNumericalValue(node)
-      node.__scaledColor = colorAttribute.getNodeColorValue(node)
-    })
   }
 }

@@ -1,25 +1,30 @@
+import * as svgUtils from './svg_utils'
+
 export class Text {
-  constructor(value, x, y, font) {
+  constructor(value, x, y, font, rotation, align) {
     this.value = value
     this.x = x
     this.y = y
-    this.font = font
+    this.font = font || '12px'
+    this.rotation = rotation || 0
+    this.align = align || 'left'
   }
 
-  draw(ctx) {
-    ctx.save()
-    ctx.fillStyle = "black"
-    ctx.font = this.font
-    ctx.fillText(this.value, this.x, this.y)
-    ctx.restore()
+  draw(context) {
+    context.save()
+    context.fillStyle = "black"
+    context.font = this.font
+    context.translate(this.x, this.y)
+    context.rotate(this.rotation)
+    context.textAlign = this.align
+    context.textBaseline = 'middle'
+    context.fillText(this.value, 0, 0)
+    context.restore()
   }
 
   drawSVG() {
-    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-    text.textContent = this.value
-    text.setAttributeNS(null, 'x', this.x)
-    text.setAttributeNS(null, 'y', this.y)
-    text.setAttributeNS(null, 'style', 'fill: black; font-size: ' + this.font + ';' )
-    return text
+    // rotation is currently in radians, which isn't how it's expected to be
+    // also currently doesn't deal with textAlign
+    return svgUtils.drawText(this.value, x, y, this.font, this.rotation)
   }
 }

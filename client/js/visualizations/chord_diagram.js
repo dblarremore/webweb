@@ -3,6 +3,7 @@ import { NoneAttribute, DivergingScalarAttribute } from '../attribute'
 import { ChordDiagramSettings } from './chord_diagram/settings'
 import * as widgets  from './chord_diagram/widgets'
 import * as svgUtils from '../svg_utils'
+import { Text } from '../text'
 
 import * as d3 from 'd3'
 
@@ -14,6 +15,12 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   get handlers() {
     return {
       'redraw': settings =>  this.redraw(settings),
+    }
+  }
+
+  get listeners() {
+    return {
+      "mousemove": event => this.mouseMoveListener(),
     }
   }
 
@@ -38,38 +45,37 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     }
   }
 
-  get listeners() {
-    return {
-      "mousemove": event => this.mouseMoveListener(),
-    }
-  }
-
   constructor(settings, menu, canvas, layer, nodes) {
     super(settings, menu, canvas, layer, nodes)
 
     // FIX SETTINGS
     this.objectSettings = {
       'radius': {
-        'outer': 290,
-        'inner': 270,
+        'outside': 290,
+        'outer': 270,
+        'inner': 250,
       },
     }
 
     this.canvas.context.translate(canvas.width / 2, canvas.height / 2)
 
     this.chordFunction = d3.chord()
-      .padAngle(0.05)
-      // .sortSubgroups(d3.descending)
+      .padAngle(0.03)
+      .sortSubgroups(d3.descending)
 
     this.arc = d3.arc()
       .innerRadius(this.objectSettings.radius.inner)
       .outerRadius(this.objectSettings.radius.outer)
       
+    this.annotationsArc = d3.arc()
+      .innerRadius(this.objectSettings.radius.outer)
+      .outerRadius(this.objectSettings.radius.outside)
+      
     this.ribbon = d3.ribbon()
       .radius(this.objectSettings.radius.inner)
 
     this.noneAttribute = new NoneAttribute()
-    this.setVisualizationObjects()
+    this.updateAttributes()
   }
 
   translateMouseState(mouseState) {
@@ -128,6 +134,19 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     }
 
     this.edgeColor = new DivergingScalarAttribute('edgeRatio', this.edgeRatios, 'color')
+
+    this.texts = this.nodeTexts
+  }
+
+  get nodeTexts() {
+    let texts = []
+    for (let [i, arc] of Object.entries(this.groups)) {
+      let [x, y] = this.annotationsArc.centroid(arc)
+
+      const textAlign = x > 0 ? 'left' : 'right'
+      texts.push(new Text(this.nodes[i].name, x, y, undefined, undefined, textAlign))
+    }
+    return texts
   }
 
   updateAttributes() {
@@ -139,6 +158,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     this.nodeColorAttribute.coloror.setPalette(this.settings.nodeColorPalette)
     // this won't work for categorical
     this.nodeColorAttribute.setScaleRange(this.settings.flipNodeColorScale ? [1, 0] : [0, 1])
+
+    this.setPathsToDrawByColor()
   }
 
   convertEdgesToRatios(matrix, object){
@@ -152,9 +173,15 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   }
 
   mouseMoveListener(event) {
+    if (this.mouseContained == true) {
+      this.mouseContained = false
+      this.redraw(this.settings)
+    }
+
     for (let [i, points] of Object.entries(this.nodePoints)) {
       if (this.containsMouse(points)) {
-        console.log(this.nodes[i])
+        this.mouseContained = true
+        this.texts[i].draw(this.canvas.context)
       }
     }
   }
@@ -192,6 +219,11 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     return arcs
   }
 
+  /*
+   * This is very much a hack. Basically we sample along the path to get a
+   * series of points to then do an inside/outside check later for mouse
+   * presence
+    * */
   getPathPoints(path) {
     const element = this.drawObjectSVG(path, 'black')
 
@@ -219,25 +251,25 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     this.canvas.redraw()
   }
 
-  draw(mouseState) {
-    this.mouseState = mouseState
-
+  setPathsToDrawByColor() {
     let chords = this.getChordsToDraw()
     let arcs = this.getArcsToDraw()
 
-    let polygons = []
-    let pathsByColor = {}
+    this.pathsToDrawByColor = {}
     for (let [color, rawPath] of chords.concat(arcs)) {
       color = color.hex()
-      if (pathsByColor[color] == undefined) {
-        pathsByColor[color] = new Path2D()
+      if (this.pathsToDrawByColor[color] == undefined) {
+        this.pathsToDrawByColor[color] = new Path2D()
       }
 
-      polygons.push(rawPath)
-      pathsByColor[color].addPath(new Path2D(rawPath))
+      this.pathsToDrawByColor[color].addPath(new Path2D(rawPath))
     }
+  }
 
-    for (let [color, path] of Object.entries(pathsByColor)) {
+  draw(mouseState) {
+    this.mouseState = mouseState
+
+    for (let [color, path] of Object.entries(this.pathsToDrawByColor)) {
       this.drawObjects(this.canvas.context, color, path)
     }
   }

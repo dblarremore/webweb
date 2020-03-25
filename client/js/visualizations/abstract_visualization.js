@@ -65,10 +65,6 @@ export class AbstractVisualization {
     this.scales = scales
   }
 
-  get attributes() {
-    return {}
-  }
-
   get listeners() {
     return {}
   }
