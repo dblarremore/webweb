@@ -1,18 +1,42 @@
 import { AbstractVisualization } from './abstract_visualization'
 import { Simulation } from './force_directed/simulation'
 import { ForceDirectedSettings } from './force_directed/settings'
-import * as widgets  from './force_directed/widgets'
+import { forceDirectedWidgets } from './force_directed/widgets'
 import { Legend } from '../legend'
 import { ScalarAttribute } from '../attribute'
 import { Coloror } from '../coloror'
 import * as shapes from '../shapes'
 
-import * as d3 from 'd3'
-
 export class ForceDirectedVisualization extends AbstractVisualization {
+  static get settingsObject() { return ForceDirectedSettings }
   static get HighlightRadiusMultiplier() { return 1.3 }
   static get TextRadiusMultiplier() { return 1.1 }
-  static get settingsObject() { return ForceDirectedSettings }
+
+  get handlers() {
+    return {
+      'redraw': settings => this.redraw(settings),
+      'change-force': settings => this.simulation.update(settings),
+      'freeze-simulation': settings => {
+        if (settings.freezeNodeMovement) {
+          this.simulation.freeze()
+        }
+        else {
+          this.simulation.unfreeze()
+        }
+        this.canvas.redraw()
+      }
+    }
+  }
+
+  get listeners() {
+    return {
+      "mousedown": event => this.mouseDownListener(),
+      "mousemove": event => this.mouseMoveListener(),
+      "mouseup": event => this.mouseUpListener(),
+    }
+  }
+
+  get widgets() { return forceDirectedWidgets() }
 
   constructor(settings, menu, canvas, layer, previousNodePositions) {
     super(settings, menu, canvas, layer, previousNodePositions)
@@ -106,6 +130,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.simulation.links = this.simulationLinks
     this.simulation.update(this.settings)
 
+    this.createLegend()
     // if we've frozen node movement manually tick so new edges are evaluated.
     // if (settings.freezeNodeMovement) {
     //   this.canvas.redraw()
@@ -117,75 +142,6 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
     this.linkWidthAttribute = new ScalarAttribute('edgeWeight', weights)
     this.linkOpacityAttribute = new ScalarAttribute('edgeWeight', weights)
-  }
-
-  get listeners() {
-    return {
-      "mousedown": event => this.mouseDownListener(),
-      "mousemove": event => this.mouseMoveListener(),
-      "mouseup": event => this.mouseUpListener(),
-    }
-  }
-
-  get handlers() {
-    return {
-      'redraw': settings => this.redraw(settings),
-      'freeze-nodes': settings => this.freezeNodesCaller(settings),
-      'update-sim': settings => this.simulationUpdateCaller(settings),
-    }
-  }
-
-  get widgets() {
-    return {
-      'left': {
-        'size': [
-          widgets.SizeNodesSelectWidget,
-          widgets.FlipNodeSizeScaleWidget,
-        ],
-        'colors': [
-          widgets.ColorNodesSelectWidget,
-          widgets.NodeColorPaletteSelectWidget,
-          widgets.FlipNodeColorScaleWidget
-        ],
-      },
-      'right': {
-        'names': [
-          widgets.ShowNodeNamesWidget,
-          widgets.NameToMatchWidget,
-        ],
-        'scaleLink': [
-          widgets.ScaleLinkWidthWidget,
-          widgets.ScaleLinkOpacityWidget,
-        ],
-        'nodeProperties': [
-          widgets.ChargeWidget,
-          widgets.RadiusWidget,
-        ],
-        'linkLength': [widgets.LinkLengthWidget],
-        'freezeNodes': [widgets.FreezeNodesWidget],
-        'gravity' : [widgets.GravityWidget],
-      }
-    }
-  }
-
-  createLegend() {
-    this.legendNodes = []
-    this.legendText = []
-
-    if (this.settings.showLegend) {
-      let legend = new Legend(
-        this.settings.sizeBy,
-        this.layer.attributes.size[this.settings.sizeBy],
-        this.settings.colorBy,
-        this.layer.attributes.color[this.settings.colorBy],
-        this.settings.radius,
-        this.simulation.nodes,
-        this.scales,
-      )
-
-      this.legendNodes = objects.nodes
-      this.legendText = objects.text
-    }
   }
 
   getLinksToDraw() {
@@ -206,26 +162,25 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   }
 
   getNodesAndTextToDraw() {
-    let nodesToDraw = []
-    let nodeTexts = []
+    let objects = []
     for (let [i, node] of Object.entries(this.simulationNodes)) {
       const [radius, highlightNode] = this.getNodeRadiusAndIsHighlighted(node)
       const outline = highlightNode ? 'black' : Coloror.defaultColor
       const color = this.nodeColorAttribute.getNodeColorValue(node)
 
-      nodesToDraw.push(new shapes.Circle(node.x, node.y, radius, outline, color))
+      objects.push(new shapes.Circle(node.x, node.y, radius, outline, color))
 
       if (this.simulation.isStable) {
         if (highlightNode || this.settings.showNodeNames) {
           const annotationRadius = radius * this.constructor.TextRadiusMultiplier
-          nodeTexts.push(
+          objects.push(
             new shapes.Text(node.name, node.x + annotationRadius, node.y - annotationRadius)
           )
         }
       }
     }
 
-    return nodesToDraw.concat(nodeTexts)
+    return objects
   }
 
   getNodeRadiusAndIsHighlighted(node) {
@@ -284,21 +239,29 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     return false
   }
 
-  getObjectsToDraw() {
+  createLegend() {
+    this.legend = new Legend(
+      this.settings.showLegend,
+      this.nodeSizeAttribute,
+      this.nodeColorAttribute,
+      this.settings.radius,
+      this.canvas.width / 2,
+      this.canvas.height / 2,
+    )
+
+    this.legendObjectsToDraw = this.legend.getObjectsToDraw()
+  }
+
+  get ObjectsToDraw() {
     const linksToDraw = this.getLinksToDraw()
     const nodesAndTextToDraw = this.getNodesAndTextToDraw()
 
-    // let legendObjectsToDraw = this.legend.getObjectsToDraw(this.settings.showLegend)
-
-    // let objects = simulationObjectsToDraw.concat(legendObjectsToDraw)
-
-    let objects = linksToDraw.concat(nodesAndTextToDraw)
+    let objects = linksToDraw.concat(nodesAndTextToDraw).concat(this.legendObjectsToDraw)
     return objects
   }
 
   draw() {
-    let objects = this.getObjectsToDraw()
-    this.getObjectsToDraw().forEach(object => object.draw(this.canvas.context), this)
+    this.ObjectsToDraw.forEach(object => object.draw(this.canvas.context))
   }
 
   updateDraggedNode(mouseState) {
@@ -308,7 +271,6 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.draggedNode.fy = mouseState.y
   }
 
-  // I don't really understand the dragging logic
   endDragging() {
     this.simulation.simulation.alphaTarget(0)
 
@@ -384,27 +346,5 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
 
     return true
-  }
-
-  freezeNodesCaller(settings) {
-    if (! this.simulation) {
-      return
-    }
-
-    if (settings.freezeNodeMovement) {
-      this.simulation.freeze()
-    }
-    else {
-      this.simulation.unfreeze()
-    }
-    this.canvas.redraw()
-  }
-
-  simulationUpdateCaller(settings) {
-    if (! this.simulation) {
-      return
-    }
-
-    this.simulation.update(settings)
   }
 }

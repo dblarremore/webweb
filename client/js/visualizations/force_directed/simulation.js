@@ -4,15 +4,14 @@ export class Simulation {
   constructor(nodes, settings) {
     this.settings = settings
     this.nodes = nodes
+    this.isFrozen = false
 
     this.simulation = d3.forceSimulation(this.nodes)
-
     this.simulation.alphaDecay = 0.001
+  }
 
-    const width = this.settings.width / 2
-    const height = this.settings.height / 2
-
-    this.forces = {
+  get forces() {
+    return {
       "center" : () => {
         return d3.forceCenter(0)
       },
@@ -32,6 +31,10 @@ export class Simulation {
           .strength(this.settings.linkStrength)
       },
     }
+  }
+
+  get isStable() {
+    return this.simulation.alpha() < .05 || this.isFrozen
   }
 
   update(settings) { 
@@ -54,22 +57,19 @@ export class Simulation {
   freeze() {
     this.simulation.stop()
     this.isFrozen = true
-    for (let node of this.nodes) {
+    this.nodes.forEach(node => {
       node.fx = node.x
       node.fy = node.y
-    }
+    })
   }
 
   unfreeze() {
     this.isFrozen = false
-    for (let node of this.nodes) {
+    this.nodes.forEach(node => {
       node.fx = undefined
       node.fy = undefined
-    }
-    this.update()
-  }
+    })
 
-  get isStable() {
-    return this.simulation.alpha() < .05 || this.isFrozen
+    this.simulation.restart()
   }
 }

@@ -1,7 +1,7 @@
 import * as svgUtils from './svg_utils'
 
 export class Circle {
-  constructor(x, y, radius, outline, color, opacity) {
+  constructor(x, y, radius, outline, color) {
     this.x = x
     this.y = y
     this.radius = radius

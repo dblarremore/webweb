@@ -1,10 +1,31 @@
 import { SelectWidget, CheckboxWidget } from '../../widget'
 import { DiveringColoror } from '../../coloror'
 
+export function chordDiagramWidgets() {
+  return {
+    'left': {
+      'nodeSort': [
+        SortNodesByWidget,
+        SortNodesWidget,
+      ],
+      'nodeColor': [
+        ColorNodesSelectWidget,
+        NodeColorPaletteSelectWidget,
+        FlipNodeColorScaleWidget,
+      ],
+      'edges': [
+        ColorEdgesWidget,
+        EdgeColorPaletteSelectWidget,
+        FlipEdgeColorScaleWidget,
+      ],
+    }
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Edge Coloring
 ////////////////////////////////////////////////////////////////////////////////
-export class ColorEdgesWidget extends CheckboxWidget {
+class ColorEdgesWidget extends CheckboxWidget {
   setProperties() {
     this.text = 'Color edges '
     this.size = 10
@@ -13,7 +34,7 @@ export class ColorEdgesWidget extends CheckboxWidget {
   }
 }
 
-export class EdgeColorPaletteSelectWidget extends SelectWidget {
+class EdgeColorPaletteSelectWidget extends SelectWidget {
   setProperties() {
     this.text = " with color palette "
     this.settingName = 'edgeColorPalette'
@@ -21,11 +42,10 @@ export class EdgeColorPaletteSelectWidget extends SelectWidget {
   }
 
   get options() { return DiveringColoror.palettes }
-
   get visible() { return super.visible && this.settings.colorEdges }
 }
 
-export class FlipEdgeColorScaleWidget extends CheckboxWidget {
+class FlipEdgeColorScaleWidget extends CheckboxWidget {
   setProperties() {
     this.text = " flip colors "
     this.settingName = 'flipEdgeColorScale'
@@ -38,7 +58,7 @@ export class FlipEdgeColorScaleWidget extends CheckboxWidget {
 ////////////////////////////////////////////////////////////////////////////////
 // Node Coloring
 ////////////////////////////////////////////////////////////////////////////////
-export class ColorNodesSelectWidget extends SelectWidget {
+class ColorNodesSelectWidget extends SelectWidget {
   setProperties() {
     this.text = "Color nodes by "
     this.settingName = 'colorNodesBy'
@@ -48,7 +68,7 @@ export class ColorNodesSelectWidget extends SelectWidget {
   get options() { return Object.keys(this.attributes.color) }
 }
 
-export class NodeColorPaletteSelectWidget extends SelectWidget {
+class NodeColorPaletteSelectWidget extends SelectWidget {
   setProperties() {
     this.text = " with color palette "
     this.settingName = 'nodeColorPalette'
@@ -56,14 +76,11 @@ export class NodeColorPaletteSelectWidget extends SelectWidget {
   }
 
   get options() {
-    const attribute = this.attributes.color[this.settings.colorNodesBy]
-
-    // this won't work with categorical
-    return attribute.coloror.constructor.palettes
+    return this.attributes.color[this.settings.colorNodesBy].colorPalettes
   }
 }
 
-export class FlipNodeColorScaleWidget extends CheckboxWidget {
+class FlipNodeColorScaleWidget extends CheckboxWidget {
   setProperties() {
     this.text = " flip colors "
     this.settingName = 'flipNodeColorScale'
@@ -76,7 +93,7 @@ export class FlipNodeColorScaleWidget extends CheckboxWidget {
 ////////////////////////////////////////////////////////////////////////////////
 // Sort
 ////////////////////////////////////////////////////////////////////////////////
-export class SortNodesByWidget extends SelectWidget {
+class SortNodesByWidget extends SelectWidget {
   setProperties() {
     this.text = "Sort nodes by "
     this.settingName = 'sortNodesBy'
@@ -86,7 +103,7 @@ export class SortNodesByWidget extends SelectWidget {
   get options() { return ['out degree', 'in degree'] }
 }
 
-export class SortNodesWidget extends SelectWidget {
+class SortNodesWidget extends SelectWidget {
   setProperties() {
     this.text = " "
     this.settingName = 'sortNodes'

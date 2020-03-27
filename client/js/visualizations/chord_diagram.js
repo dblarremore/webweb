@@ -1,7 +1,7 @@
 import { AbstractVisualization } from './abstract_visualization'
 import { NoneAttribute, DivergingScalarAttribute } from '../attribute'
 import { ChordDiagramSettings } from './chord_diagram/settings'
-import * as widgets  from './chord_diagram/widgets'
+import { chordDiagramWidgets } from './chord_diagram/widgets'
 import * as svgUtils from '../svg_utils'
 import * as shapes from '../shapes'
 
@@ -24,26 +24,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     }
   }
 
-  get widgets() {
-    return {
-      'left': {
-        'nodeSort': [
-          widgets.SortNodesByWidget,
-          widgets.SortNodesWidget,
-        ],
-        'nodeColor': [
-          widgets.ColorNodesSelectWidget,
-          widgets.NodeColorPaletteSelectWidget,
-          widgets.FlipNodeColorScaleWidget,
-        ],
-        'edges': [
-          widgets.ColorEdgesWidget,
-          widgets.EdgeColorPaletteSelectWidget,
-          widgets.FlipEdgeColorScaleWidget,
-        ],
-      }
-    }
-  }
+  get widgets() { return chordDiagramWidgets() }
 
   constructor(settings, menu, canvas, layer) {
     super(settings, menu, canvas, layer)
@@ -117,15 +98,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
     this.edgeRatios = this.chords.map(chord => this.convertEdgesToRatios(this.matrix, chord))
     this.edgeColor = new DivergingScalarAttribute('edgeRatio', this.edgeRatios)
-
-    // this.edgeRatios = {}
-    // for (let [i, ratio] of Object.entries(edgeRatios)) {
-    //   this.edgeRatios[i] = {
-    //     'edgeRatio': ratio
-    //   }
-    // }
-
-    // this.edgeColor = new DivergingScalarAttribute('edgeRatio', this.edgeRatios, 'color')
 
     this.texts = this.nodeTexts
   }

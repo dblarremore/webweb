@@ -1,104 +1,49 @@
-import * as d3 from 'd3'
+import * as shapes from './shapes'
+import { NoneAttribute } from './attribute'
 
-import { Text } from './shapes'
-import { Node } from './node'
-
-export class Sublegend {
-  get FONT_SIZE() { return "12px" }
+export class NodeLegend {
   get JUSTIFY_UNIT() { return 5 }
   get MARGIN_TOP() { return 3 * this.JUSTIFY_UNIT }
 
-  constructor(attribute, r, scales) {
-    this.attribute = attribute
-    this.r = r
-    this.scales = scales
-    this.shouldDraw = this.attribute.key !== 'none' && this.attribute.key !== 'color'
+  constructor(legendType, radius, colorAttribute, sizeAttribute) {
+    this.radius = radius
+    this.colorAttribute = colorAttribute
+    this.sizeAttribute = sizeAttribute
+
+    const legendAttribute = legendType === 'size' ? sizeAttribute : colorAttribute
+    this.title = legendAttribute.key
+    this.rawObjects = legendAttribute.getLegendNodes(legendAttribute.values)
+
+    this.radiusMultiplier = Math.max(...this.sizeAttribute.scale.range())
+    this.Radius = this.radius * this.radiusMultiplier
+    this.YCoordinate = this.MARGIN_TOP
   }
 
-  get R() { return this._R }
-  set R(R) { this._R = R }
+  get nodeXCoordinate() { return Math.max(this.Radius, this.JUSTIFY_UNIT) + this.JUSTIFY_UNIT }
+  get textXCoordinate() { return 2 * this.nodeXCoordinate }
+  get titleXCoordinate() { return this.JUSTIFY_UNIT }
+  stepYCoordinate() { this.YCoordinate += 2.3 * Math.max(this.Radius, 7.5) }
 
-  get pushdownState() {
-    return this._pushdownState
-  }
+  getNodeAndTextObjects() {
+    let objects = [this.titleText]
 
-  set pushdownState(pushdownState) {
-    this._pushdownState = pushdownState
-  }
+    for (let [text, value] of this.rawObjects) {
+      const radius = this.sizeAttribute.getNumericalValue(value) * this.radius
+      const color = this.colorAttribute.getColorValue(value)
+      const outline = this.colorAttribute.coloror.constructor.defaultColor
 
-  pushdown(i) {
-    let pushdown = this.pushdownState
-    if (i !== undefined) {
-      pushdown += 2.3 * this.R
-      this.pushdownState = pushdown
-    }
-    return pushdown
-  }
-
-  getNodeAndTextObjects(initialPushdown) {
-    if (initialPushdown === undefined || isNaN(initialPushdown)) {
-      initialPushdown = 0
-    }
-    initialPushdown += this.MARGIN_TOP
-    this.pushdownState = initialPushdown
-    
-    let objects = {
-      'nodes': [],
-      'text': [
-        this.getLegendTitleText(this.attribute.key)
-      ],
-    }
-
-    let nodePushRight = Math.max(this.R, this.JUSTIFY_UNIT) + this.JUSTIFY_UNIT
-    let textPushRight = 2 * nodePushRight
-
-    let nodes = this.attribute.getLegendNodes(this.attribute.values)
-
-    for (let [i, node] of Object.entries(nodes)) {
-      let pushdown = this.pushdown(i)
-
-      objects.text.push(new Text(node.__text, textPushRight, pushdown + 2.5, this.FONTSIZE))
-
-      node.nonInteractive = true
-      node.x = nodePushRight
-      node.y = pushdown
-      node.fixedRadius = (this.attribute.getNodeNumericalValue(node) || 1) * this.r
-      node.__scaledColor = this.attribute.getNodeColorValue(node)
-
-      objects.nodes.push(node)
+      objects.push(new shapes.Text(text, this.textXCoordinate, this.YCoordinate))
+      objects.push(new shapes.Circle(this.nodeXCoordinate, this.YCoordinate, radius, outline, color))
+      this.stepYCoordinate()
     }
 
     return objects
   }
 
-  getLegendTitleText(text) {
-    let textObject = new Text(text, this.JUSTIFY_UNIT, this.pushdown(), this.FONTSIZE)
-    this.pushdown_state += this.JUSTIFY_UNIT + this.R
-
-    return textObject
-  }
-}
-
-export class SizeSublegend extends Sublegend {
-  constructor(attribute, r, scales) {
-    super(attribute, r, nodes, scales)
-    this.R = this.r * scales.nodeSize.range()[1]
-  }
-}
-export class ColorSublegend extends Sublegend {
-  pushdown(i) {
-    let pushdown = this.pushdownState
-    if (i !== undefined) {
-      if (this.sizeLegendShown) {
-        pushdown += 2.3 * Math.max(this.R, 7.5)
-        this.pushdownState = pushdown
-      }
-      else {
-        pushdown += 3.3 * this.r
-        this.pushdownState = pushdown
-      }
-    }
-    return pushdown
+  get titleText() {
+    let text = new shapes.Text(this.title, this.titleXCoordinate, this.YCoordinate)
+    this.YCoordinate += (3 * this.JUSTIFY_UNIT) + this.Radius
+    return text
   }
 }
 
@@ -114,64 +59,70 @@ export class ColorSublegend extends Sublegend {
 // steps through what we think of as standard human preference.
 ////////////////////////////////////////////////////////////////////////////////
 export class Legend {
-  constructor(sizingBy, sizeAttribute, coloringBy, colorAttribute, r, nodes, scales) {
-    this.sizingBy = sizingBy
+  constructor(showLegend, sizeAttribute, colorAttribute, radius, xOffset, yOffset) {
+    this.showLegend = showLegend
     this.sizeAttribute = sizeAttribute
-    this.coloringBy = coloringBy
     this.colorAttribute = colorAttribute
-    this.r = r
-    this.scales = scales
+    this.radius = radius
+    this.xOffset = xOffset
+    this.yOffset = yOffset
 
-    this.sizeSub = new SizeSublegend(this.sizeAttribute, this.r, this.scales)
-    this.colorSub = new ColorSublegend(this.colorAttribute, this.r, this.scales)
-    this.colorSub.R = this.sizeSub.R
+    this.showSizeLegend = this.sizeAttribute.hasLegend
+    this.showColorLegend = this.colorAttribute.hasLegend
 
-    if (this.sizeSub.shouldDraw == false && this.colorSub.shouldDraw == false) {
+    if (! this.showLegend) {
+      return
+    }
+    else if (! this.showSizeLegend && ! this.showColorLegend) {
       return
     }
 
-    if (this.sizingBy == this.coloringBy) {
-      this.colorSub.shouldDraw = false
+    this.sameColorAndSizeAttributes = this.sizeAttribute.key === this.colorAttribute.key
+
+    if (this.sameColorAndSizeAttributes) {
+      // we'll just show the color legend, and size the nodes
+      this.showSizeLegend = false
     }
-    
-    this.colorSub.sizeLegendShown = this.sizeSub.shouldDraw
   }
 
-  getObjectsToDraw(showLegend) {
-    if (showLegend == false) {
+  getObjectsToDraw() {
+    if (! this.showLegend) {
       return []
     }
 
-    let pushdown = 0
+    let verticalShift = 0
+    const colorLegendSizeAttribute = this.sameColorAndSizeAttributes
+      ? this.sizeAttribute
+      : new NoneAttribute()
 
-    let sizeSubObjects = this.sizeSub.getNodeAndTextObjects()
-
-    pushdown += this.sizeSub.shouldDraw
-      ? this.sizeSub.pushdown(sizeSubObjects.text.length + 1)
-      : 0
-
-    let colorSubObjects = this.colorSub.getNodeAndTextObjects(pushdown)
-
-    let nodes = []
-    let text = []
-    if (this.sizeSub.shouldDraw) {
-      // set the node colors to the computed ones
-      if (this.sizingBy == this.coloringBy) {
-        for (let [i, sizeNode] of Object.entries(sizeSubObjects.nodes)) {
-          let colorNode = colorSubObjects.nodes[i]
-          sizeNode.__scaledColor = colorNode.__scaledColor
-        }
-      }
-
-      nodes = nodes.concat(sizeSubObjects.nodes)
-      text = text.concat(sizeSubObjects.text)
+    let objects = []
+    if (this.showSizeLegend) {
+      this.sizeLegend = new NodeLegend('size', this.radius, new NoneAttribute(), this.sizeAttribute)
+      objects = objects.concat(this.sizeLegend.getNodeAndTextObjects())
+      verticalShift = this.sizeLegend.YCoordinate
     }
 
-    if (this.colorSub.shouldDraw) {
-      nodes = nodes.concat(colorSubObjects.nodes)
-      text = text.concat(colorSubObjects.text)
+    if (this.showColorLegend) {
+      this.colorLegend = new NodeLegend(
+        'color',
+        this.radius,
+        this.colorAttribute,
+        colorLegendSizeAttribute
+      )
+
+      let colorObjects = this.colorLegend.getNodeAndTextObjects()
+
+      // move the legend down to account for the other legend
+      colorObjects.forEach(object => object.y += verticalShift)
+
+      objects = objects.concat(colorObjects)
     }
 
-    return nodes.concat(text)
+    objects.forEach(object => {
+      object.x -= this.xOffset
+      object.y -= this.yOffset
+    })
+
+    return objects
   }
 }

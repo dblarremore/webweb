@@ -1,3 +1,21 @@
+export function binValues(values, bins) {
+  if (bins === undefined) {
+    bins = values.length < 5 ? values.length : 4
+  }
+
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const step = (max - min) / (bins - 1)
+
+  let binnedValues = []
+  for (let binValue = min; binValue < max; binValue += step) {
+    binnedValues.push(round(binValue, 10))
+  }
+  binnedValues.push(max)
+
+  return binnedValues
+}
+
 export function getCallHandler(handlers) {
   let handleFunction = (handlerRequest, settings) => {
     let fn = handlers[handlerRequest]
@@ -43,11 +61,11 @@ export function allInts(vals) {
 export function allNumbers(values) {
   for (let value of values) {
     if (isNaN(value)) {
-      return true
+      return false
     }
   }
 
-  return false
+  return true
 }
 
 export function isInt(n){

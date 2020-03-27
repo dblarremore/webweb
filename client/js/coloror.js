@@ -4,8 +4,9 @@ export class Coloror {
   static get colorScalePrefix() { return 'interpolate' }
   static get defaultColor() { return d3.rgb(128, 128, 128) }
 
-  constructor(palette) {
-    this.setPalette(palette)
+  constructor(values) {
+    this.values = values
+    this.setPalette()
   }
 
   static paletteAcessor(palette) {
@@ -110,6 +111,29 @@ export class CyclicalColoror extends Coloror {
 
 export class CategoricalColoror extends Coloror {
   static get colorScalePrefix() { return 'scheme' }
+
+  static get defaultPalette() {
+    return Object.keys(this.palettes)[0]
+  }
+
+  static palettesValidForSize(size) {
+    return Object.keys(this.palettes).filter(palette => size <= this.palettes[palette])
+  }
+
+  setPalette(palette) {
+    if (! Object.keys(this.constructor.palettes).includes(palette)) {
+      palette = this.constructor.defaultPalette
+    }
+    else if (this.constructor.palettes[palette] < this.values.length) {
+      palette = this.getPalettesValidForSize(this.values.length)[0]
+    }
+
+    this.palette = palette
+  }
+
+  color(value) {
+    return d3[this.constructor.paletteAcessor(this.palette)][this.values.indexOf(value)]
+  }
 
   static get palettes() {
     return {

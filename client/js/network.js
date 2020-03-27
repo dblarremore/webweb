@@ -20,7 +20,7 @@ export class Network {
     }]
 
     let layers = []
-    for (let [i, rawLayer] of rawLayers.entries()) {
+    for (let rawLayer of rawLayers) {
       let layer = new Layer(
         rawLayer.edgeList, rawLayer.nodes, rawLayer.metadata, rawLayer.display,
         this.globalMetadata, this.globalNodes
@@ -29,10 +29,5 @@ export class Network {
     }
 
     return layers
-  }
-
-  get maxNodes() {
-    const layerNodeCounts = this.layers.map(layer => layer.nodeCount)
-    return Math.max(...layerNodeCounts)
   }
 }

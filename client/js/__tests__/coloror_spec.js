@@ -1,4 +1,5 @@
-import { Coloror, DiveringColoror } from '../coloror'
+import { Coloror, DiveringColoror, CategoricalColoror } from '../coloror'
+import * as d3 from 'd3'
 
 describe("Coloror object", () => {
   it("tests the colorScalePrefix accessor", () => {
@@ -16,12 +17,14 @@ describe("DiveringColoror object", () => {
   })
 
   it("tests the setPalette of a valid palette", () => {
-    let coloror = new DiveringColoror('PRGn')
+    let coloror = new DiveringColoror()
+    coloror.setPalette('PRGn')
     expect(coloror.palette).toStrictEqual('PRGn')
   })
 
   it("tests the setPalette of an invalid palette", () => {
-    let coloror = new DiveringColoror('Steve')
+    let coloror = new DiveringColoror()
+    coloror.setPalette('Steve')
     expect(coloror.palette).toStrictEqual('BrBG')
   })
 
@@ -31,4 +34,26 @@ describe("DiveringColoror object", () => {
   })
 })
 
+describe("CategoricalColoror object", () => {
+  it("tests the colorScalePrefix accessor", () => {
+    expect(CategoricalColoror.colorScalePrefix).toStrictEqual('scheme')
+  })
 
+  it("tests the default palette", () => {
+    expect(CategoricalColoror.defaultPalette).toStrictEqual('Accent')
+  })
+
+  it("tests coloring", () => {
+    const coloror = new CategoricalColoror([1, 2, 3])
+    coloror.setPalette(coloror.defaultPalette)
+    expect(coloror.color(1)).toStrictEqual(d3.schemeAccent[0])
+  })
+
+  it("tests getting of valid palette sizes", () => {
+    expect(CategoricalColoror.palettesValidForSize(20)).toStrictEqual([
+      "Category20",
+      "Category20b",
+      "Category20c",
+    ])
+  })
+})

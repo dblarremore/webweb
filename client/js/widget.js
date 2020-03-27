@@ -161,6 +161,13 @@ export class SelectWidget extends Widget {
     this.HTMLValue = this.SettingValue
   }
 
+  refresh(settings) {
+    this.settings = settings
+    // new settings can change the selectlist options
+    this.setSelectOptions(this.HTML, this.options)
+    this.setVisibility()
+  }
+
   setSelectOptions(HTML, options) {
     let lastValue = HTML.value
     if (HTML.options !== undefined) {
