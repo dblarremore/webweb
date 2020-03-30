@@ -73,11 +73,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.nodeSizeAttribute.setScaleRange(this.settings.flipNodeSizeScale ? [1.5, 0.5] : [0.5, 1.5])
 
     this.nodeColorAttribute.coloror.setPalette(this.settings.nodeColorPalette)
-
-    // this won't work for categorical
-    this.nodeColorAttribute.setScaleRange(this.settings.flipNodeColorScale ? [1, 0] : [0, 1])
-
-    this.simulation.update(this.settings)
+    this.nodeColorAttribute.setScaleReverse(this.settings.flipNodeColorScale)
 
     this.legend = new Legend(
       this.settings.showLegend,
@@ -86,6 +82,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
       this.nodeColorAttribute,
       this.canvas,
     )
+
     // if we've frozen node movement manually tick so new edges are evaluated.
     // if (settings.freezeNodeMovement) {
     //   this.canvas.redraw()

@@ -10,6 +10,7 @@ export class Simulation {
 
     this.simulation = d3.forceSimulation(this.nodes)
     this.simulation.alphaDecay = 0.001
+    this.update(this.settings)
   }
 
   /*

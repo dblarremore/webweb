@@ -10,9 +10,58 @@ class Shape {
   containsPoint(x, y) {
     return false
   }
+
+  get drawProperties() { return [] }
+  
+  get stringifiedDrawProperties() {
+    let string = ""
+    for (let property of this.drawProperties.sort()) {
+      if (string.length) {
+        string += '-'
+      }
+      string += this[property].toString()
+    }
+    return string
+  }
+
+  resetCanvasContextProperties(context) {
+    const defaults = {
+      'color': 'black',
+      'outline': 'black',
+      'width': 1,
+      'opacity': 1,
+      'font': '12px',
+      'align': 'left',
+      'textBaseline': 'middle',
+    }
+    for (let [key, value] of Object.entries(defaults)) {
+      context[this.canvasPropertyAliases[key]] = value
+    }
+  }
+
+  get canvasPropertyAliases() {
+    return {
+      'color': 'fillStyle',
+      'outline': 'strokeStyle',
+      'width': 'lineWidth',
+      'opacity': 'globalAlpha',
+      'font': 'font',
+      'align': 'textAlign',
+      'textBaseline': 'textBaseline'
+    }
+  }
+
+  setCanvasContextProperties(context) {
+    this.resetCanvasContextProperties(context)
+    for (let property of this.drawProperties) {
+      context[this.canvasPropertyAliases[property]] = this[property]
+    }
+  }
 }
 
 export class Circle extends Shape {
+  get drawProperties() { return ['outline', 'color'] }
+
   constructor(x, y, radius, outline, color) {
     super()
     this.x = x
@@ -25,9 +74,7 @@ export class Circle extends Shape {
   draw(context) {
     context.beginPath()
     context.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
-    context.strokeStyle = this.outline
     context.stroke()
-    context.fillStyle = this.color
     context.fill()
   }
 
@@ -53,6 +100,8 @@ export class Circle extends Shape {
 }
 
 export class Line extends Shape {
+  get drawProperties() { return ['outline', 'width', 'opacity'] }
+
   constructor(x1, y1, x2, y2, width, opacity, color) {
     super()
     this.x1 = x1
@@ -61,7 +110,7 @@ export class Line extends Shape {
     this.y2 = y2
     this.width = width
     this.opacity = opacity
-    this.color = color
+    this.outline = color
   }
 
   translate(x, y) {
@@ -72,15 +121,10 @@ export class Line extends Shape {
   }
 
   draw(context) {
-    context.save()
-    context.globalAlpha = this.opacity
     context.beginPath()
     context.moveTo(this.x1, this.y1)
     context.lineTo(this.x2, this.y2)
-    context.lineWidth = this.width
-    context.strokeStyle = this.color
     context.stroke()
-    context.restore()
   }
 
   get svg() {
@@ -92,38 +136,31 @@ export class Line extends Shape {
 }
 
 export class Text extends Shape {
-  constructor(value, x, y, font='12px', rotation=0, align='left') {
+  get drawProperties() { return ['color', 'font', 'align', 'textBaseline'] }
+
+  constructor(value, x, y, font='12px', align='left', color='black') {
     super()
     this.value = value
+    this.color = color
     this.x = x
     this.y = y
     this.font = font
-    this.rotation = rotation
     this.align = align
+    this.textBaseline = 'middle'
   }
 
   draw(context) {
-    context.save()
-    context.fillStyle = "black"
-    context.font = this.font
-    context.translate(this.x, this.y)
-    context.rotate(this.rotation)
-    context.textAlign = this.align
-    context.textBaseline = 'middle'
-    context.fillText(this.value, 0, 0)
-    context.restore()
+    context.fillText(this.value, this.x, this.y)
   }
 
   get svg() {
-    // rotation is currently in radians, which isn't how it's expected to be
-    // also currently doesn't deal with textAlign
-    return svgUtils.drawText(this.value, x, y, this.font, this.rotation)
+    return svgUtils.drawText(this.value, x, y, this.font)
   }
 }
 
 export class Path extends Shape {
   get pathSamples() { return 200 }
-
+  get drawProperties() { return ['color', 'outline', 'opacity'] }
   constructor(path, color, opacity, outline) {
     super()
     this.path = path
@@ -135,9 +172,6 @@ export class Path extends Shape {
   draw(context) {
     const path = new Path2D(this.path)
     context.beginPath()
-    context.fillStyle = this.color
-    context.strokeStyle = this.outline
-    context.globalAlpha = this.opacity
     context.stroke(path)
     context.fill(path)
   }

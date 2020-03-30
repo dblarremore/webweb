@@ -40,6 +40,7 @@ export class WebwebCanvas {
 
   reset() {
     this.context.restore()
+    this.setTranslation(-1 * this.xTranslate, -1 * this.yTranslate)
     this.context.save()
     this.clear()
   }
@@ -86,9 +87,23 @@ export class WebwebCanvas {
     this.draw()
   }
 
+  defaultDrawProperties() {
+
+  }
+
   draw() {
-    // should later sort by attributes and draw in batches
-    this.visualization.objectsToDraw.forEach(object => object.draw(this.context))
+    const objects = this.visualization.objectsToDraw
+    const objectDrawProperties = objects.map(object => [object.stringifiedDrawProperties, object]).sort()
+    let lastPropertyString = undefined
+    this.context.save()
+    for (let [propertyString, object] of objectDrawProperties) {
+      if (propertyString !== lastPropertyString) {
+        object.setCanvasContextProperties(this.context)
+        lastPropertyString = propertyString
+      }
+
+      object.draw(this.context)
+    }
   }
 
   svgDraw() {

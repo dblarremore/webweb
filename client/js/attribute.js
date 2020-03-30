@@ -49,6 +49,7 @@ export class Attribute {
     }
 
     this.coloror = new this.colororClass(this.valuesSet)
+    this.scaleReversed = false
     this.setScale()
   }
 
@@ -56,12 +57,20 @@ export class Attribute {
   set colorPalette(palette) { this.coloror.setPalette(palette) }
 
   get valuesSet() {
-    let valuesSet = [... new Set(this.values)]
-    if (utils.allNumbers(valuesSet)) {
-      valuesSet = valuesSet.sort((a, b) => a - b)
-    }
+    if (this._valuesSet === undefined) {
+      let valuesSet = [... new Set(this.values)]
+      if (utils.allNumbers(valuesSet)) {
+        valuesSet = valuesSet.sort((a, b) => a - b)
+      }
 
-    return valuesSet
+      this._valuesSet = valuesSet
+    }
+    
+    return this._valuesSet
+  }
+
+  set valuesSet(valuesSet) {
+    this._valuesSet = valuesSet
   }
 
   get extent() {
@@ -104,6 +113,17 @@ export class Attribute {
   setScaleRange(range) {
     if ((this.scale !== undefined) && (this.scale.range !== undefined)) {
       this.scale.range(range)
+    }
+  }
+
+  setScaleReverse(reverseScale) {
+    reverseScale = reverseScale ? true : false
+    if (this.scaleReversed === reverseScale) {
+      return
+    }
+    else {
+      this.setScaleRange(this.scale.range().reverse())
+      this.scaleReversed = reverseScale
     }
   }
 
@@ -214,8 +234,37 @@ export class CategoricalAttribute extends Attribute {
   static get displays () { return ['color'] }
   get colororClass() { return coloror.CategoricalColoror }
 
+  setScale() {
+    this.scale = d3.scaleLinear()
+    this.scale.domain(this.extent).range(this.extent)
+  }
+
+  transformValue(value) {
+    if (this.categoricalValues == undefined) {
+      this.categoricalValues = []
+    }
+
+    let index = this.categoricalValues.indexOf(value)
+
+    if (index >= 0) {
+      return index
+    }
+
+    index = this.categoricalValues.length
+    this.categoricalValues.push(value)
+    return index
+  }
+
+  get valuesSet() {
+    return this.categoricalValues
+  }
+
+  get extent() {
+    return [0, this.valuesSet.length - 1]
+  }
+
   get colorPalettes() {
-    return this.coloror.constructor.palettesValidForSize(this.values.length)
+    return this.coloror.constructor.palettesValidForSize(this.valuesSet.length)
   }
 
   static isType(nodeValues) {
