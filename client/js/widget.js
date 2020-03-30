@@ -237,11 +237,27 @@ export class ButtonWidget extends Widget {
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-// Instantiated Widgets
+// Basic webweb Widgets
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-export class NetworkSelectWidget extends SelectWidget {
+export function BasicWebwebWidgets() {
+  return {
+    'network': [
+      NetworkSelectWidget,
+      NetworkLayerSelectWidget
+    ],
+    'plotType': [
+      VisualizationSelectWidget,
+    ],
+    'save': [
+      SaveSVGWidget,
+      SaveCanvasWidget
+    ]
+  }
+}
+
+class NetworkSelectWidget extends SelectWidget {
   setProperties() {
     this.text = "Display data from "
     this.settingName = 'networkName'
@@ -253,7 +269,7 @@ export class NetworkSelectWidget extends SelectWidget {
   postValueSet() { this.settings.networkLayer = 0 }
 }
 
-export class NetworkLayerSelectWidget extends SelectWidget {
+class NetworkLayerSelectWidget extends SelectWidget {
   setProperties() {
     this.text = " layer "
     this.settingName = 'networkLayer'
@@ -269,7 +285,7 @@ export class NetworkLayerSelectWidget extends SelectWidget {
   }
 }
 
-export class SaveSVGWidget extends ButtonWidget {
+class SaveSVGWidget extends ButtonWidget {
   setProperties() {
     this.size = 10
     this.text = 'Save as '
@@ -281,7 +297,7 @@ export class SaveSVGWidget extends ButtonWidget {
   }
 }
 
-export class SaveCanvasWidget extends ButtonWidget {
+class SaveCanvasWidget extends ButtonWidget {
   setProperties() {
     this.size = 10
     this.value = 'PNG'
@@ -292,7 +308,7 @@ export class SaveCanvasWidget extends ButtonWidget {
   }
 }
 
-export class VisualizationSelectWidget extends SelectWidget {
+class VisualizationSelectWidget extends SelectWidget {
   setProperties() {
     this.text = "Visualization type "
     this.settingName = 'plotType'

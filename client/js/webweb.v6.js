@@ -15,6 +15,7 @@ import { Network } from './network'
 import { WebwebCanvas } from './canvas'
 import { ForceDirectedVisualization } from './visualizations/force_directed'
 import { ChordDiagramVisualization } from './visualizations/chord_diagram'
+import { BasicWebwebWidgets } from './widget'
 import * as widgets  from './widget'
 import * as utils from './utils'
 
@@ -57,32 +58,17 @@ export class Webweb {
     this.menu = new Menu(this.settings.hideMenu)
     box.appendChild(this.menu.HTML)
 
-    this.menu.addWidgets('webweb-all', 'left', this.defaultMenuWidgets, this.settings, this.callHandler)
+    this.menu.addWidgets(this.widgetKey, 'left', BasicWebwebWidgets(), this.settings, this.callHandler)
 
     this.canvas = new WebwebCanvas(this.settings.width, this.settings.height)
     box.append(this.canvas.box)
 
-    let listeners = new GlobalListeners(this.callHandler)
+    this.listeners = new GlobalListeners(this.callHandler)
 
     this.displayNetwork(this.settings)
   }
 
-  get defaultMenuWidgets() {
-    return {
-      'network': [
-        widgets.NetworkSelectWidget,
-        widgets.NetworkLayerSelectWidget
-      ],
-      'plotType': [
-        widgets.VisualizationSelectWidget,
-      ],
-      'save': [
-        widgets.SaveSVGWidget,
-        widgets.SaveCanvasWidget
-      ]
-    }
-  }
-
+  get widgetKey() { return 'webweb-all' }
   get callHandler() { return utils.getCallHandler(this.handlers) }
 
   get handlers() {
@@ -119,6 +105,7 @@ export class Webweb {
     settings = this.defaultSettingsAfterNetworkChange(settings)
     // TODO: ^nix
 
+    this.listeners.settings = settings
     let layer = this.getLayerDisplayedBySettings(settings)
 
     console.log('changing settings is going to fuck everything up.')
@@ -126,7 +113,7 @@ export class Webweb {
     settings = this.globalSettings
 
     this.visualization = new Visualizer(settings, this.menu, this.canvas, layer, this.nodePositions)
-    this.visualization.draw()
+    this.canvas.draw()
   }
 
   cleanSlate() {
@@ -171,8 +158,10 @@ export class Webweb {
 
     let layer = network.layers[settings['networkLayer']]
 
-    settings = this.defaultDoByAttribute(settings, layer.attributes, 'size')
-    settings = this.defaultDoByAttribute(settings, layer.attributes, 'color')
+    this.menu.updateWidgets(settings, this.widgetKey)
+
+    // settings = this.defaultDoByAttribute(settings, layer.attributes, 'size')
+    // settings = this.defaultDoByAttribute(settings, layer.attributes, 'color')
 
     return settings
   }

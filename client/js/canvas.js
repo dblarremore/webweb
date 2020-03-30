@@ -1,14 +1,13 @@
 import * as d3 from 'd3'
 
 export class WebwebCanvas {
+  get padding() { return 3 }
+  get dragBoundary() { return 15 }
+  get dpr() { return window.devicePixelRatio || 1}
+
   constructor(width, height) {
     this.width = width
     this.height = height
-
-    this.w = this.width
-    this.h = this.height
-
-    this.dpr = window.devicePixelRatio || 1
 
     this.canvasWidth = this.width * this.dpr
     this.canvasHeight = this.height * this.dpr
@@ -22,12 +21,21 @@ export class WebwebCanvas {
     this.context = this.HTML.getContext('2d')
     this.context.scale(this.dpr, this.dpr)
 
-    this.padding = 3
-    this.dragBoundary = 15
-
     for (let [event, eventFunction] of Object.entries(this.listeners)) {
       this.HTML.addEventListener(event, eventFunction)
     }
+  }
+
+  get xTranslate() { return this._xTranslate || 0 }
+  set xTranslate(value) { this._xTranslate = value }
+
+  get yTranslate() { return this._yTranslate || 0 }
+  set yTranslate(value) { this._yTranslate = value }
+
+  setTranslation(x=0, y=0) {
+    this.xTranslate = x
+    this.yTranslate = y
+    this.context.translate(x, y)
   }
 
   reset() {
@@ -75,17 +83,17 @@ export class WebwebCanvas {
 
   redraw() {
     this.clear()
-    this.visualization.draw()
+    this.draw()
+  }
+
+  draw() {
+    // should later sort by attributes and draw in batches
+    this.visualization.objectsToDraw.forEach(object => object.draw(this.context))
   }
 
   svgDraw() {
     let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-    const redrawContent = this.visualization.getRedrawContent(this.mouseState)
-
-    redrawContent.forEach((element) => {
-      svg.appendChild(element.drawSVG())
-    }, this)
-
+    this.visualization.objectsToDraw.forEach(object => svg.appendChild(object.svg))
     return svg
   }
 
@@ -93,8 +101,8 @@ export class WebwebCanvas {
     let box = this.HTML.getBoundingClientRect()
     let date = new Date()
     this.mouseState = {
-      x: event.clientX - box.left - this.padding,
-      y: event.clientY - box.top - this.padding,
+      x: event.clientX - box.left - this.padding - this.xTranslate,
+      y: event.clientY - box.top - this.padding - this.yTranslate,
       time: date.getTime(),
     }
     

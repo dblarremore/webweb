@@ -138,17 +138,14 @@ export class CategoricalColoror extends Coloror {
   static get palettes() {
     return {
       "Accent": 8,
-      "Dark2": 8,
-      "Pastel2": 8,
-      "Set2": 8,
-      "Set1": 9,
-      "Pastel1": 9,
       "Category10": 10,
+      "Dark2": 8,
+      "Set1": 9,
+      "Set2": 8,
       "Set3": 12,
       "Paired": 12,
-      "Category20": 20,
-      "Category20b": 20,
-      "Category20c": 20
+      "Pastel1": 9,
+      "Pastel2": 8,
     }
   }
 }

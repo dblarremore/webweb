@@ -24,7 +24,7 @@ export class NodeLegend {
   get titleXCoordinate() { return this.JUSTIFY_UNIT }
   stepYCoordinate() { this.YCoordinate += 2.3 * Math.max(this.Radius, 7.5) }
 
-  getNodeAndTextObjects() {
+  get objectsToDraw() {
     let objects = [this.titleText]
 
     for (let [text, value] of this.rawObjects) {
@@ -59,13 +59,12 @@ export class NodeLegend {
 // steps through what we think of as standard human preference.
 ////////////////////////////////////////////////////////////////////////////////
 export class Legend {
-  constructor(showLegend, sizeAttribute, colorAttribute, radius, xOffset, yOffset) {
+  constructor(showLegend, radius, sizeAttribute, colorAttribute, canvas) {
     this.showLegend = showLegend
+    this.radius = radius
     this.sizeAttribute = sizeAttribute
     this.colorAttribute = colorAttribute
-    this.radius = radius
-    this.xOffset = xOffset
-    this.yOffset = yOffset
+    this.canvas = canvas
 
     this.showSizeLegend = this.sizeAttribute.hasLegend
     this.showColorLegend = this.colorAttribute.hasLegend
@@ -80,12 +79,11 @@ export class Legend {
     this.sameColorAndSizeAttributes = this.sizeAttribute.key === this.colorAttribute.key
 
     if (this.sameColorAndSizeAttributes) {
-      // we'll just show the color legend, and size the nodes
       this.showSizeLegend = false
     }
   }
 
-  getObjectsToDraw() {
+  get objectsToDraw() {
     if (! this.showLegend) {
       return []
     }
@@ -98,7 +96,7 @@ export class Legend {
     let objects = []
     if (this.showSizeLegend) {
       this.sizeLegend = new NodeLegend('size', this.radius, new NoneAttribute(), this.sizeAttribute)
-      objects = objects.concat(this.sizeLegend.getNodeAndTextObjects())
+      objects = objects.concat(this.sizeLegend.objectsToDraw)
       verticalShift = this.sizeLegend.YCoordinate
     }
 
@@ -110,18 +108,15 @@ export class Legend {
         colorLegendSizeAttribute
       )
 
-      let colorObjects = this.colorLegend.getNodeAndTextObjects()
+      let colorObjects = this.colorLegend.objectsToDraw
 
       // move the legend down to account for the other legend
-      colorObjects.forEach(object => object.y += verticalShift)
+      colorObjects.forEach(object => object.translate(0, verticalShift))
 
       objects = objects.concat(colorObjects)
     }
 
-    objects.forEach(object => {
-      object.x -= this.xOffset
-      object.y -= this.yOffset
-    })
+    objects.forEach(object => object.translate(-1 * this.canvas.xTranslate, -1 * this.canvas.yTranslate))
 
     return objects
   }

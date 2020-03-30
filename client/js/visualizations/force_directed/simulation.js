@@ -70,6 +70,6 @@ export class Simulation {
       node.fy = undefined
     })
 
-    this.simulation.restart()
+    this.simulation.alpha(.5).restart()
   }
 }

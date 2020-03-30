@@ -56,12 +56,12 @@ export class GlobalListeners {
   }
 
   switchToAdjacentLayer(settings, layerIndex) {
-    if (layerIndex == undefined) {
+    if (layerIndex === undefined) {
       return
     }
     const layerCount = settings.networkLayers[settings.networkName]
     if ((0 <= layerIndex) && (layerIndex < layerCount)) {
-      settings.networkLayer = layerIndex
+      settings.networkLayer = parseInt(layerIndex)
       this.callHandler('display-network', settings)
     }
   }
@@ -72,15 +72,15 @@ export class GlobalListeners {
         let keyCode = event.keyCode
         let listener = keyCodeToListener[keyCode]
         if (listener !== undefined) {
-            listener(_this.settings, event)
+          listener(_this.settings, event)
         }
       })
     }
   }
 }
 function playNetworkLayers() {
-    window.setTimeout(function() {
-        changeNetworkLayerListener({'keyCode' : 39});
-        playNetworkLayers();
-    }, 1000);
+  window.setTimeout(function() {
+    changeNetworkLayerListener({'keyCode' : 39})
+    playNetworkLayers()
+  }, 1000)
 }

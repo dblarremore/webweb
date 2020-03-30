@@ -9,8 +9,8 @@ import * as shapes from '../shapes'
 
 export class ForceDirectedVisualization extends AbstractVisualization {
   static get settingsObject() { return ForceDirectedSettings }
-  static get HighlightRadiusMultiplier() { return 1.3 }
-  static get TextRadiusMultiplier() { return 1.1 }
+  get TextRadiusMultiplier() { return 1.1 }
+  get NodeFocusRadiusMultiplier() { return 1.3 }
 
   get handlers() {
     return {
@@ -84,14 +84,14 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   createSimulationNodes(previousNodePositions) {
     let simulationNodes = []
     for (let [i, node] of Object.entries(this.layer.nodes)) {
-      const simulationNode = {
-        'name': node.name
-      }
+      const simulationNode = new shapes.Circle()
+      simulationNode.name = node.name
 
       const previousPosition = previousNodePositions[node.name] || {}
       Object.entries(previousPosition).forEach(([key, value]) => simulationNode[key] = value)
+      Object.entries(node).forEach(([key, value]) => simulationNode[key] = value)
 
-      simulationNodes.push(node)
+      simulationNodes.push(simulationNode)
     }
 
     return simulationNodes
@@ -130,7 +130,13 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.simulation.links = this.simulationLinks
     this.simulation.update(this.settings)
 
-    this.createLegend()
+    this.legend = new Legend(
+      this.settings.showLegend,
+      this.settings.radius,
+      this.nodeSizeAttribute,
+      this.nodeColorAttribute,
+      this.canvas,
+    )
     // if we've frozen node movement manually tick so new edges are evaluated.
     // if (settings.freezeNodeMovement) {
     //   this.canvas.redraw()
@@ -144,8 +150,8 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.linkOpacityAttribute = new ScalarAttribute('edgeWeight', weights)
   }
 
-  getLinksToDraw() {
-    let linksToDraw = []
+  get edgesToDraw() {
+    let edgesToDraw = []
     for (let link of this.layer.links) {
 
       const width = this.linkWidthAttribute.getNumericalValue(link.weight)
@@ -153,49 +159,70 @@ export class ForceDirectedVisualization extends AbstractVisualization {
       const source = this.simulationNodes[link.source]
       const target = this.simulationNodes[link.target]
 
-      linksToDraw.push(
+      edgesToDraw.push(
         new shapes.Line(source.x, source.y, target.x, target.y, width, opacity, Coloror.defaultColor)
       )
     }
 
-    return linksToDraw
+    return edgesToDraw
   }
 
-  getNodesAndTextToDraw() {
-    let objects = []
+  get nodesToDraw() {
+    let nodesToDraw = []
     for (let [i, node] of Object.entries(this.simulationNodes)) {
-      const [radius, highlightNode] = this.getNodeRadiusAndIsHighlighted(node)
-      const outline = highlightNode ? 'black' : Coloror.defaultColor
-      const color = this.nodeColorAttribute.getNodeColorValue(node)
-
-      objects.push(new shapes.Circle(node.x, node.y, radius, outline, color))
-
-      if (this.simulation.isStable) {
-        if (highlightNode || this.settings.showNodeNames) {
-          const annotationRadius = radius * this.constructor.TextRadiusMultiplier
-          objects.push(
-            new shapes.Text(node.name, node.x + annotationRadius, node.y - annotationRadius)
-          )
-        }
-      }
+      node.radius = this.getNodeRadius(node)
+      node.outline = this.focusOnNode(node) ? 'black' : Coloror.defaultColor
+      node.color = this.nodeColorAttribute.getNodeColorValue(node)
+      nodesToDraw.push(node)
     }
 
-    return objects
+    return nodesToDraw
   }
 
-  getNodeRadiusAndIsHighlighted(node) {
-    const sizeScale = this.nodeSizeAttribute.getNodeNumericalValue(node)
-    let radius = this.settings.radius * sizeScale
+  get textsToDraw() {
+    let textsToDraw = []
+    for (let node of this.nodesToShowTextFor) {
+      const radius = node.radius * this.TextRadiusMultiplier
+      const text = node.name
+      const x = node.x + radius
+      const y = node.y - radius
+      textsToDraw.push(new shapes.Text(text, x, y))
+    }
+    
+    return textsToDraw
+  }
 
-    const matchesString = this.nodeMatchesNames(node, this.namesToMatch)
-    const containsMouse = this.nodeContainsMouse(node, radius, this.mouseState)
-    const highlightNode = matchesString || containsMouse
-
-    if (highlightNode) {
-      radius *= this.constructor.HighlightRadiusMultiplier
+  get nodesToShowTextFor() {
+    if (! this.simulation.isStable) {
+      return []
     }
 
-    return [radius, highlightNode]
+    let nodes = this.simulationNodes
+    if (this.settings.showNodeNames) {
+      return nodes
+    }
+    else {
+      return nodes.filter(node => this.focusOnNode(node))
+    }
+  }
+
+  focusOnNode(node) {
+    const matchesString = this.nameMatchesNames(node.name, this.namesToMatch)
+    return matchesString || node === this.mouseoverNode
+  }
+
+  getNodeRadius(node) {
+    let radius = this.getDefaultNodeRadius(node)
+
+    if (this.focusOnNode(node)) {
+      radius *= this.NodeFocusRadiusMultiplier
+    }
+
+    return radius
+  }
+
+  getDefaultNodeRadius(node) {
+    return this.settings.radius * this.nodeSizeAttribute.getNodeNumericalValue(node)
   }
 
   get namesToMatch() {
@@ -209,76 +236,43 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     return namesToMatch
   }
 
-  nodeMatchesNames(node, namesToMatch) {
-    for (let nameToMatch of namesToMatch) {
-      if (nameToMatch.length > 0) {
-        if (node.name !== undefined) {
-          if (node.name.indexOf(nameToMatch) >= 0) {
-            return true
-          }
-        }
-      }
-    }
-    return false
-  }
-
-  nodeContainsMouse(node, radius, mouseState) {
-    if (mouseState !== undefined) {
-      radius *= this.constructor.HighlightRadiusMultiplier
-
-      if (
-        node.x + radius >= mouseState.x &&
-        node.x - radius <= mouseState.x &&
-        node.y + radius >= mouseState.y &&
-        node.y - radius <= mouseState.y
-      ) {
-        return true
-      }
+  nameMatchesNames(name, namesToMatch) {
+    if (name === undefined) {
+      return false
     }
 
-    return false
+    return namesToMatch.filter(toMatch => name.indexOf(toMatch) >= 0).length
+      ? true
+      : false
   }
 
-  createLegend() {
-    this.legend = new Legend(
-      this.settings.showLegend,
-      this.nodeSizeAttribute,
-      this.nodeColorAttribute,
-      this.settings.radius,
-      this.canvas.width / 2,
-      this.canvas.height / 2,
-    )
+  get objectsToDraw() {
+    const nodes = this.nodesToDraw
+    const edges = this.edgesToDraw
+    const texts = this.textsToDraw
+    const legend = this.legend.objectsToDraw
 
-    this.legendObjectsToDraw = this.legend.getObjectsToDraw()
+    return edges.concat(nodes).concat(texts).concat(legend)
   }
 
-  get ObjectsToDraw() {
-    const linksToDraw = this.getLinksToDraw()
-    const nodesAndTextToDraw = this.getNodesAndTextToDraw()
-
-    let objects = linksToDraw.concat(nodesAndTextToDraw).concat(this.legendObjectsToDraw)
-    return objects
-  }
-
-  draw() {
-    this.ObjectsToDraw.forEach(object => object.draw(this.canvas.context))
-  }
-
-  updateDraggedNode(mouseState) {
-    this.draggedNode.x = mouseState.x
-    this.draggedNode.y = mouseState.y
-    this.draggedNode.fx = mouseState.x
-    this.draggedNode.fy = mouseState.y
+  setMouseoverNode() {
+    this.mouseoverNode = undefined
+    for (let node of this.simulation.nodes) {
+      if (node.containsPoint(this.mouseState.x, this.mouseState.y)) {
+        this.mouseoverNode = node
+        return
+      }
+    }
   }
 
   endDragging() {
     this.simulation.simulation.alphaTarget(0)
 
-    if (! this.settings.freezeNodeMovement && this.draggedNode !== undefined) {
-      this.draggedNode.fx = null
-      this.draggedNode.fy = null
+    if (! this.settings.freezeNodeMovement) {
+      this.mouseoverNode.fx = null
+      this.mouseoverNode.fy = null
     }
-    this.draggedNode = undefined
+
     this.dragging = false
   }
 
@@ -287,14 +281,11 @@ export class ForceDirectedVisualization extends AbstractVisualization {
       this.endDragging()
     }
 
-    const mouseState = this.mouseState
-
-    if (this.mouseStatesAreVeryClose(mouseState, this.mouseDownState)) {
-      for (let node of this.simulation.nodes) {
-        if (this.nodeContainsMouse(node, mouseState)) {
-          if (node.url !== undefined) {
-            window.open(node.url, '_blank')
-          }
+    if (this.mouseStatesAreVeryClose(this.mouseState, this.mouseDownState)) {
+      if (this.mouseoverNode) {
+        const url = this.mouseoverNode.url
+        if (url !== undefined) {
+          window.open(url, '_blank')
         }
       }
     }
@@ -302,33 +293,31 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.mouseDownState = undefined
   }
 
-  mouseMoveListener(event) {
+  mouseMoveListener() {
     if (this.dragging) {
       if (this.canvas.mouseIsWithinDragBoundary(this.mouseState)) {
         this.endDragging()
       }
       else {
-        this.updateDraggedNode(this.mouseState)
+        this.mouseoverNode.x = this.mouseState.x
+        this.mouseoverNode.y = this.mouseState.y
+        this.mouseoverNode.fx = this.mouseState.x
+        this.mouseoverNode.fy = this.mouseState.y
       }
+    }
+    else {
+      this.setMouseoverNode()
     }
 
     this.canvas.redraw()
   }
 
   mouseDownListener() {
-    const mouseState = this.mouseState
     this.mouseDownState = this.mouseState
-    this.endDragging()
 
-    for (let node of this.simulation.nodes) {
-      const [radius, highlightNode] = this.getNodeRadiusAndIsHighlighted(node)
-      if (this.nodeContainsMouse(node, radius, mouseState)) {
-        this.dragging = true
-        this.draggedNode = node
-
-        this.simulation.simulation.alphaTarget(0.3).restart()
-        this.updateDraggedNode(mouseState)
-      }
+    if (this.mouseoverNode) {
+      this.dragging = true
+      this.simulation.simulation.alphaTarget(0.3).restart()
     }
   }
 

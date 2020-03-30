@@ -9,8 +9,9 @@ import * as d3 from 'd3'
 
 export class ChordDiagramVisualization extends AbstractVisualization {
   static get settingsObject() { return ChordDiagramSettings }
-  static get opacity() { return .67 }
-  static get pathSamples() { return 200 }
+  static get opacity() { return .5 }
+
+  get widgets() { return chordDiagramWidgets() }
 
   get handlers() {
     return {
@@ -20,11 +21,12 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
   get listeners() {
     return {
-      "mousemove": event => this.mouseMoveListener(),
+      "mousemove": event => {
+        this.setTextsToDraw()
+        this.canvas.redraw()
+      },
     }
   }
-
-  get widgets() { return chordDiagramWidgets() }
 
   constructor(settings, menu, canvas, layer) {
     super(settings, menu, canvas, layer)
@@ -42,7 +44,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       .padAngle(0.03)
       .sortSubgroups(d3.descending)
 
-    this.arc = d3.arc()
+    this.nodePathFunction = d3.arc()
       .innerRadius(this.objectSettings.radius.inner)
       .outerRadius(this.objectSettings.radius.outer)
       
@@ -50,7 +52,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       .innerRadius(this.objectSettings.radius.outer)
       .outerRadius(this.objectSettings.radius.outside)
       
-    this.ribbon = d3.ribbon()
+    this.edgePathFunction = d3.ribbon()
       .radius(this.objectSettings.radius.inner)
 
     this.noneAttribute = new NoneAttribute()
@@ -64,6 +66,21 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   get nodeColorAttribute() {
     const attributeName = this.settings.colorNodesBy
     return this.layer.attributes.color[attributeName]
+  }
+
+  updateAttributes() {
+    this.setVisualizationObjects()
+
+    this.edgeColor.coloror.setPalette(this.settings.edgeColorPalette)
+    this.edgeColor.setScaleRange(this.settings.flipEdgeColorScale ? [1, 0] : [0, 1])
+
+    this.nodeColorAttribute.coloror.setPalette(this.settings.nodeColorPalette)
+    // this won't work for categorical
+    this.nodeColorAttribute.setScaleRange(this.settings.flipNodeColorScale ? [1, 0] : [0, 1])
+
+    this.setNodesToDraw()
+    this.setEdgesToDraw()
+    this.setTextsToDraw()
   }
 
   setVisualizationObjects() {
@@ -98,32 +115,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
     this.edgeRatios = this.chords.map(chord => this.convertEdgesToRatios(this.matrix, chord))
     this.edgeColor = new DivergingScalarAttribute('edgeRatio', this.edgeRatios)
-
-    this.texts = this.nodeTexts
-  }
-
-  get nodeTexts() {
-    let texts = []
-    for (let [i, arc] of Object.entries(this.groups)) {
-      let [x, y] = this.annotationsArc.centroid(arc)
-
-      const textAlign = x > 0 ? 'left' : 'right'
-      texts.push(new shapes.Text(this.nodes[i].name, x, y, undefined, undefined, textAlign))
-    }
-    return texts
-  }
-
-  updateAttributes() {
-    this.setVisualizationObjects()
-
-    this.edgeColor.coloror.setPalette(this.settings.edgeColorPalette)
-    this.edgeColor.setScaleRange(this.settings.flipEdgeColorScale ? [1, 0] : [0, 1])
-
-    this.nodeColorAttribute.coloror.setPalette(this.settings.nodeColorPalette)
-    // this won't work for categorical
-    this.nodeColorAttribute.setScaleRange(this.settings.flipNodeColorScale ? [1, 0] : [0, 1])
-
-    this.setPathsToDrawByColor()
   }
 
   convertEdgesToRatios(matrix, object){
@@ -136,106 +127,41 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     return outWeight / inWeight
   }
 
-  mouseMoveListener(event) {
-    if (this.mouseContained == true) {
-      this.mouseContained = false
-      this.redraw(this.settings)
-    }
-
-    for (let [i, points] of Object.entries(this.nodePoints)) {
-      if (this.containsMouse(points)) {
-        this.mouseContained = true
-        this.texts[i].draw(this.canvas.context)
-      }
-    }
-  }
-
-  containsMouse(points) {
-    if (this.mouseState == undefined) {
-      return false
-    }
-
-    return d3.polygonContains(points, this.mouseState)
-  }
-
-  getChordsToDraw() {
-    let chords = []
-    for (const [i, chord] of Object.entries(this.chords)) {
-      // const color = this.edgeColorAttribute.getNodeColorValue(this.edgeRatios[i])
-      const color = this.edgeColorAttribute.getColorValue(this.edgeRatios[i])
-      const path = this.ribbon(chord)
-
-      chords.push([color, path])
-    }
-    return chords
-  }
-
-  getArcsToDraw() {
-    let arcs = []
-    this.nodePoints = []
-    for (const [i, arc] of this.groups.entries()) {
+  setNodesToDraw() {
+    this.nodesToDraw = []
+    for (let [i, arc] of this.groups.entries()) {
       const color = this.nodeColorAttribute.getNodeColorValue(this.nodes[i])
-      const path = this.arc(arc)
-
-      this.nodePoints.push(this.getPathPoints(path))
-
-      arcs.push([color, path])
+      const path = this.nodePathFunction(arc)
+      this.nodesToDraw.push(new shapes.Path(path, color, this.constructor.opacity))
     }
-    return arcs
   }
 
-  /*
-   * This is very much a hack. Basically we sample along the path to get a
-   * series of points to then do an inside/outside check later for mouse
-   * presence
-    * */
-  getPathPoints(path) {
-    const element = this.drawObjectSVG(path, 'black')
-
-    const totalLength = element.getTotalLength()
-    const points = []
-    for (let i = 0; i < this.constructor.pathSamples; i++) {
-      const length = (i / this.constructor.pathSamples) * totalLength
-      const svgPoint = element.getPointAtLength(length)
-      points.push([svgPoint.x, svgPoint.y])
+  setEdgesToDraw() {
+    this.edgesToDraw = []
+    for (let [i, chord] of Object.entries(this.chords)) {
+      const color = this.edgeColorAttribute.getColorValue(this.edgeRatios[i])
+      const path = this.edgePathFunction(chord)
+      this.edgesToDraw.push(new shapes.Path(path, color, this.constructor.opacity))
     }
-
-    return points
   }
 
-  drawObjectSVG(path, color) {
-    const opacity = this.constructor.opacity
-    const outline = d3.rgb(color).darker().hex()
-    return svgUtils.drawPath(path, opacity, color, outline)
-  }
-
-  setPathsToDrawByColor() {
-    let chords = this.getChordsToDraw()
-    let arcs = this.getArcsToDraw()
-
-    this.pathsToDrawByColor = {}
-    for (let [color, rawPath] of chords.concat(arcs)) {
-      color = color.hex()
-      if (this.pathsToDrawByColor[color] == undefined) {
-        this.pathsToDrawByColor[color] = new Path2D()
+  setTextsToDraw() {
+    this.textsToDraw = []
+    for (let [i, nodeToDraw] of Object.entries(this.nodesToDraw)) {
+      if (nodeToDraw.containsPoint(this.mouseState.x, this.mouseState.y)) {
+        const [x, y] = this.annotationsArc.centroid(this.groups[i])
+        const textAlign = x > 0 ? 'left' : 'right'
+        const text = this.nodes[i].name
+        this.textsToDraw.push(new shapes.Text(text, x, y, undefined, undefined, textAlign))
       }
-
-      this.pathsToDrawByColor[color].addPath(new Path2D(rawPath))
     }
   }
 
-  draw() {
-    for (let [color, path] of Object.entries(this.pathsToDrawByColor)) {
-      this.drawObjects(this.canvas.context, color, path)
-    }
-  }
+  get objectsToDraw() {
+    const edges = this.edgesToDraw
+    const nodes = this.nodesToDraw
+    const texts = this.textsToDraw
 
-  drawObjects(context, color, path) {
-    context.beginPath()
-    context.fillStyle = color
-    context.strokeStyle = d3.rgb(color).darker().hex()
-    context.globalAlpha = this.constructor.opacity
-    context.stroke(path)
-    context.fill(path)
+    return edges.concat(nodes).concat(texts)
   }
 }

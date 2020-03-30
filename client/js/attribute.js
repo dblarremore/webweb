@@ -162,7 +162,7 @@ export class BinaryAttribute extends Attribute {
   static get falseValues() { return [false, 'false', 0, undefined, null] }
   static get validValues() { return this.trueValues.concat(this.falseValues) }
 
-  get extent() { return [false, true] }
+  get valuesSet() { return [0, 1] }
 
   get colorPalettes() { return Object.keys(this.coloror.constructor.palettes) }
 
@@ -186,8 +186,8 @@ export class BinaryAttribute extends Attribute {
 
   getLegendNodes() {
     return [
-      ['false', false],
-      ['true', true],
+      ['false', 0],
+      ['true', 1],
     ]
   }
 }

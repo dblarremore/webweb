@@ -13,6 +13,13 @@ export class Menu {
     }
   }
 
+  updateWidgets(settings, storeKey) {
+    for (let side of Object.keys(this.widgets)) {
+      const sideWidgets = this.widgets[side][storeKey] || []
+      sideWidgets.forEach(widget => widget.refresh(settings))
+    }
+  }
+
   addWidgets(storeKey, side, widgetsToAdd, settings, callHandler, attributes) {
     if (this.hideMenu) {
       return

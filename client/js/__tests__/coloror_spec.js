@@ -50,10 +50,9 @@ describe("CategoricalColoror object", () => {
   })
 
   it("tests getting of valid palette sizes", () => {
-    expect(CategoricalColoror.palettesValidForSize(20)).toStrictEqual([
-      "Category20",
-      "Category20b",
-      "Category20c",
+    expect(CategoricalColoror.palettesValidForSize(12)).toStrictEqual([
+      "Set3",
+      "Paired",
     ])
   })
 })

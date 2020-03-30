@@ -9,43 +9,41 @@ export class AbstractVisualization {
     this.previousNodePositions = previousNodePositions || {}
 
     this.canvas.reset()
-    this.canvas.context.translate(canvas.width / 2, canvas.height / 2)
+    this.canvas.setTranslation(canvas.width / 2, canvas.height / 2)
     this.canvas.addListeners(this.listeners)
     this.canvas.visualization = this
 
     this.addWidgets()
   }
 
-  get nodePositions() { return {} }
-
-  set mouseState(mouseState) {
-    this._mouseState = mouseState
-    this._mouseState.x  -= this.canvas.width / 2
-    this._mouseState.y  -= this.canvas.height / 2
-  }
-
-  get mouseState() { return this._mouseState }
-
-  redraw(settings) {
-    this.settings = this.formatSettings(settings)
-    this.updateWidgets()
-    this.updateAttributes()
-    this.canvas.redraw()
-  }
-
   static get settingsObject() { return undefined }
+  get nodePositions() { return {} }
 
   get listeners() { return {} }
   get handlers() { return {} }
-  
-  get widgets() {
-    return {
-      'left': {},
-      'right': {},
-    }
-  }
+  get widgets() { return { 'left': {}, 'right': {}, } }
 
   get callHandler() { return utils.getCallHandler(this.handlers) }
+  get objectsToDraw() { return [] }
+
+  set mouseState(value) { this._mouseState = value }
+  get mouseState() {
+    if (this._mouseState === undefined) {
+      this._mouseState = {
+        'x': 0,
+        'y': 0,
+        'time': 0,
+      }
+    }
+    return this._mouseState
+  }
+
+  redraw(settings) {
+    this.settings = this.formatSettings(settings)
+    this.menu.updateWidgets(this.settings, 'visualization')
+    this.updateAttributes()
+    this.canvas.redraw()
+  }
 
   addWidgets() {
     for (let [side, widgets] of Object.entries(this.widgets)) {
@@ -57,15 +55,6 @@ export class AbstractVisualization {
         this.callHandler,
         this.layer.attributes,
       )
-    }
-  }
-
-  updateWidgets() {
-    for (let side of Object.keys(this.menu.widgets)) {
-      const sideWidgets = this.menu.widgets[side]['visualization'] || []
-      for (let widget of sideWidgets) {
-        widget.refresh(this.settings)
-      }
     }
   }
 
