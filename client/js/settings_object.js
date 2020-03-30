@@ -1,22 +1,36 @@
 import * as d3 from 'd3'
+import { CheckboxWidget, SelectWidget } from './widget'
 
 export class SettingsObject {
   static get settingDefaults() {
     return {
-      'example_key': 'example_value',
+      'exampleKey': 'exampleValue',
     }
   }
 
-  static get scaleDefaults() { return {} }
   static get scales() { return [] }
+
+  static get attributes() {
+    return {
+      'exampleAttributeName': {
+        'input': 'doExampleThingBy',
+        'range': 'exampleAttributeScaleRange',
+        'flip': 'flipExampleAttributeScaleRange',
+        'colorPalette': 'exampleAttributeColorPalette',
+        'on': 'exampleAttribute',
+        'type': 'color', // or 'size', but size should really be numerical
+        'from': 'layer', // or 'visualization'; later should do this better
+      },
+    }
+  }
 
   static get settingSynonyms() {
     return {
-      'example_key_alias': {
-        'aliasOf': 'example_key',
+      'exampleKeyAlias': {
+        'aliasOf': 'exampleKey',
         'valueMap': {
-          'example_value': false,
-          'false_example_value': true,
+          'exampleValue': false,
+          'falseExampleValue': true,
         }
       }
     }
@@ -62,26 +76,6 @@ export class SettingsObject {
     }
 
     return constructedSettings
-    // // apply the user settings to the scales.
-    // Object.entries(this.scaleDefaults).forEach(([name, scale]) => {
-    //   if (userScales !== undefined) {
-    //     const userScale = userScales[name]
-
-    //     if (userScale !== undefined) {
-    //       const min = userScale['min']
-    //       if (min !== undefined) {
-    //         scale['min'] = min
-    //       }
-
-    //       const max = userScale['max']
-    //       if (max !== undefined) {
-    //         scale['max'] = max
-    //       }
-    //     }
-    //   }
-
-    //   this.settings['scales'][name] = scale
-    // })
   }
 }
 
@@ -104,37 +98,6 @@ export class WebwebSettings extends SettingsObject {
     return {
       'h' : { 'aliasOf': 'height', },
       'w': { 'aliasOf': 'width', },
-    }
-  }
-}
-
-export class AllSettings extends SettingsObject {
-  static get settingDefaults() {
-    return {
-      // node settings
-      'colorPalette' : undefined,
-      'invertBinaryColors' : false,
-      'invertBinarySizes' : false,
-    }
-  }
-
-  static get scaleDefaults() {
-    return {
-      'nodeSize' : {
-        'type': 'linear',
-        'min': 0.5,
-        'max': 1.5,
-      },
-      'linkWidth' : {
-        'min': 1,
-        'max': 1,
-        'type': 'linear',
-      },
-      'linkOpacity' : {
-        'min': 0.4,
-        'max': 0.9,
-        'type': 'linear',
-      },
     }
   }
 }

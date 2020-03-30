@@ -28,9 +28,19 @@ export class Menu {
     const sideElement = this.getSideElement(side)
     let widgets = []
     for (let [category, widgetList] of Object.entries(widgetsToAdd)) {
-      let subwidgets = widgetList.map(Constructor => new Constructor(settings, callHandler, attributes))
+      let subwidgets = []
+      for (let args of widgetList) {
+        let Constructor = args
+        let properties = undefined
+        if (args instanceof Array) {
+          [Constructor, properties] = args
+        }
 
-      let container = document.createElement('div')
+        subwidgets.push(new Constructor(settings, callHandler, properties, attributes))
+
+      }
+
+      const container = document.createElement('div')
 
       subwidgets.forEach(subwidget => {
         container.append(subwidget.container)

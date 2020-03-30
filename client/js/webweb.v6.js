@@ -10,7 +10,7 @@
 
 import { Menu } from './menu'
 import { GlobalListeners } from './listeners'
-import { WebwebSettings, AllSettings } from './settings_object'
+import { WebwebSettings } from './settings_object'
 import { Network } from './network'
 import { WebwebCanvas } from './canvas'
 import { ForceDirectedVisualization } from './visualizations/force_directed'

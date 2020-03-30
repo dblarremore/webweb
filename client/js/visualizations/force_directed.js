@@ -38,107 +38,70 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
   }
 
+  get nodePositions() { return this.simulation.nodePositions }
+
   constructor(settings, menu, canvas, layer, previousNodePositions) {
     super(settings, menu, canvas, layer, previousNodePositions)
 
-    this.simulation = new Simulation(
-      this.settings,
-      this.layer.nodes,
-      this.layer.links,
-      previousNodePositions
-  )
+    this.simulation = new Simulation(this.settings, this.layer, this.canvas, previousNodePositions)
 
-    this.simulation.simulation.on('tick', this.canvas.redraw.bind(this.canvas))
+    const edgeWeights = this.layer.links.map(link => link.weight)
 
-    this.makeLinkAttributes()
-    this.updateAttributes()
+    this.availableAttributes = {
+      'linkWidth': new ScalarAttribute('edgeWeight', edgeWeights),
+      'linkOpacity': new ScalarAttribute('edgeWeight', edgeWeights),
+    }
+
+    this.update()
   }
 
-  get nodePositions() { return this.simulation.nodePositions }
-
-  get nodeColorAttribute() {
-    const attributeName = this.settings.colorNodesBy
-    return this.layer.attributes.color[attributeName]
-  }
-
-  get nodeSizeAttribute() {
-    const attributeName = this.settings.sizeNodesBy
-    return this.layer.attributes.size[attributeName]
-  }
-
-  updateAttributes() {
-    this.linkWidthAttribute.setScaleRange(this.settings.scaleLinkWidth ? [0.5, 2] : [1, 1])
-    this.linkOpacityAttribute.setScaleRange(this.settings.scaleLinkOpacity ? [0.3, 1] : [1, 1])
-
-    this.nodeSizeAttribute.setScaleRange(this.settings.flipNodeSizeScale ? [1.5, 0.5] : [0.5, 1.5])
-
-    this.nodeColorAttribute.coloror.setPalette(this.settings.nodeColorPalette)
-    this.nodeColorAttribute.setScaleReverse(this.settings.flipNodeColorScale)
+  update() {
+    this.setActiveAttributes()
 
     this.legend = new Legend(
       this.settings.showLegend,
       this.settings.radius,
-      this.nodeSizeAttribute,
-      this.nodeColorAttribute,
+      this.attributes.nodeSize,
+      this.attributes.nodeColor,
       this.canvas,
     )
 
     // if we've frozen node movement manually tick so new edges are evaluated.
+    // (I don't think we need to do this)
     // if (settings.freezeNodeMovement) {
     //   this.canvas.redraw()
     // }
   }
 
-  makeLinkAttributes() {
-    const weights = this.layer.links.map(link => link.weight)
-
-    this.linkWidthAttribute = new ScalarAttribute('edgeWeight', weights)
-    this.linkOpacityAttribute = new ScalarAttribute('edgeWeight', weights)
-  }
-
   get edgesToDraw() {
-    let edgesToDraw = []
-    for (let link of this.simulation.links) {
-      const width = this.linkWidthAttribute.getNumericalValue(link.weight)
-      const opacity = this.linkOpacityAttribute.getNumericalValue(link.weight)
-      edgesToDraw.push(
-        new shapes.Line(
-          link.source.x, link.source.y,
-          link.target.x, link.target.y,
-          width, opacity,
-          Coloror.defaultColor,
-        )
-      )
-    }
-
-    return edgesToDraw
+    return this.simulation.links.map(link => new shapes.Line(
+      link.source.x, link.source.y,
+      link.target.x, link.target.y,
+      this.attributes.linkWidth.getNumericalValue(link.weight),
+      this.attributes.linkOpacity.getNumericalValue(link.weight),
+      Coloror.defaultColor,
+    ))
   }
 
   get nodesToDraw() {
-    let nodesToDraw = []
-    for (let [i, node] of Object.entries(this.simulation.nodes)) {
+    return this.simulation.nodes.map(node => {
       const focusOnNode = this.focusOnNode(node)
-      node.radius = this.settings.radius * this.nodeSizeAttribute.getNodeNumericalValue(node)
+      node.radius = this.settings.radius * this.attributes.nodeSize.getNodeNumericalValue(node)
       node.radius *= focusOnNode ? this.NodeFocusRadiusMultiplier : 1
       node.outline = focusOnNode ? 'black' : Coloror.defaultColor
-      node.color = this.nodeColorAttribute.getNodeColorValue(node)
-      nodesToDraw.push(node)
-    }
-
-    return nodesToDraw
+      node.color = this.attributes.nodeColor.getNodeColorValue(node)
+      return node
+    })
   }
 
   get textsToDraw() {
-    let textsToDraw = []
-    for (let node of this.nodesToShowTextFor) {
+    return this.nodesToShowTextFor.map(node => {
       const radius = node.radius * this.TextRadiusMultiplier
       const text = node.name
       const x = node.x + radius
       const y = node.y - radius
-      textsToDraw.push(new shapes.Text(text, x, y))
-    }
-    
-    return textsToDraw
+      return new shapes.Text(text, x, y)
+    })
   }
 
   get nodesToShowTextFor() {

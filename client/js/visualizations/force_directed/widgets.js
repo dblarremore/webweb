@@ -16,19 +16,50 @@ export function forceDirectedWidgets() {
     },
     'right': {
       'names': [
-        ShowNodeNamesWidget,
+        [
+          CheckboxWidget,
+          {
+            'text': 'Show node names ',
+            'settingName': 'showNodeNames',
+            'setHandler': 'redraw',
+          },
+        ],
         NameToMatchWidget,
       ],
       'scaleLink': [
-        ScaleLinkWidthWidget,
-        ScaleLinkOpacityWidget,
+        [
+          CheckboxWidget,
+          {
+            'text': 'Scale link width ',
+            'settingName': 'scaleLinkWidth',
+            'setHandler': 'redraw',
+          }
+        ],
+        [
+          CheckboxWidget,
+          {
+            'text': 'Scale link opacity ',
+            'settingName': 'scaleLinkOpacity',
+            'setHandler': 'redraw',
+          }
+        ]
       ],
       'nodeProperties': [
         ChargeWidget,
         RadiusWidget,
       ],
       'linkLength': [LinkLengthWidget],
-      'freezeNodes': [FreezeNodesWidget],
+      'freezeNodes': [
+        [
+          CheckboxWidget,
+          {
+            'text': 'Freeze nodes ',
+            'size': 10,
+            'settingName': 'freezeNodeMovement',
+            'setHandler': 'freeze-simulation',
+          }
+        ],
+      ],
       'gravity' : [GravityWidget],
     }
   }
@@ -92,35 +123,6 @@ class FlipNodeSizeScaleWidget extends CheckboxWidget {
   get visible() { return super.visible && this.settings.sizeNodesBy !== 'none' }
 }
 
-
-
-class ScaleLinkWidthWidget extends CheckboxWidget {
-  setProperties() {
-    this.text = 'Scale link width '
-    this.size = 10
-    this.settingName = 'scaleLinkWidth'
-    this.setHandler = 'redraw'
-  }
-}
-
-class ScaleLinkOpacityWidget extends CheckboxWidget {
-  setProperties() {
-    this.text = 'Scale link opacity '
-    this.size = 10
-    this.settingName = 'scaleLinkOpacity'
-    this.setHandler = 'redraw'
-  }
-}
-
-class ShowNodeNamesWidget extends CheckboxWidget {
-  setProperties() {
-    this.text = 'Show node names '
-    this.size = 10
-    this.settingName = 'showNodeNames'
-    this.setHandler = 'redraw'
-  }
-}
-
 class NameToMatchWidget extends Widget {
   get events() { return ['input'] }
 
@@ -130,8 +132,6 @@ class NameToMatchWidget extends Widget {
     this.settingName = 'nameToMatch'
     this.setHandler = 'redraw'
   }
-
-  input(value) { this.syncTo(value) }
 }
 
 class ChargeWidget extends Widget {
@@ -185,15 +185,6 @@ class LinkLengthWidget extends Widget {
   }
 }
 
-class FreezeNodesWidget extends CheckboxWidget {
-  setProperties() {
-    this.text = 'Freeze nodes '
-    this.size = 10
-    this.settingName = 'freezeNodeMovement'
-    this.setHandler = 'freeze-simulation'
-  }
-}
-
 class GravityWidget extends Widget {
   setProperties() {
     this.text = 'Gravity: '
@@ -211,4 +202,3 @@ class GravityWidget extends Widget {
     }
   }
 }
-

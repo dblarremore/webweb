@@ -6,15 +6,16 @@ export class Widget {
   get elementDisplay() { return this.inline ? 'inline' : 'block' }
   get visible() { return true }
   get events() { return ['change'] }
-  get options() { return [] }
 
-  constructor(settings, callHandler, attributes) {
+  constructor(settings, callHandler, properties={}, attributes) {
     this.settings = settings
     this.callHandler = callHandler
     this.attributes = attributes
     this.inline = true
 
     this.setProperties()
+    Object.entries(properties).forEach(([key, value]) => this[key] = value)
+
     this.init()
   }
 
@@ -133,9 +134,17 @@ export class Widget {
   change(value) {
     this.syncTo(value)
   }
+
+  input(value) {
+    this.syncTo(value)
+  }
 }
 export class CheckboxWidget extends Widget {
   get type() { return 'checkbox' }
+
+  setProperties() {
+    this.size = 10
+  }
 
   get HTMLValue() {
     if (this.HTML !== undefined) {
@@ -232,6 +241,10 @@ export class ButtonWidget extends Widget {
     HTML.innerHTML = this.value
     return HTML
   }
+
+  click() {
+    this.callHandler(this.setHandler, this.settings)
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -248,11 +261,34 @@ export function BasicWebwebWidgets() {
       NetworkLayerSelectWidget
     ],
     'plotType': [
-      VisualizationSelectWidget,
+      [
+        SelectWidget,
+        {
+          'text': "Visualization type ",
+          'settingName': 'plotType',
+          'setHandler': 'display-network',
+          'options': ['Force Directed', 'Chord Diagram']
+        }
+      ],
     ],
     'save': [
-      SaveSVGWidget,
-      SaveCanvasWidget
+      [ 
+        ButtonWidget,
+        {
+          'size': 10,
+          'text': 'Save as ',
+          'value': 'SVG',
+          'setHandler': 'save-svg',
+        }
+      ],
+      [
+        ButtonWidget,
+        {
+          'size': 10,
+          'value': 'PNG',
+          'setHandler': 'save-canvas',
+        }
+      ],
     ]
   }
 }
@@ -282,40 +318,5 @@ class NetworkLayerSelectWidget extends SelectWidget {
 
   get options() {
     return [...Array(this.layerCount).keys()]
-  }
-}
-
-class SaveSVGWidget extends ButtonWidget {
-  setProperties() {
-    this.size = 10
-    this.text = 'Save as '
-    this.value = 'SVG'
-  }
-
-  click() {
-    this.callHandler('save-svg', this.settings)
-  }
-}
-
-class SaveCanvasWidget extends ButtonWidget {
-  setProperties() {
-    this.size = 10
-    this.value = 'PNG'
-  }
-
-  click() {
-    this.callHandler('save-canvas', this.settings)
-  }
-}
-
-class VisualizationSelectWidget extends SelectWidget {
-  setProperties() {
-    this.text = "Visualization type "
-    this.settingName = 'plotType'
-    this.setHandler = 'display-network'
-  }
-
-  get options() {
-    return ['Force Directed', 'Chord Diagram']
   }
 }

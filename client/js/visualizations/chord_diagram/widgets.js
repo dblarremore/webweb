@@ -5,8 +5,24 @@ export function chordDiagramWidgets() {
   return {
     'left': {
       'nodeSort': [
-        SortNodesByWidget,
-        SortNodesWidget,
+        [
+          SelectWidget,
+          {
+            'text': "Sort nodes by ",
+            'settingName': 'sortNodesBy',
+            'setHandler': 'redraw',
+            'options': ['out degree', 'in degree'],
+          },
+        ],
+        [
+          SelectWidget,
+          {
+            'text': " ",
+            'settingName': 'sortNodes',
+            'setHandler': 'redraw',
+            'options': ['ascending', 'descending']
+          }
+        ]
       ],
       'nodeColor': [
         ColorNodesSelectWidget,
@@ -14,7 +30,14 @@ export function chordDiagramWidgets() {
         FlipNodeColorScaleWidget,
       ],
       'edges': [
-        ColorEdgesWidget,
+        [
+          CheckboxWidget,
+          {
+            'text': 'Color edges ',
+            'settingName': 'colorEdges',
+            'setHandler': 'redraw',
+          }
+        ],
         EdgeColorPaletteSelectWidget,
         FlipEdgeColorScaleWidget,
       ],
@@ -25,15 +48,6 @@ export function chordDiagramWidgets() {
 ////////////////////////////////////////////////////////////////////////////////
 // Edge Coloring
 ////////////////////////////////////////////////////////////////////////////////
-class ColorEdgesWidget extends CheckboxWidget {
-  setProperties() {
-    this.text = 'Color edges '
-    this.size = 10
-    this.settingName = 'colorEdges'
-    this.setHandler = 'redraw'
-  }
-}
-
 class EdgeColorPaletteSelectWidget extends SelectWidget {
   setProperties() {
     this.text = " with color palette "
@@ -88,27 +102,4 @@ class FlipNodeColorScaleWidget extends CheckboxWidget {
   }
 
   get visible() { return super.visible && this.settings.colorNodesBy !== 'none' }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Sort
-////////////////////////////////////////////////////////////////////////////////
-class SortNodesByWidget extends SelectWidget {
-  setProperties() {
-    this.text = "Sort nodes by "
-    this.settingName = 'sortNodesBy'
-    this.setHandler = 'redraw'
-  }
-
-  get options() { return ['out degree', 'in degree'] }
-}
-
-class SortNodesWidget extends SelectWidget {
-  setProperties() {
-    this.text = " "
-    this.settingName = 'sortNodes'
-    this.setHandler = 'redraw'
-  }
-
-  get options() { return ['ascending', 'descending'] }
 }

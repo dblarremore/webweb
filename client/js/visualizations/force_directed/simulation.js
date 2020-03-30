@@ -2,14 +2,15 @@ import * as d3 from 'd3'
 import * as shapes from '../../shapes'
 
 export class Simulation {
-  constructor(settings, nodes, links, previousNodePositions={}) {
+  constructor(settings, layer, canvas, previousNodePositions={}) {
     this.settings = settings
-    this.nodes = this.createNodes(nodes, previousNodePositions)
-    this.links = this.createLinks(links)
+    this.nodes = this.createNodes(layer.nodes, previousNodePositions)
+    this.links = this.createLinks(layer.links)
     this.isFrozen = false
 
     this.simulation = d3.forceSimulation(this.nodes)
     this.simulation.alphaDecay = 0.001
+    this.simulation.on('tick', canvas.redraw.bind(canvas))
     this.update(this.settings)
   }
 

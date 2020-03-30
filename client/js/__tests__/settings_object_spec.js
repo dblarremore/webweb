@@ -4,13 +4,13 @@ describe("settings object", () => {
   it("tests that keys without values are defaulted", () => {
     let settings = SettingsObject.getSettings({})
     expect(settings).toStrictEqual({
-      'example_key': 'example_value'
+      'exampleKey': 'exampleValue'
     })
   })
 
   it("tests that keys with values are not defaulted", () => {
     let settings = {
-      'example_key': 'test_value',
+      'exampleKey': 'exampleValue'
     }
     let _settings = SettingsObject.getSettings(settings)
     expect(_settings).toStrictEqual(settings)
@@ -18,11 +18,11 @@ describe("settings object", () => {
 
   it("tests that aliases with values are properly handled", () => {
     let settings = {
-      'example_key_alias': 'example_value',
+      'exampleKeyAlias': 'exampleValue',
     }
     let _settings = SettingsObject.getSettings(settings)
     expect(_settings).toStrictEqual({
-      'example_key': false,
+      'exampleKey': false,
     })
   })
 })

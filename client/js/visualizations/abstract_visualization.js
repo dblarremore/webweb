@@ -1,4 +1,5 @@
 import * as utils from '../utils'
+import { NoneAttribute } from '../attribute'
 
 export class AbstractVisualization {
   constructor(settings, menu, canvas, layer, previousNodePositions) {
@@ -34,6 +35,58 @@ export class AbstractVisualization {
     return edges.concat(nodes).concat(texts).concat(legend)
   }
 
+  getSettingValueIfKeyDefined(key) {
+    if (key) {
+      const setting = this.settings[key]
+      return setting
+    }
+  }
+
+  setActiveAttributes() {
+    this.attributes = {}
+
+    for (let [name, settingKeys] of Object.entries(this.constructor.settingsObject.attributes)) {
+      let attribute
+
+      if (settingKeys.from === 'layer') {
+        // if the setting is from a selection menu, set it to the value from there
+        attribute = this.layer.attributes[settingKeys.type][this.settings[settingKeys.input]]
+      }
+      else if (settingKeys.from === 'visualization') {
+        attribute = this.availableAttributes[name]
+      }
+
+      // the attribute is a None attribute if it's not on
+      if (settingKeys.on) {
+        if (! this.settings[settingKeys.on]) {
+          attribute = new NoneAttribute()
+        }
+      }
+      else if (attribute === undefined) {
+        attribute = new NoneAttribute()
+      }
+
+      this.attributes[name] = attribute
+
+      if (attribute instanceof NoneAttribute) {
+        continue
+      }
+
+      if (settingKeys.range) {
+        attribute.scaleReversed = false
+        attribute.setScaleRange(this.settings[settingKeys.range])
+      }
+
+      if (settingKeys.colorPalette) {
+        attribute.colorPalette = this.settings[settingKeys.colorPalette]
+      }
+
+      if (settingKeys.flip) {
+        attribute.setScaleReverse(this.settings[settingKeys.flip])
+      }
+    }
+  }
+
   set mouseState(value) { this._mouseState = value }
   get mouseState() {
     if (this._mouseState === undefined) {
@@ -49,7 +102,7 @@ export class AbstractVisualization {
   redraw(settings) {
     this.settings = this.formatSettings(settings)
     this.menu.updateWidgets(this.settings, 'visualization')
-    this.updateAttributes()
+    this.update()
     this.canvas.redraw()
   }
 
@@ -70,7 +123,5 @@ export class AbstractVisualization {
     return this.constructor.settingsObject.getSettings(settings)
   }
 
-  updateAttributes() {
-    return
-  }
+  update() { return }
 }

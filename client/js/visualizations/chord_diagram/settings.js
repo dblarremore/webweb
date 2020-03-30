@@ -4,7 +4,7 @@ export class ChordDiagramSettings extends SettingsObject {
   static get settingDefaults() {
     return {
       "colorNodesBy": "none",
-      "nodeColorPalette": true,
+      "nodeColorPalette": undefined,
       "flipNodeColorScale": false,
 
       "colorEdges": true,
@@ -22,16 +22,27 @@ export class ChordDiagramSettings extends SettingsObject {
     }
   }
 
-  static get scales() {
-    return [
-      'nodeSizeScaleRange'
-    ]
-  }
-
   static get settingSynonyms() {
     return {
-      'sizeBy': { 'aliasOf': 'sizeNodesBy' },
       'colorBy': { 'aliasOf': 'colorNodesBy' },
+    }
+  }
+
+  static get attributes() {
+    return {
+      'nodeColor': {
+        'input': 'colorNodesBy',
+        'flip': 'flipNodeColorScale',
+        'colorPalette': 'nodeColorPalette',
+        'type': 'color',
+        'from': 'layer',
+      },
+      'edgeColor': {
+        'flip': 'flipEdgeColorScale',
+        'colorPalette': 'edgeColorPalette',
+        'on': 'colorEdges',
+        'from': 'visualization',
+      },
     }
   }
 }
