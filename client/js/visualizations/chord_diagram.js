@@ -156,12 +156,4 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       }
     }
   }
-
-  get objectsToDraw() {
-    const edges = this.edgesToDraw
-    const nodes = this.nodesToDraw
-    const texts = this.textsToDraw
-
-    return edges.concat(nodes).concat(texts)
-  }
 }

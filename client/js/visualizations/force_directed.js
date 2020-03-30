@@ -12,6 +12,8 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   get TextRadiusMultiplier() { return 1.1 }
   get NodeFocusRadiusMultiplier() { return 1.3 }
 
+  get widgets() { return forceDirectedWidgets() }
+
   get handlers() {
     return {
       'redraw': settings => this.redraw(settings),
@@ -36,14 +38,15 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
   }
 
-  get widgets() { return forceDirectedWidgets() }
-
   constructor(settings, menu, canvas, layer, previousNodePositions) {
     super(settings, menu, canvas, layer, previousNodePositions)
 
-    this.simulationNodes = this.createSimulationNodes(this.previousNodePositions)
-
-    this.simulation = new Simulation(this.simulationNodes, this.settings)
+    this.simulation = new Simulation(
+      this.settings,
+      this.layer.nodes,
+      this.layer.links,
+      previousNodePositions
+  )
 
     this.simulation.simulation.on('tick', this.canvas.redraw.bind(this.canvas))
 
@@ -51,60 +54,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     this.updateAttributes()
   }
 
-  /* nodes persist between layers (for the simulation's sake), so when the
-   * network changes:
-   * - reset the node metadata
-   *    - save those nodes' x/y positions under their name, for later layer-coherence
-   * - for all the nodes in the layer metadata, use the nodeNameToIdMap to set
-   *   corresponding node's values
-   * - for any node in the old network that also exists in the new one:
-   *    - set that new node's x/y positions to the old one's
-    * */
-  get nodePositions() {
-    let nodePositions = {}
-    for (let node of this.simulation.nodes) {
-      nodePositions[node.name] = {
-        'x': node.x,
-        'y': node.y,
-        'fx': node.fx,
-        'fy': node.fy,
-        'vx': node.vx,
-        'vy': node.vy,
-      }
-    }
-
-    return nodePositions
-  }
-
-  /*
-   * previousNodePositions is a dictionary where:
-   * - keys are node names
-   * - values are node positions
-    * */
-  createSimulationNodes(previousNodePositions) {
-    let simulationNodes = []
-    for (let [i, node] of Object.entries(this.layer.nodes)) {
-      const simulationNode = new shapes.Circle()
-      simulationNode.name = node.name
-
-      const previousPosition = previousNodePositions[node.name] || {}
-      Object.entries(previousPosition).forEach(([key, value]) => simulationNode[key] = value)
-      Object.entries(node).forEach(([key, value]) => simulationNode[key] = value)
-
-      simulationNodes.push(simulationNode)
-    }
-
-    return simulationNodes
-  }
-
-  get simulationLinks() {
-    return this.layer.links.map(link => {
-      return {
-        'source': this.simulationNodes[link.source],
-        'target': this.simulationNodes[link.target],
-      }
-    })
-  }
+  get nodePositions() { return this.simulation.nodePositions }
 
   get nodeColorAttribute() {
     const attributeName = this.settings.colorNodesBy
@@ -127,7 +77,6 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     // this won't work for categorical
     this.nodeColorAttribute.setScaleRange(this.settings.flipNodeColorScale ? [1, 0] : [0, 1])
 
-    this.simulation.links = this.simulationLinks
     this.simulation.update(this.settings)
 
     this.legend = new Legend(
@@ -152,15 +101,16 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
   get edgesToDraw() {
     let edgesToDraw = []
-    for (let link of this.layer.links) {
-
+    for (let link of this.simulation.links) {
       const width = this.linkWidthAttribute.getNumericalValue(link.weight)
       const opacity = this.linkOpacityAttribute.getNumericalValue(link.weight)
-      const source = this.simulationNodes[link.source]
-      const target = this.simulationNodes[link.target]
-
       edgesToDraw.push(
-        new shapes.Line(source.x, source.y, target.x, target.y, width, opacity, Coloror.defaultColor)
+        new shapes.Line(
+          link.source.x, link.source.y,
+          link.target.x, link.target.y,
+          width, opacity,
+          Coloror.defaultColor,
+        )
       )
     }
 
@@ -169,9 +119,11 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
   get nodesToDraw() {
     let nodesToDraw = []
-    for (let [i, node] of Object.entries(this.simulationNodes)) {
-      node.radius = this.getNodeRadius(node)
-      node.outline = this.focusOnNode(node) ? 'black' : Coloror.defaultColor
+    for (let [i, node] of Object.entries(this.simulation.nodes)) {
+      const focusOnNode = this.focusOnNode(node)
+      node.radius = this.settings.radius * this.nodeSizeAttribute.getNodeNumericalValue(node)
+      node.radius *= focusOnNode ? this.NodeFocusRadiusMultiplier : 1
+      node.outline = focusOnNode ? 'black' : Coloror.defaultColor
       node.color = this.nodeColorAttribute.getNodeColorValue(node)
       nodesToDraw.push(node)
     }
@@ -197,7 +149,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
       return []
     }
 
-    let nodes = this.simulationNodes
+    let nodes = this.simulation.nodes
     if (this.settings.showNodeNames) {
       return nodes
     }
@@ -209,20 +161,6 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   focusOnNode(node) {
     const matchesString = this.nameMatchesNames(node.name, this.namesToMatch)
     return matchesString || node === this.mouseoverNode
-  }
-
-  getNodeRadius(node) {
-    let radius = this.getDefaultNodeRadius(node)
-
-    if (this.focusOnNode(node)) {
-      radius *= this.NodeFocusRadiusMultiplier
-    }
-
-    return radius
-  }
-
-  getDefaultNodeRadius(node) {
-    return this.settings.radius * this.nodeSizeAttribute.getNodeNumericalValue(node)
   }
 
   get namesToMatch() {
@@ -237,22 +175,9 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   }
 
   nameMatchesNames(name, namesToMatch) {
-    if (name === undefined) {
-      return false
-    }
-
     return namesToMatch.filter(toMatch => name.indexOf(toMatch) >= 0).length
       ? true
       : false
-  }
-
-  get objectsToDraw() {
-    const nodes = this.nodesToDraw
-    const edges = this.edgesToDraw
-    const texts = this.textsToDraw
-    const legend = this.legend.objectsToDraw
-
-    return edges.concat(nodes).concat(texts).concat(legend)
   }
 
   setMouseoverNode() {

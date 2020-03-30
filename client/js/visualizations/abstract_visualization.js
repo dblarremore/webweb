@@ -24,7 +24,15 @@ export class AbstractVisualization {
   get widgets() { return { 'left': {}, 'right': {}, } }
 
   get callHandler() { return utils.getCallHandler(this.handlers) }
-  get objectsToDraw() { return [] }
+
+  get objectsToDraw() {
+    const edges = this.edgesToDraw
+    const nodes = this.nodesToDraw
+    const texts = this.textsToDraw
+    const legend = this.legend ? this.legend.objectsToDraw : []
+
+    return edges.concat(nodes).concat(texts).concat(legend)
+  }
 
   set mouseState(value) { this._mouseState = value }
   get mouseState() {

@@ -1,13 +1,68 @@
 import * as d3 from 'd3'
+import * as shapes from '../../shapes'
 
 export class Simulation {
-  constructor(nodes, settings) {
+  constructor(settings, nodes, links, previousNodePositions={}) {
     this.settings = settings
-    this.nodes = nodes
+    this.nodes = this.createNodes(nodes, previousNodePositions)
+    this.links = this.createLinks(links)
     this.isFrozen = false
 
     this.simulation = d3.forceSimulation(this.nodes)
     this.simulation.alphaDecay = 0.001
+  }
+
+  /*
+   * previousNodePositions is a dictionary where:
+   * - keys are node names
+   * - values are node positions
+    * */
+  createNodes(rawNodes, previousNodePositions) {
+    let nodes = []
+    for (let [i, rawNode] of Object.entries(rawNodes)) {
+      const node = new shapes.Circle()
+      const previousPosition = previousNodePositions[rawNode.name] || {}
+      Object.entries(previousPosition).forEach(([key, value]) => node[key] = value)
+      Object.entries(rawNode).forEach(([key, value]) => node[key] = value)
+      nodes.push(node)
+    }
+
+    return nodes
+  }
+
+  /* nodes persist between layers (for the simulation's sake), so when the
+   * network changes:
+   * - reset the node metadata
+   *    - save those nodes' x/y positions under their name, for later layer-coherence
+   * - for all the nodes in the layer metadata, use the nodeNameToIdMap to set
+   *   corresponding node's values
+   * - for any node in the old network that also exists in the new one:
+   *    - set that new node's x/y positions to the old one's
+    * */
+  get nodePositions() {
+    let nodePositions = {}
+    for (let node of this.nodes) {
+      nodePositions[node.name] = {
+        'x': node.x,
+        'y': node.y,
+        'fx': node.fx,
+        'fy': node.fy,
+        'vx': node.vx,
+        'vy': node.vy,
+      }
+    }
+
+    return nodePositions
+  }
+
+  createLinks(links) {
+    return links.map(link => {
+      return {
+        'source': this.nodes[link.source],
+        'target': this.nodes[link.target],
+        'weight': link.weight,
+      }
+    })
   }
 
   get forces() {
