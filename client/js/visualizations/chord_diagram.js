@@ -9,7 +9,14 @@ import * as d3 from 'd3'
 
 export class ChordDiagramVisualization extends AbstractVisualization {
   static get settingsObject() { return ChordDiagramSettings }
-  static get opacity() { return .5 }
+
+  get opacities() {
+    return {
+      'default': .5,
+      'focus': .7,
+      'fade': .3,
+    }
+  }
 
   get widgets() { return chordDiagramWidgets() }
 
@@ -22,15 +29,14 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   get listeners() {
     return {
       "mousemove": event => {
-        this.setTextsToDraw()
+        this.setFocusedElements()
+        this.updateFocusedElements()
         this.canvas.redraw()
       },
     }
   }
 
-  constructor(settings, menu, canvas, layer) {
-    super(settings, menu, canvas, layer)
-
+  initialize() {
     // FIX SETTINGS
     this.objectSettings = {
       'radius': {
@@ -39,6 +45,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
         'inner': 250,
       },
     }
+
+    this.resetFocusedElements()
 
     this.chordFunction = d3.chord()
       .padAngle(0.03)
@@ -65,7 +73,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
     this.setNodesToDraw()
     this.setEdgesToDraw()
-    this.setTextsToDraw()
+    this.setTexts()
+    this.updateFocusedElements()
   }
 
   setVisualizationObjects() {
@@ -74,10 +83,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     let elementsBySortAttribute = Object.entries(
       this.layer.constructor[sortAttribute](this.layer.matrix)
     ).sort((a, b) => a[1] - b[1])
-
-    if (this.settings.sortNodes == 'descending') {
-      elementsBySortAttribute = elementsBySortAttribute.reverse()
-    }
 
     this.matrix = []
     this.nodes = {}
@@ -120,7 +125,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     for (let [i, arc] of this.groups.entries()) {
       const color = this.attributes.nodeColor.getNodeColorValue(this.nodes[i])
       const path = this.nodePathFunction(arc)
-      this.nodesToDraw.push(new shapes.Path(path, color, this.constructor.opacity))
+      this.nodesToDraw.push(new shapes.Path(path, color))
     }
   }
 
@@ -129,19 +134,71 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     for (let [i, chord] of Object.entries(this.chords)) {
       const color = this.attributes.edgeColor.getColorValue(this.edgeRatios[i])
       const path = this.edgePathFunction(chord)
-      this.edgesToDraw.push(new shapes.Path(path, color, this.constructor.opacity))
+      this.edgesToDraw.push(new shapes.Path(path, color))
     }
   }
 
-  setTextsToDraw() {
-    this.textsToDraw = []
+  setTexts() {
+    this.texts = []
     for (let [i, nodeToDraw] of Object.entries(this.nodesToDraw)) {
-      if (nodeToDraw.containsPoint(this.mouseState.x, this.mouseState.y)) {
-        const [x, y] = this.annotationsArc.centroid(this.groups[i])
-        const textAlign = x > 0 ? 'left' : 'right'
-        const text = this.nodes[i].name
-        this.textsToDraw.push(new shapes.Text(text, x, y, undefined, undefined, textAlign))
-      }
+      const [x, y] = this.annotationsArc.centroid(this.groups[i])
+      this.texts.push(new shapes.Text(this.nodes[i].name, x, y))
     }
+  }
+
+  /*
+   * If the mouse is in a node, highlight:
+   * - the node's arc 
+   * - the edges it is involved in
+   *
+   * If the mouse is in an edge, highlight:
+   * - the edge's chord
+   * - the nodes it connects
+    * */
+  setFocusedElements() {
+    this.resetFocusedElements()
+
+    this.groups.forEach((group, i) => {
+      if (this.canvas.isPointInPath(this.nodesToDraw[i].path, this.mouseState.x, this.mouseState.y)) {
+        this.focusedElements.nodes.push(i)
+        for (let [j, chord] of Object.entries(this.chords)) {
+          if (chord.source.index === i || chord.target.index === i) {
+            this.focusedElements.edges.push(j)
+          }
+        }
+      }
+    })
+
+    this.chords.forEach((chord, i) => {
+      if (this.canvas.isPointInPath(this.edgesToDraw[i].path, this.mouseState.x, this.mouseState.y)) {
+        this.focusedElements.edges.push(i)
+        this.focusedElements.nodes.push(chord.source.index)
+
+        if (chord.target.index !== chord.source.index) {
+          this.focusedElements.nodes.push(chord.target.index)
+        }
+      }
+    })
+  }
+
+  resetFocusedElements() {
+    this.focusedElements = {
+      'nodes': [],
+      'edges': [],
+    }
+  }
+
+  updateFocusedElements() {
+    this.textsToDraw = this.focusedElements.nodes.map(i => this.texts[i])
+
+    const defaultOpacity = this.focusedElements.nodes.length > 0 || this.focusedElements.edges.length > 0
+      ? this.opacities.fade
+      : this.opacities.default
+
+    this.nodesToDraw.forEach(node => node.opacity = defaultOpacity)
+    this.edgesToDraw.forEach(edge => edge.opacity = defaultOpacity)
+
+    this.focusedElements.edges.forEach(i => this.edgesToDraw[i].opacity = this.opacities.focus)
+    this.focusedElements.nodes.forEach(i => this.nodesToDraw[i].opacity = this.opacities.focus)
   }
 }

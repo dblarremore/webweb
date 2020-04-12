@@ -40,10 +40,8 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
   get nodePositions() { return this.simulation.nodePositions }
 
-  constructor(settings, menu, canvas, layer, previousNodePositions) {
-    super(settings, menu, canvas, layer, previousNodePositions)
-
-    this.simulation = new Simulation(this.settings, this.layer, this.canvas, previousNodePositions)
+  initialize() {
+    this.simulation = new Simulation(this.settings, this.layer, this.canvas, this.previousNodePositions)
 
     const edgeWeights = this.layer.links.map(link => link.weight)
 
@@ -90,6 +88,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
       node.radius *= focusOnNode ? this.NodeFocusRadiusMultiplier : 1
       node.outline = focusOnNode ? 'black' : Coloror.defaultColor
       node.color = this.attributes.nodeColor.getNodeColorValue(node)
+      node.makePath()
       return node
     })
   }
@@ -97,10 +96,8 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   get textsToDraw() {
     return this.nodesToShowTextFor.map(node => {
       const radius = node.radius * this.TextRadiusMultiplier
-      const text = node.name
-      const x = node.x + radius
-      const y = node.y - radius
-      return new shapes.Text(text, x, y)
+      const x = node.x + radius * (node.x < 0 ? -1 : 1)
+      return new shapes.Text(node.name, x, node.y)
     })
   }
 
@@ -143,7 +140,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   setMouseoverNode() {
     this.mouseoverNode = undefined
     for (let node of this.simulation.nodes) {
-      if (node.containsPoint(this.mouseState.x, this.mouseState.y)) {
+      if (this.canvas.isPointInPath(node.path, this.mouseState.x, this.mouseState.y)) {
         this.mouseoverNode = node
         return
       }

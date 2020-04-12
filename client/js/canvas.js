@@ -40,7 +40,7 @@ export class WebwebCanvas {
 
   reset() {
     this.context.restore()
-    this.setTranslation(-1 * this.xTranslate, -1 * this.yTranslate)
+    this.setTranslation()
     this.context.save()
     this.clear()
   }
@@ -87,23 +87,40 @@ export class WebwebCanvas {
     this.draw()
   }
 
-  defaultDrawProperties() {
-
-  }
-
   draw() {
-    const objects = this.visualization.objectsToDraw
-    const objectDrawProperties = objects.map(object => [object.stringifiedDrawProperties, object]).sort()
-    let lastPropertyString = undefined
-    this.context.save()
-    for (let [propertyString, object] of objectDrawProperties) {
-      if (propertyString !== lastPropertyString) {
-        object.setCanvasContextProperties(this.context)
-        lastPropertyString = propertyString
+    let objectsByDrawProperties = {}
+    let pathsByDrawProperties = {}
+    for (let object of this.visualization.objectsToDraw) {
+      const propertyKey = object.stringifiedDrawProperties
+      if (objectsByDrawProperties[propertyKey] === undefined) {
+        objectsByDrawProperties[propertyKey] = []
+      }
+      
+      objectsByDrawProperties[propertyKey].push(object)
+
+      if (pathsByDrawProperties[propertyKey] === undefined) {
+        pathsByDrawProperties[propertyKey] = new Path2D()
       }
 
-      object.draw(this.context)
+      if (object.path) {
+        pathsByDrawProperties[propertyKey].addPath(object.path)
+      }
     }
+
+    for (let [key, objects] of Object.entries(objectsByDrawProperties)) {
+      objects[0].setCanvasContextProperties(this.context)
+      objects.forEach(object => object.write(this.context))
+      this.context.fill(pathsByDrawProperties[key])
+      this.context.stroke(pathsByDrawProperties[key])
+    }
+  }
+
+  isPointInPath(path, x, y) {
+    return this.context.isPointInPath(
+      path,
+      this.dpr * (x + this.xTranslate),
+      this.dpr * (y + this.yTranslate)
+    )
   }
 
   svgDraw() {

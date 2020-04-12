@@ -15,6 +15,7 @@ import { Network } from './network'
 import { WebwebCanvas } from './canvas'
 import { ForceDirectedVisualization } from './visualizations/force_directed'
 import { ChordDiagramVisualization } from './visualizations/chord_diagram'
+import { AdjacencyMatrixVisualization } from './visualizations/adjacency_matrix'
 import { BasicWebwebWidgets } from './widget'
 import * as widgets  from './widget'
 import * as utils from './utils'
@@ -144,6 +145,9 @@ export class Webweb {
     }
     else if (settings.plotType == 'Chord Diagram') {
       Visualizer = ChordDiagramVisualization
+    }
+    else if (settings.plotType == 'Adjacency Matrix') {
+      Visualizer = AdjacencyMatrixVisualization
     }
     return Visualizer
   }

@@ -267,7 +267,11 @@ export function BasicWebwebWidgets() {
           'text': "Visualization type ",
           'settingName': 'plotType',
           'setHandler': 'display-network',
-          'options': ['Force Directed', 'Chord Diagram']
+          'options': [
+            'Force Directed',
+            'Chord Diagram',
+            'Adjacency Matrix',
+          ]
         }
       ],
     ],

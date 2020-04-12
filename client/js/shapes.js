@@ -5,11 +5,12 @@ class Shape {
   translate(x, y) {
     this.x += x
     this.y += y
+    this.makePath()
   }
 
-  containsPoint(x, y) {
-    return false
-  }
+  makePath() { return }
+
+  write(context) { return }
 
   get drawProperties() { return [] }
   
@@ -19,7 +20,9 @@ class Shape {
       if (string.length) {
         string += '-'
       }
-      string += this[property].toString()
+      const str = this[property] !== undefined ? this[property].toString() : undefined
+      string += str
+      // string += this[property].toString()
     }
     return string
   }
@@ -69,33 +72,16 @@ export class Circle extends Shape {
     this.radius = radius
     this.outline = outline
     this.color = color
+    this.makePath()
   }
 
-  draw(context) {
-    context.beginPath()
-    context.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
-    context.stroke()
-    context.fill()
+  makePath() {
+    this.path = new Path2D()
+    this.path.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
   }
 
   get svg() {
     return svgUtils.drawCircle(this.x, this.y, this.radius, this.outline, this.color)
-  }
-
-  containsPoint(x, y) {
-    const radius = this.radius ? this.radius : 1
-    return this.constructor.containsPoint(this.x, this.y, radius, x, y)
-  }
-
-  static containsPoint(x, y, radius, pointX, pointY) {
-    if (
-      x - radius <= pointX && pointX <= x + radius && 
-      y - radius <= pointY && pointY <= y + radius
-    ) {
-      return true
-    }
-
-    return false
   }
 }
 
@@ -111,6 +97,13 @@ export class Line extends Shape {
     this.width = width
     this.opacity = opacity
     this.outline = color
+    this.makePath()
+  }
+
+  makePath() {
+    this.path = new Path2D()
+    this.path.moveTo(this.x1, this.y1)
+    this.path.lineTo(this.x2, this.y2)
   }
 
   translate(x, y) {
@@ -118,13 +111,7 @@ export class Line extends Shape {
     this.y1 += y
     this.x2 += x
     this.y2 += y
-  }
-
-  draw(context) {
-    context.beginPath()
-    context.moveTo(this.x1, this.y1)
-    context.lineTo(this.x2, this.y2)
-    context.stroke()
+    this.makePath()
   }
 
   get svg() {
@@ -135,8 +122,38 @@ export class Line extends Shape {
   }
 }
 
+export class Rectangle extends Shape {
+  get drawProperties() { return ['outline', 'color', 'opacity'] }
+
+  constructor(x, y, width, height, opacity, color, outline) {
+    super()
+    this.x = x
+    this.y = y
+    this.width = width
+    this.height = height
+    this.opacity = opacity
+    this.color = color
+    this.outline = outline
+    this.makePath()
+  }
+
+  makePath() {
+    this.path = new Path2D()
+    this.path.moveTo(this.x, this.y)
+    this.path.rect(this.x, this.y, this.width, this.height)
+  }
+
+  get svg() {
+    console.log('not implemented yet')
+    // return svgUtils.drawLine(
+    //   this.target.x, this.target.y, this.source.x, this.source.y,
+    //   this.color, this.opacity, this.width
+    // )
+  }
+}
+
 export class Text extends Shape {
-  get drawProperties() { return ['color', 'font', 'align', 'textBaseline'] }
+  get drawProperties() { return ['color', 'font'] }
 
   constructor(value, x, y, font='12px', align='left', color='black') {
     super()
@@ -145,11 +162,12 @@ export class Text extends Shape {
     this.x = x
     this.y = y
     this.font = font
-    this.align = align
-    this.textBaseline = 'middle'
   }
 
-  draw(context) {
+  write(context) {
+    context.textAlign = this.x < 0 ? 'right' : 'left'
+    context.textBaseline = this.y < 0 ? 'bottom' : 'top'
+
     context.fillText(this.value, this.x, this.y)
   }
 
@@ -161,50 +179,21 @@ export class Text extends Shape {
 export class Path extends Shape {
   get pathSamples() { return 200 }
   get drawProperties() { return ['color', 'outline', 'opacity'] }
-  constructor(path, color, opacity, outline) {
+  constructor(pathString, color, opacity, outline) {
     super()
-    this.path = path
+    this.pathString = pathString
     this.color = color
     this.opacity = opacity
     this.outline = outline || d3.rgb(color).darker().hex()
+
+    this.makePath()
   }
 
-  draw(context) {
-    const path = new Path2D(this.path)
-    context.beginPath()
-    context.stroke(path)
-    context.fill(path)
-  }
-
-  containsPoint(x, y) {
-    return d3.polygonContains(this.points, [x, y])
+  makePath() {
+    this.path = new Path2D(this.pathString)
   }
 
   get svg() {
-    return svgUtils.drawPath(this.path, this.opacity, this.color, this.outline)
-  }
-
-  get points() {
-    if (this._points === undefined) {
-      this.setPoints()
-    }
-
-    return this._points
-  }
-
-  /*
-   * This is very much a hack. Basically we sample along the path to get a
-   * series of points to then do an inside/outside check later for mouse
-   * presence
-    * */
-  setPoints() {
-    const element = this.svg
-    const totalLength = element.getTotalLength()
-    this._points = []
-    for (let i = 0; i < this.pathSamples; i++) {
-      const length = (i / this.pathSamples) * totalLength
-      const svgPoint = element.getPointAtLength(length)
-      this._points.push([svgPoint.x, svgPoint.y])
-    }
+    return svgUtils.drawPath(this.pathString, this.opacity, this.color, this.outline)
   }
 }

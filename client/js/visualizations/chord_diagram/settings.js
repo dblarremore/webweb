@@ -37,6 +37,13 @@ export class ChordDiagramSettings extends SettingsObject {
         'type': 'color',
         'from': 'layer',
       },
+      'nodeSize': {
+        'input': 'sizeNodesBy',
+        'flip': 'flipNodeSizeScale',
+        'range': "nodeSizeScaleRange",
+        'from': 'layer',
+        'type': 'size',
+      },
       'edgeColor': {
         'flip': 'flipEdgeColorScale',
         'colorPalette': 'edgeColorPalette',

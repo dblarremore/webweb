@@ -14,20 +14,15 @@ export function chordDiagramWidgets() {
             'options': ['out degree', 'in degree'],
           },
         ],
-        [
-          SelectWidget,
-          {
-            'text': " ",
-            'settingName': 'sortNodes',
-            'setHandler': 'redraw',
-            'options': ['ascending', 'descending']
-          }
-        ]
       ],
       'nodeColor': [
         ColorNodesSelectWidget,
         NodeColorPaletteSelectWidget,
         FlipNodeColorScaleWidget,
+      ],
+      'nodeSize': [
+        SizeNodesSelectWidget,
+        FlipNodeSizeScaleWidget,
       ],
       'edges': [
         [
@@ -103,3 +98,28 @@ class FlipNodeColorScaleWidget extends CheckboxWidget {
 
   get visible() { return super.visible && this.settings.colorNodesBy !== 'none' }
 }
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Node Size
+////////////////////////////////////////////////////////////////////////////////
+class SizeNodesSelectWidget extends SelectWidget {
+  setProperties() {
+    this.text = "Scale node sizes by "
+    this.settingName = 'sizeNodesBy'
+    this.setHandler = 'redraw'
+  }
+
+  get options() { return Object.keys(this.attributes.size) }
+}
+
+class FlipNodeSizeScaleWidget extends CheckboxWidget {
+  setProperties() {
+    this.text = " flip sizes "
+    this.settingName = 'flipNodeSizeScale'
+    this.setHandler = 'redraw'
+  }
+
+  get visible() { return super.visible && this.settings.sizeNodesBy !== 'none' }
+}
+

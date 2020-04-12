@@ -15,7 +15,10 @@ export class AbstractVisualization {
     this.canvas.visualization = this
 
     this.addWidgets()
+    this.initialize()
   }
+
+  initialize() { return }
 
   static get settingsObject() { return undefined }
   get nodePositions() { return {} }
@@ -27,9 +30,9 @@ export class AbstractVisualization {
   get callHandler() { return utils.getCallHandler(this.handlers) }
 
   get objectsToDraw() {
-    const edges = this.edgesToDraw
-    const nodes = this.nodesToDraw
-    const texts = this.textsToDraw
+    const edges = this.edgesToDraw || []
+    const nodes = this.nodesToDraw || []
+    const texts = this.textsToDraw || []
     const legend = this.legend ? this.legend.objectsToDraw : []
 
     return edges.concat(nodes).concat(texts).concat(legend)
