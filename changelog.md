@@ -1,3 +1,8 @@
+## 20200000 - 0.0.39
+
+- multiple visualization types.
+- webweb tries to align text intelligently (away from the center of the visualization)
+
 ## 20191207 - 0.0.38
 
 - save as png

@@ -9,6 +9,9 @@ import * as d3 from 'd3'
 
 export class ChordDiagramVisualization extends AbstractVisualization {
   static get settingsObject() { return ChordDiagramSettings }
+  
+  get directed() { return false }
+  get weighted() { return true }
 
   get opacities() {
     return {
@@ -63,13 +66,20 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     this.edgePathFunction = d3.ribbon()
       .radius(this.objectSettings.radius.inner)
 
+    this.edgeRatios = this.layer.undirectedLinks.map(
+      link => this.convertEdgesToRatios(link.source, link.target, this.layer.matrix)
+    )
+
+    this.availableAttributes = {
+      'edgeColor': new DivergingScalarAttribute('edgeRatio', this.edgeRatios),
+    }
+
     this.update()
   }
 
   update() {
-    this.setVisualizationObjects()
-
     this.setActiveAttributes()
+    this.setVisualizationObjects()
 
     this.setNodesToDraw()
     this.setEdgesToDraw()
@@ -81,19 +91,19 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     const sortAttribute = this.settings.sortNodesBy == 'out degree' ? 'outDegrees' : 'inDegrees'
 
     let elementsBySortAttribute = Object.entries(
-      this.layer.constructor[sortAttribute](this.layer.matrix)
+      this.layer[sortAttribute](this.layer.matrix)
     ).sort((a, b) => a[1] - b[1])
 
-    this.matrix = []
-    this.nodes = {}
+    let matrix = []
+    this.nodeSortMap = []
     let counter = 0
     for (let [i, v] of elementsBySortAttribute) {
-      this.matrix.push(this.layer.matrix[i])
-      this.nodes[counter] = this.layer.nodes[i]
+      matrix.push(this.layer.matrix[i])
+      this.nodeSortMap[i] = counter
       counter += 1
     }
 
-    const chordsD3 = this.chordFunction(this.matrix) 
+    const chordsD3 = this.chordFunction(matrix) 
     this.groups = chordsD3.groups
 
     this.chords = []
@@ -103,17 +113,36 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       }
     }
 
-    this.edgeRatios = this.chords.map(chord => this.convertEdgesToRatios(this.matrix, chord))
+    this.edgeSortMap = new Array(this.layer.undirectedLinks.length).fill(-1)
+    this.layer.undirectedLinks.forEach((link, i) => {
+      let source = +link.source
+      let target = +link.target
 
-    this.availableAttributes = {
-      'edgeColor': new DivergingScalarAttribute('edgeRatio', this.edgeRatios),
-    }
+      for (let [j, chord] of Object.entries(this.chords)) {
+        if (source === chord.source.index && target === chord.target.index) {
+          this.edgeSortMap[i] = j
+          break
+        }
+        else if (target === chord.source.index && source === chord.target.index) {
+          this.edgeSortMap[i] = j
+          break
+        }
+      }
+    })
   }
 
-  convertEdgesToRatios(matrix, object){
-    let source = object.source.index
-    let target = object.target.index
+  /*
+    * because we sort and do fancy things, there's not a correspondence between
+    * index and arc. it's a d3 bullshit thing. */
+  getNodeArc(index) {
+    return this.groups[this.nodeSortMap[index]]
+  }
 
+  getEdgeChord(index) {
+    return this.chords[this.edgeSortMap[index]]
+  }
+
+  convertEdgesToRatios(source, target, matrix){
     let outWeight = matrix[source][target]
     let inWeight = matrix[target][source] || 1
 
@@ -122,18 +151,18 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
   setNodesToDraw() {
     this.nodesToDraw = []
-    for (let [i, arc] of this.groups.entries()) {
-      const color = this.attributes.nodeColor.getNodeColorValue(this.nodes[i])
-      const path = this.nodePathFunction(arc)
+    for (let [i, node] of Object.entries(this.layer.nodes)) {
+      const color = this.attributes.nodeColor.getColorValue(this.attributeValues.nodeColor[i])
+      const path = this.nodePathFunction(this.getNodeArc(i))
       this.nodesToDraw.push(new shapes.Path(path, color))
     }
   }
 
   setEdgesToDraw() {
     this.edgesToDraw = []
-    for (let [i, chord] of Object.entries(this.chords)) {
+    for (let [i, link] of Object.entries(this.layer.undirectedLinks)) {
       const color = this.attributes.edgeColor.getColorValue(this.edgeRatios[i])
-      const path = this.edgePathFunction(chord)
+      const path = this.edgePathFunction(this.getEdgeChord(i))
       this.edgesToDraw.push(new shapes.Path(path, color))
     }
   }
@@ -141,8 +170,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   setTexts() {
     this.texts = []
     for (let [i, nodeToDraw] of Object.entries(this.nodesToDraw)) {
-      const [x, y] = this.annotationsArc.centroid(this.groups[i])
-      this.texts.push(new shapes.Text(this.nodes[i].name, x, y))
+      const [x, y] = this.annotationsArc.centroid(this.getNodeArc(i))
+      this.texts.push(new shapes.Text(this.layer.nodes[i].name, x, y))
     }
   }
 

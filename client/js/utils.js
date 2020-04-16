@@ -1,3 +1,9 @@
+export function zerosMatrix(size) {
+  let matrix = new Array(size).fill(0)
+  matrix.forEach((row, i) => matrix[i] = new Array(size).fill(0))
+  return matrix
+}
+
 export function binValues(values, bins) {
   if (bins === undefined) {
     bins = values.length < 5 ? values.length : 4

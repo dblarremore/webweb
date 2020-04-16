@@ -2,6 +2,9 @@ import * as utils from '../utils'
 import { NoneAttribute } from '../attribute'
 
 export class AbstractVisualization {
+  get directed() { return false }
+  get weighted() { return false }
+
   constructor(settings, menu, canvas, layer, previousNodePositions) {
     this.settings = this.formatSettings(settings)
     this.menu = menu
@@ -13,6 +16,8 @@ export class AbstractVisualization {
     this.canvas.setTranslation(canvas.width / 2, canvas.height / 2)
     this.canvas.addListeners(this.listeners)
     this.canvas.visualization = this
+
+    this.layerAttributes = this.layer.getAttributes(this.weighted, this.directed)
 
     this.addWidgets()
     this.initialize()
@@ -45,22 +50,30 @@ export class AbstractVisualization {
     }
   }
 
+  /*
+   * this function is getting gibberish. I've made some (very useful but) very
+   * opaque decisions, namely about using things from settings objects
+    * */
   setActiveAttributes() {
     this.attributes = {}
+    this.attributeValues = {}
 
     for (let [name, settingKeys] of Object.entries(this.constructor.settingsObject.attributes)) {
       let attribute
 
       if (settingKeys.from === 'layer') {
         // if the setting is from a selection menu, set it to the value from there
-        attribute = this.layer.attributes[settingKeys.type][this.settings[settingKeys.input]]
+        let attributeInfo = this.layerAttributes[this.settings[settingKeys.input]]
+        let attributeValues = attributeInfo.getValues(Object.values(this.layer.nodes), this.layer.matrix)
+        this.attributeValues[name] = attributeValues
+        attribute = new attributeInfo.class(this.settings[settingKeys.input], attributeValues)
       }
       else if (settingKeys.from === 'visualization') {
         attribute = this.availableAttributes[name]
       }
 
       // the attribute is a None attribute if it's not on
-      if (settingKeys.on) {
+      if (settingKeys.on !== undefined) {
         if (! this.settings[settingKeys.on]) {
           attribute = new NoneAttribute()
         }
@@ -82,6 +95,10 @@ export class AbstractVisualization {
 
       if (settingKeys.colorPalette) {
         attribute.colorPalette = this.settings[settingKeys.colorPalette]
+
+        const widget = this.menu.getSettingWidget(settingKeys.colorPalette, 'visualization')
+        widget.options = attribute.colorPalettes
+        widget.refresh(this.settings)
       }
 
       if (settingKeys.flip) {
@@ -117,7 +134,7 @@ export class AbstractVisualization {
         widgets,
         this.settings,
         this.callHandler,
-        this.layer.attributes,
+        this.layerAttributes,
       )
     }
   }

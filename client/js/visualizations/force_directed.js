@@ -41,6 +41,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   get nodePositions() { return this.simulation.nodePositions }
 
   initialize() {
+    console.log('need to give things the undirected version')
     this.simulation = new Simulation(this.settings, this.layer, this.canvas, this.previousNodePositions)
 
     const edgeWeights = this.layer.links.map(link => link.weight)

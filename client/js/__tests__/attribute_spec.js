@@ -122,6 +122,6 @@ describe("CategoricalAttribute object", () => {
   })
 
   it("tests the color palettes return for a restrictive size", () => {
-    expect(attribute.colorPalettes.length).toStrictEqual(8)
+    expect(attribute.colorPalettes.length).toStrictEqual(5)
   })
 })

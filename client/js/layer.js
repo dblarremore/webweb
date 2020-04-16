@@ -17,44 +17,39 @@ export class Layer {
       'x', 'y',
       'vx', 'vy',
       'fx', 'fy',
+      'name',
     ]
   }
 
-  constructor(edgeList, nodes, metadata, display, globalMetadata, globalNodes) {
-    this.edgeList = this.regularizeEdgeList(edgeList || [])
-    this.metadata = this.regularizeMetadata(metadata || {}, globalMetadata, {})
-    this.nodes = this.regularizeNodes(nodes || {}, globalNodes, {})
-    this.display = display || {}
+  constructor(edgeList=[], nodes, metadata, display, globalMetadata, globalNodes) {
+    const rawEdgeList = this.regularizeEdgeList(edgeList)
+    const rawNodes = this.regularizeNodes(nodes, globalNodes)
+    this.metadata = this.regularizeMetadata(metadata, globalMetadata)
 
-    this.nodeNameToIdMap = this.getNodeNameToIdMap(this.edgeList, this.metadata, this.nodes)
+    this.nodeNameToIdMap = this.getNodeNameToIdMap(rawEdgeList, this.metadata, rawNodes)
 
-    // assign metadata from the metadata vector onto the nodes
-    this.nodes = this.mergeMetadataWithNodes(this.nodes, this.metadata, this.nodeIdToNameMap)
-
-    this.links = this.createLinks(this.edgeList, this.nodeNameToIdMap)
-    this.matrix = this.createMatrix(this.edgeList, this.nodeNameToIdMap)
-
-    this.nodes = this.addEdgeMetadataToNodes(this.links, this.nodes, this.nodeIdToNameMap)
-    this.attributes =  this.getAttributes(this.nodes, this.metadata)
+    // TODO: we need to handle weighted/unweighted requests
+    this.links = this.createLinks(rawEdgeList)
+    this.nodes = this.createNodes(rawNodes, this.metadata)
   }
 
   get nodeCount() {
     return Object.keys(this.nodeNameToIdMap).length
   }
 
-  get edgeWeights() {
-    return this.links.map(link => link[2])
+  degrees(matrix) {
+    return matrix.map(row => row.filter(v => v > 0).length)
   }
 
-  get nodeIdToNameMap() {
-    return Object.fromEntries(Object.entries(this.nodeNameToIdMap).map(([k, v]) => ([v, k])))
-  }
-
-  static outDegrees(matrix) {
+  strengths(matrix) {
     return matrix.map(row => row.reduce((a, b) => a + b, 0))
   }
 
-  static inDegrees(matrix) {
+  outDegrees(matrix) {
+    return matrix.map(row => row.reduce((a, b) => a + b, 0))
+  }
+
+  inDegrees(matrix) {
     let inDegrees = []
     for (let i = 0; i < matrix.length; i++) {
       inDegrees.push(0)
@@ -72,256 +67,127 @@ export class Layer {
    * 
    *
    *********************************************************************************/
+  regularizeEdgeList(rawEdgeList) {
+    let matrix = {}
+    for (let edge of rawEdgeList) {
+      let [source, target, weight] = this.regularizeEdge(edge)
 
-  // we want to convert "string" edges into int edges
-  regularizeEdgeList(edgeList) {
-    let regularizedEdgeList = []
-    for (let edge of edgeList) {
-      // there may or may not be a weight on the edge
-      // so copy it and modify only the ids pointed to
-      let source = edge[0];
-      let target = edge[1];
-      let weight = edge.length == 3
-        ? parseFloat(edge[2])
-        : 1
+      if (matrix[source] === undefined) {
+        matrix[source] = {}
+      }
 
-      source = isNaN(source) ? source : +source
-      target = isNaN(target) ? target : +target
-      regularizedEdgeList.push(new Link(source, target, weight))
+      if (matrix[source][target] === undefined) {
+        matrix[source][target] = 0
+      }
+
+      matrix[source][target] += weight
     }
 
-    return regularizedEdgeList
+    let edges = []
+    let weights = []
+    this.isDirected = false
+    Object.keys(matrix).forEach(source => {
+      Object.keys(matrix[source]).forEach(target => {
+        const weight = matrix[source][target]
+
+        edges.push(new Link(source, target, weight))
+        weights.push(weight)
+
+        if (matrix[target] !== undefined && matrix[target][source] !== undefined) {
+          this.isDirected = true
+        }
+      })
+    })
+
+    this.isWeighted = [... new Set(edges.map(edge => edge.weight))].length !== 1
+
+    return edges
+  }
+
+  regularizeEdge(edge) {
+    let source = edge[0]
+    let target = edge[1]
+    let weight = edge.length == 3 ? parseFloat(edge[2]) : 1
+
+    source = isNaN(source) ? source : +source
+    target = isNaN(target) ? target : +target
+    return [source, target, weight]
   }
 
   // cleans up metadata representation.
-  regularizeMetadata(layerMetadata, globalMetadata) {
-    let newLayerMetadata = {};
-
+  regularizeMetadata(rawLayerMetadata, globalMetadata) {
     // default values to the global metadata
-    for (let [key, value] of Object.entries(globalMetadata)) {
-      newLayerMetadata[key] = value
-    }
+    let layerMetadata = Object.assign({}, globalMetadata || {})
 
-    if (layerMetadata !== undefined && layerMetadata !== null) {
-      // iterate over the layerMetadata keys, possibly overwriting global values
-      for (let [key, value] of Object.entries(layerMetadata)) {
-        if (newLayerMetadata[key] == undefined) {
-          newLayerMetadata[key] = {}
-        }
-
-        if (value.categories !== undefined) {
-          newLayerMetadata[key].categories = value.categories;
-        }
-
-        if (value.type !== undefined) {
-          newLayerMetadata[key].type = value.type;
-        }
-
-        if (value.values !== undefined) {
-          newLayerMetadata[key].values = value.values;
-        }
-      }
-    }
+    Object.keys(rawLayerMetadata || {}).forEach(key => {
+      layerMetadata[key] = Object.assign(layerMetadata[key] || {}, rawLayerMetadata[key])
+    })
 
     // set the type of any key that has 'categories' to categorical
-    for (let [key, value] of Object.entries(newLayerMetadata)) {
+    for (let [key, value] of Object.entries(layerMetadata)) {
       if (value.categories !== undefined) {
-        newLayerMetadata[key].type = 'categorical'
+        layerMetadata[key].type = 'categorical'
       }
     }
 
-    return newLayerMetadata;
+    return layerMetadata
   }
 
-  // does some cleaning on node representations.
-  // - adds keys from global nodes if a node is present
-  // important for nodeNameToIdMap)
-  regularizeNodes(nodes, globalNodes) {
-    let newNodes = {}
+  // adds keys from global nodes if a node is present, which is important for nodeNameToIdMap
+  regularizeNodes(rawNodes={}, globalNodes={}) {
+    let nodes = {}
+    Object.keys(globalNodes).forEach(key => {
+      key = utils.isInt(key) ? +key : key
+      nodes[key] = Object.assign({}, globalNodes[key])
+    })
 
-    for (let [_id, node] of Object.entries(nodes)) {
-      // default the node to this layer's nodes
-      _id = isNaN(_id) ? _id : +_id
-      newNodes[_id] = node
-    }
+    Object.keys(rawNodes).forEach(key => {
+      key = utils.isInt(key) ? +key : key
+      nodes[key] = Object.assign(nodes[key] || {}, rawNodes[key])
+    })
 
-    for (let [_id, globalNode] of Object.entries(globalNodes)) {
-      _id = isNaN(_id) ? _id : +_id
-      let newNode = newNodes[_id] || {}
-
-      // if there is a global node, add its values, but don't overwrite
-      for (let [attributeKey, attributeValue] of Object.entries(globalNode)) {
-        if (newNode[attributeKey] == undefined) {
-          newNode[attributeKey] = attributeValue;
-        }
-      }
-
-      newNodes[_id] = newNode
-    }
-
-    return newNodes
+    return nodes
   }
 
   // this function constructs the mapping from node names to array indices (ids)
   getNodeNameToIdMap(edgeList, metadata, nodes) {
-    let mentionedNodes = this.getNodesMentioned(edgeList, metadata, nodes);
+    let mentionedNodes = this.getNodesMentioned(edgeList, metadata, nodes)
 
-    let nodeNameToIdMap = {};
+    let nodeNameToIdMap = {}
 
-    let nextId = 0;
-    let nextName = 0;
+    let nextId = 0
+    let nextName = 0
     mentionedNodes.forEach((node) => {
       // don't assign to null nodes;
       // instead, find the largest number used in the node map
       // and use this to give them an id later.
       if (node !== null && nodeNameToIdMap[node] == undefined) {
-        nodeNameToIdMap[node] = nextId;
+        nodeNameToIdMap[node] = nextId
 
         if (utils.isInt(node)) {
-          node = +node;
-          nodeNameToIdMap[node] = nextId;
+          node = +node
+          nodeNameToIdMap[node] = nextId
 
           if (node >= nextName) {
-            nextName = node + 1;
+            nextName = node + 1
           }
         }
 
-        nextId += 1;
+        nextId += 1
       }
     })
 
     // assign the unnamed nodes ids
     mentionedNodes.forEach((name) => {
       if (name == null) {
-        nodeNameToIdMap[nextName] = nextId;
-        nodeNameToIdMap[+nextName] = nextId;
-        nextId += 1;
-        nextName += 1;
+        nodeNameToIdMap[nextName] = nextId
+        nodeNameToIdMap[+nextName] = nextId
+        nextId += 1
+        nextName += 1
       }
     })
 
     return nodeNameToIdMap
-  }
-
-  // iterate over nodes in the nodeIdToNameMap
-  // assign them their metadata values from the metadata hash of values
-  // also default node naming
-  mergeMetadataWithNodes(nodes, metadata, nodeIdToNameMap) {
-    for (let [_id, _name] of Object.entries(nodeIdToNameMap)) {
-      if (nodes[_name] == undefined) {
-        nodes[_name] = {}
-      }
-
-      if (nodes[_name]['name'] == undefined) {
-        nodes[_name]['name'] = _name
-      }
-
-      for (let [key, keyMetadata] of Object.entries(metadata)) {
-        let nodeKeyValue = nodes[_name][key]
-
-        if (keyMetadata.values !== undefined) {
-          nodeKeyValue = keyMetadata.values[_id]
-        }
-
-        // apply categories here if they're present
-        if (keyMetadata.categories !== undefined) {
-          nodeKeyValue = keyMetadata.categories[nodeKeyValue]
-        }
-
-        if (nodeKeyValue !== undefined) {
-          nodes[_name][key] = nodeKeyValue
-        }
-      }
-    }
-
-    return nodes
-  }
-
-  createLinks(edgeList, nodeNameToIdMap) {
-    let linkMatrix = {}
-
-    // reset the node degrees
-    for (let id_one of Object.values(nodeNameToIdMap)) {
-      linkMatrix[id_one] = {}
-      for (let id_two of Object.values(nodeNameToIdMap)) {
-        linkMatrix[id_one][id_two] = 0
-      }
-    }
-
-    // essentially this sums up repeated/directed edges.
-    edgeList.forEach((edge) => {
-      let source = nodeNameToIdMap[edge.source]
-      let target = nodeNameToIdMap[edge.target]
-      let weight = edge.weight !== undefined ? parseFloat(edge.weight) : 1
-
-      if (source <= target) {
-        linkMatrix[source][target] += weight
-      }
-      else {
-        linkMatrix[target][source] += weight
-      }
-    })
-
-    let links = []
-    for (let [source, targets] of Object.entries(linkMatrix)) {
-      for (let [target, weight] of Object.entries(targets)) {
-        if (weight) {
-          links.push(new Link(source, target, weight))
-        }
-      }
-    }
-
-    return links
-  }
-
-  createMatrix(edgeList, nodeNameToIdMap) {
-    let matrix = []
-    for (let i = 0; i < this.nodeCount; i++) {
-      let row = []
-      for (let j = 0; j < this.nodeCount; j++) {
-        row.push(0)
-      }
-      matrix.push(row)
-    }
-
-    for (let edge of edgeList) {
-      const i = nodeNameToIdMap[edge.source]
-      const j = nodeNameToIdMap[edge.target]
-      matrix[i][j] += edge.weight
-    }
-
-    return matrix
-  }
-
-  // adds `degree`
-  // if the network is weighted, adds `strength`
-  addEdgeMetadataToNodes(links, nodes, nodeIdToNameMap) {
-    Object.values(nodes).forEach((node) => {
-      node.degree = 0
-      node.strength = 0
-    })
-
-    links.forEach((l) => {
-      let source = nodeIdToNameMap[l.source]
-      let target = nodeIdToNameMap[l.target]
-      nodes[source].degree += 1
-      nodes[target].degree += 1
-      nodes[source].strength += l.weight
-      nodes[target].strength += l.weight
-    })
-
-    return nodes
-  }
-
-  isWeighted(nodes) {
-    let networkIsWeighted = false
-    Object.values(nodes).forEach((node) => {
-      if (node.strength !== node.degree) {
-        networkIsWeighted = true
-      }
-    })
-
-    return networkIsWeighted
   }
 
   // retrieves the nodeNames. The ordering of these is important.
@@ -330,12 +196,12 @@ export class Layer {
   // - nodes in nodes object
   // - the number of elements in each metadata attribute's values list
   getNodesMentioned(edgeList, metadata, nodes) {
-    let nodeNames = [];
+    let nodeNames = []
 
     edgeList.forEach(function(edge) {
-      nodeNames.push(edge.source);
-      nodeNames.push(edge.target);
-    });
+      nodeNames.push(edge.source)
+      nodeNames.push(edge.target)
+    })
 
     Object.keys(nodes).forEach(function(node) {
       nodeNames.push(node)
@@ -368,78 +234,168 @@ export class Layer {
 
   // Finds the maximum length of a `values` array in the metadata.
   maxMetadataValuesCount(metadata) {
-    var maxValuesCount = 0;
+    const metadataValueLengths = Object.values(metadata || {}).filter(
+      metadatum => metadatum.values !== undefined
+    ).map(metadatum => metadatum.values.length)
 
-    if (metadata == null || metadata == undefined) {
-      return maxValuesCount;
-    }
-
-    Object.values(metadata).forEach((metadatum) => {
-      let values = metadatum.values
-
-      if (values !== undefined && values.length > maxValuesCount) {
-        maxValuesCount = values.length
-      }
-    })
-
-    return maxValuesCount
+    return metadataValueLengths.length ? Math.max(...metadataValueLengths) : 0
   }
 
-  /********************************************************************************
-   *
-   *
-   *
-   * Node Attributes
-   * 
-   * 
-   * 
-  ********************************************************************************/
-  // iterates over all of the nodes and identifies the set of metadata we can
-  // include in the visualization.
-  getAttributes(nodes, metadata) {
-    let attributes = [
-      [ScalarAttribute, 'degree'],
-    ]
-
-    if (this.isWeighted(nodes) === true) {
-      attributes.push([ScalarAttribute, 'strength'])
+  get undirectedLinks() {
+    if (! this.isDirected) {
+      return this.links
+    }
+    else if (this._undirectedLinks === undefined) {
+      this._undirectedLinks = []
+      Object.keys(this.undirectedMatrix).forEach(source => {
+        Object.keys(this.undirectedMatrix[source]).forEach(target => {
+          const weight = this.undirectedMatrix[source][target]
+          if (source <= target && weight !== 0) {
+            this._undirectedLinks.push(new Link(source, target, weight))
+          }
+        })
+      })
     }
 
-    const metadataAttributes = this.getMetadataAttributes(nodes, metadata)
-    attributes = attributes.concat(metadataAttributes)
+    return this._undirectedLinks
+  }
 
-    let attributesByType = {
-      'color': {
-        'none': new NoneAttribute(),
+  get matrix() {
+    if (! this._matrix) {
+      this._matrix = utils.zerosMatrix(this.nodeCount)
+      this.links.forEach(link => this._matrix[link.source][link.target] = link.weight)
+    }
+
+    return this._matrix
+  }
+
+  get undirectedMatrix() {
+    if (! this.isDirected) {
+      return this.matrix
+    }
+    else if (this._undirectedMatrix === undefined) {
+      this._undirectedMatrix = utils.zerosMatrix(this.nodeCount)
+
+      this.links.forEach(link => {
+        const weight = link.weight / 2
+        this._undirectedMatrix[link.source][link.target] += weight
+        this._undirectedMatrix[link.target][link.source] += weight
+      })
+    }
+
+    return this._undirectedMatrix
+  }
+
+  createLinks(edgeList) {
+    return edgeList.map(edge => {
+      return new Link(
+        this.nodeNameToIdMap[edge.source],
+        this.nodeNameToIdMap[edge.target],
+        edge.weight,
+      )
+    })
+  }
+
+  // assign metadata from the metadata vector onto the nodes
+  //
+  // assign them their metadata values from the metadata hash of values
+  // also default node naming
+  createNodes(rawNodes, metadata) {
+    let nodes = []
+    for (let [name, _id] of Object.entries(this.nodeNameToIdMap)) {
+      let node = Object.assign({}, rawNodes[name] || {})
+      node['name'] = name
+
+      for (let [key, keyMetadata] of Object.entries(metadata)) {
+        let nodeKeyValue = node[key]
+
+        if (keyMetadata.values !== undefined) {
+          nodeKeyValue = keyMetadata.values[_id]
+        }
+
+        // apply categories here if they're present
+        if (keyMetadata.categories !== undefined) {
+          nodeKeyValue = keyMetadata.categories[nodeKeyValue]
+        }
+
+        if (nodeKeyValue !== undefined) {
+          node[key] = nodeKeyValue
+        }
+      }
+
+      nodes[_id] = node
+    }
+
+    return nodes
+  }
+
+  getAttributes(weighted, directed) {
+    let attributes = {
+      'none': {
+        'class': NoneAttribute,
+        'getValues': (nodes, matrix) => [],
       },
-      'size': {
-        'none': new NoneAttribute(),
+      'degree': {
+        'class': ScalarAttribute,
+        'getValues': (nodes, matrix) => this.degrees(matrix),
       },
     }
 
-    attributes.map(([attributeClass, key]) => {
-      for (let displayType of attributeClass.displays) {
-        attributesByType[displayType][key] = new attributeClass(key, nodes)
+    if (weighted && this.isWeighted) {
+      attributes = Object.assign(attributes, this.weightedAttributes)
+    }
+
+    if (directed && this.isDirected) {
+      attributes = Object.assign(attributes, this.directedAttributes)
+    }
+
+    const metadataAttributes = this.getMetadataAttributes(this.nodes, this.metadata)
+    metadataAttributes.forEach(([attributeClass, key]) => {
+      attributes[key] = {
+        'class': attributeClass,
+        'getValues': (nodes, matrix) => nodes.map(node => node[key])
       }
     })
 
-    return attributesByType
+    return attributes
+  }
+
+  get weightedAttributes() {
+    return {
+      'strength': {
+        'class': ScalarAttribute,
+        'getValues': (nodes, matrix) => this.strengths(matrix),
+      }
+
+    }
+  }
+
+  get directedAttributes() {
+    return {
+      'out degree': {
+        'class': ScalarAttribute,
+        'getValues': (nodes, matrix) => this.outDegrees(matrix),
+      },
+      'in degree': {
+        'class': ScalarAttribute,
+        'getValues': (nodes, matrix) => this.inDegrees(matrix),
+      },
+    }
   }
 
   getMetadataAttributes(nodes, metadata) {
     let allKeys = [] 
-    Object.values(nodes).map((node) => {
-      let keys = Object.keys(
-        node
-      ).filter(
+    Object.values(nodes).forEach(node => {
+      Object.keys(node).filter(
         key => utils.keyIsObjectAttribute(key, node)
       ).filter(
         key => this.constructor.nonMetadataKeys.indexOf(key) == -1
+      ).forEach(
+        key => allKeys.push(key)
       )
-        
-      allKeys = allKeys.concat(keys)
     })
-    allKeys = d3.set(allKeys).values().sort()
+
+    allKeys = [...new Set(allKeys)].sort()
 
     let attributes = []
     allKeys.forEach((key) => {
@@ -456,10 +412,6 @@ export class Layer {
   }
 
   getAttributeClassToAdd(key, type, nodes) {
-    if (key === 'name') {
-      return NoneAttribute
-    }
-
     if (key === 'color' && UserColorAttribute.isType(nodeValues)) {
       return UserColorAttribute
     }

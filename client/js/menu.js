@@ -13,6 +13,17 @@ export class Menu {
     }
   }
 
+  getSettingWidget(settingName, storeKey) {
+    for (let side of Object.keys(this.widgets)) {
+      const sideWidgets = this.widgets[side][storeKey] || []
+      const matches = sideWidgets.filter(widget => widget.settingName === settingName)
+      if (matches.length) {
+        return matches[0]
+      }
+    }
+    return undefined
+  }
+
   updateWidgets(settings, storeKey) {
     for (let side of Object.keys(this.widgets)) {
       const sideWidgets = this.widgets[side][storeKey] || []
@@ -37,7 +48,6 @@ export class Menu {
         }
 
         subwidgets.push(new Constructor(settings, callHandler, properties, attributes))
-
       }
 
       const container = document.createElement('div')

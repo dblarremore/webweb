@@ -164,18 +164,6 @@ export class Webweb {
 
     this.menu.updateWidgets(settings, this.widgetKey)
 
-    // settings = this.defaultDoByAttribute(settings, layer.attributes, 'size')
-    // settings = this.defaultDoByAttribute(settings, layer.attributes, 'color')
-
-    return settings
-  }
-
-  defaultDoByAttribute(settings, attributes, doByType) {
-    let doByKey = doByType + 'By'
-    if (! Object.keys(attributes[doByType]).includes(settings[doByKey])) {
-      settings[doByKey] = 'none'
-    }
-
     return settings
   }
 

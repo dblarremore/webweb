@@ -165,8 +165,19 @@ export class Text extends Shape {
   }
 
   write(context) {
-    context.textAlign = this.x < 0 ? 'right' : 'left'
-    context.textBaseline = this.y < 0 ? 'bottom' : 'top'
+    if (this.textAlign === undefined) {
+      context.textAlign = this.x < 0 ? 'right' : 'left'
+    }
+    else {
+      context.textAlign = this.textAlign
+    }
+    
+    if (this.textBaseline === undefined) {
+      context.textBaseline = this.y < 0 ? 'bottom' : 'top'
+    }
+    else {
+      context.textBaseline = this.textBaseline
+    }
 
     context.fillText(this.value, this.x, this.y)
   }

@@ -48,9 +48,9 @@ class EdgeColorPaletteSelectWidget extends SelectWidget {
     this.text = " with color palette "
     this.settingName = 'edgeColorPalette'
     this.setHandler = 'redraw'
+    this.options = []
   }
 
-  get options() { return DiveringColoror.palettes }
   get visible() { return super.visible && this.settings.colorEdges }
 }
 
@@ -74,7 +74,13 @@ class ColorNodesSelectWidget extends SelectWidget {
     this.setHandler = 'redraw'
   }
 
-  get options() { return Object.keys(this.attributes.color) }
+  get options() { 
+    return Object.keys(
+      this.attributes
+    ).filter(
+      key => this.attributes[key].class.displays.indexOf('color') !== -1
+    )
+  }
 }
 
 class NodeColorPaletteSelectWidget extends SelectWidget {
@@ -82,10 +88,7 @@ class NodeColorPaletteSelectWidget extends SelectWidget {
     this.text = " with color palette "
     this.settingName = 'nodeColorPalette'
     this.setHandler = 'redraw'
-  }
-
-  get options() {
-    return this.attributes.color[this.settings.colorNodesBy].colorPalettes
+    this.options = []
   }
 }
 
@@ -110,7 +113,13 @@ class SizeNodesSelectWidget extends SelectWidget {
     this.setHandler = 'redraw'
   }
 
-  get options() { return Object.keys(this.attributes.size) }
+  get options() { 
+    return Object.keys(
+      this.attributes
+    ).filter(
+      key => this.attributes[key].class.displays.indexOf('size') !== -1
+    )
+  }
 }
 
 class FlipNodeSizeScaleWidget extends CheckboxWidget {
@@ -122,4 +131,3 @@ class FlipNodeSizeScaleWidget extends CheckboxWidget {
 
   get visible() { return super.visible && this.settings.sizeNodesBy !== 'none' }
 }
-

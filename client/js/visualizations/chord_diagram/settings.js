@@ -14,10 +14,10 @@ export class ChordDiagramSettings extends SettingsObject {
       "sortNodesBy": "out degree",
       "sortNodes": 'descending',
 
+      "sizeNodesBy": "none",
+      "flipNodeSizeScale": false,
+      "nodeSizeScaleRange": [0.5, 1],
       // so far these don't exist
-      // "sizeNodesBy": "none",
-      // "flipNodeSizeScale": false,
-      // "nodeSizeScaleRange": [0.5, 1],
       // "nodesToShow": -1,
     }
   }

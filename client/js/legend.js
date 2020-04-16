@@ -27,12 +27,15 @@ export class NodeLegend {
   get objectsToDraw() {
     let objects = [this.titleText]
 
-    for (let [text, value] of this.rawObjects) {
+    for (let [string, value] of this.rawObjects) {
       const radius = this.sizeAttribute.getNumericalValue(value) * this.radius
       const color = this.colorAttribute.getColorValue(value)
       const outline = this.colorAttribute.coloror.constructor.defaultColor
 
-      objects.push(new shapes.Text(text, this.textXCoordinate, this.YCoordinate))
+      let text = new shapes.Text(string, this.textXCoordinate, this.YCoordinate)
+      text.textAlign = 'left'
+      text.textBaseline = 'middle'
+      objects.push(text)
       objects.push(new shapes.Circle(this.nodeXCoordinate, this.YCoordinate, radius, outline, color))
       this.stepYCoordinate()
     }
@@ -42,6 +45,8 @@ export class NodeLegend {
 
   get titleText() {
     let text = new shapes.Text(this.title, this.titleXCoordinate, this.YCoordinate)
+    text.textAlign = 'left'
+    text.textBaseline = 'middle'
     this.YCoordinate += (3 * this.JUSTIFY_UNIT) + this.Radius
     return text
   }

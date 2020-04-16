@@ -137,7 +137,7 @@ export class Attribute {
 }
 
 export class NoneAttribute extends Attribute {
-  static get displays() { return [] }
+  static get displays() { return ['color', 'size'] }
   get hasLegend() { return false }
 
   get colororClass() { return coloror.NoneColoror }
