@@ -54,6 +54,14 @@ export function keyIsObjectAttribute(key, object) {
   return true
 }
 
+export function getObjectAttributeKeys(object, attributesToExclude=[]) {
+  return Object.keys(object).filter(
+    key => keyIsObjectAttribute(key, object)
+  ).filter(
+    key => attributesToExclude.indexOf(key) === -1
+  )
+}
+
 export function allInts(vals) {
     for (var i in vals) {
         if (!isInt(vals[i])) {

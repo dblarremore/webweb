@@ -10,10 +10,9 @@ import * as utils from './utils'
  *
 *********************************************************************************/
 export class Layer {
-  static get nonMetadataKeys() {
+  get nonMetadataKeys() {
     return [
       'idx', 'index',
-      'degree', 'strength',
       'x', 'y',
       'vx', 'vy',
       'fx', 'fy',
@@ -86,40 +85,42 @@ export class Layer {
     let undirected = {}
     let edgeMap = {}
     for (let edge of edgeList) {
-      let [source, target, weight] = this.regularizeEdge(edge)
+      let [source, target, weight, metadata] = this.regularizeEdge(edge)
 
       const [first, second] = source <= target
         ? [source, target]
         : [target, source]
 
-      directed = this.addEdge(directed, source, target, weight)
-      undirected = this.addEdge(undirected, first, second, weight)
+      directed = this.addEdge(directed, source, target, weight, metadata)
+      undirected = this.addEdge(undirected, first, second, weight, metadata)
     }
 
-    let directedList = []
-    Object.values(directed).forEach(targets => directedList.push(...Object.values(targets)))
+    let directedList = Object.values(directed).reduce((a, b) => a.concat(Object.values(b)), [])
 
-    let undirectedList = []
-    Object.values(undirected).forEach(targets => undirectedList.push(...Object.values(targets)))
-
+    let undirectedList = Object.values(undirected).reduce((a, b) => a.concat(Object.values(b)), [])
     return [directedList, undirectedList]
   }
 
   static regularizeEdge(edge) {
-    let source = utils.safeNumberCast(edge[0])
-    let target = utils.safeNumberCast(edge[1])
-    let weight = edge.length === 3 ? parseFloat(edge[2]) : 1
-    return [source, target, weight]
+    let [one, two, three=17, four] = [1, 2]
+    let [source, target, weight=1, metadata={}] = edge
+    
+    source = utils.safeNumberCast(source)
+    target = utils.safeNumberCast(target)
+    weight = parseFloat(weight)
+
+    return [source, target, weight, metadata]
   }
 
-  static addEdge(edgeMap, source, target, weight) {
+  static addEdge(edgeMap, source, target, weight, metadata) {
     edgeMap[source] = edgeMap[source] || {}
 
     if (edgeMap[source][target]) {
+      edgeMap[source][target].metadata = Object.assign(edgeMap[source][target].metadata, metadata)
       edgeMap[source][target].weight += weight
     }
     else {
-      edgeMap[source][target] = new Edge(source, target, weight)
+      edgeMap[source][target] = new Edge(source, target, weight, metadata)
     }
 
     return edgeMap
@@ -337,10 +338,17 @@ export class Layer {
    *
    *********************************************************************************/
   getAttributes(weighted, directed) {
+    return {
+      'node': this.getNodeAttributes(weighted, directed),
+      'edge': this.getEdgeAttributes(weighted, directed),
+    }
+  }
+
+  getNodeAttributes(weighted, directed) {
     let attributes = {
       'none': {
         'class': NoneAttribute,
-        'getValues': (nodes, matrix) => [],
+        'getValues': () => [],
       },
       'degree': {
         'class': ScalarAttribute,
@@ -348,78 +356,87 @@ export class Layer {
       },
     }
 
-    console.log('hello?')
-    console.log(this.isWeighted)
-
     if (weighted && this.isWeighted) {
-      attributes = Object.assign(attributes, this.weightedAttributes)
-    }
-
-    if (directed && this.isDirected) {
-      attributes = Object.assign(attributes, this.directedAttributes)
-    }
-
-    const metadataAttributes = this.getMetadataAttributes(this.nodes, this.metadataTypes)
-    metadataAttributes.forEach(([attributeClass, key]) => {
-      attributes[key] = {
-        'class': attributeClass,
-        'getValues': (nodes, matrix) => nodes.map(node => node[key])
-      }
-    })
-
-    return attributes
-  }
-
-  get weightedAttributes() {
-    return {
-      'strength': {
+      attributes['strength'] = {
         'class': ScalarAttribute,
         'getValues': (nodes, matrix) => this.strengths(matrix),
       }
     }
-  }
 
-  get directedAttributes() {
-    return {
-      'out degree': {
+    if (directed && this.isDirected) {
+      attributes['out degree'] = {
         'class': ScalarAttribute,
         'getValues': (nodes, matrix) => this.outDegrees(matrix),
-      },
-      'in degree': {
+      }
+
+      attributes['in degree'] = {
         'class': ScalarAttribute,
         'getValues': (nodes, matrix) => this.inDegrees(matrix),
+      }
+    }
+
+    Object.assign(attributes, this.getElementMetadataAttributes(this.nodes, this.metadataTypes))
+
+    return attributes
+  }
+
+  getEdgeAttributes(weighted, directed) {
+    let attributes = {
+      'none': {
+        'class': NoneAttribute,
+        'getValues': () => [],
+      },
+      'weight': {
+        'class': ScalarAttribute,
+        'getValues': (nodes, matrix, edges) => edges.map(edge => edge.weight),
       },
     }
+
+    Object.assign(
+      attributes,
+      this.getElementMetadataAttributes(this.edges.map(edge => edge.metadata), this.metadataTypes)
+    )
+
+    return attributes
   }
 
-  getMetadataAttributes(nodes, metadataTypes) {
-    let allKeys = [] 
-    Object.values(nodes).forEach(node => {
-      Object.keys(node).filter(
-        key => utils.keyIsObjectAttribute(key, node)
-      ).filter(
-        key => this.constructor.nonMetadataKeys.indexOf(key) == -1
-      ).forEach(
-        key => allKeys.push(key)
-      )
+  getElementMetadataAttributes(metadataElements, metadataTypes={}) {
+    let metadataValues = {}
+    metadataElements.forEach((element, index) => {
+      const attributeKeys = utils.getObjectAttributeKeys(element, this.nonMetadataKeys)
+
+      // need to add undefined elements even we don't have values
+      attributeKeys.forEach(key => {
+        if (metadataValues[key] === undefined) {
+          metadataValues[key] = new Array(metadataElements.length)
+        }
+
+        metadataValues[key][index] = element[key]
+      })
     })
 
-    allKeys = [...new Set(allKeys)].sort()
+    let metadata = {}
+    Object.entries(metadataValues).forEach(([key, values]) => {
+      const AttributeClass = this.getAttributeClassToAdd(key, values, metadataTypes[key])
 
-    let attributes = allKeys.map(key => this.getAttributeClassToAdd(key, metadataTypes[key], nodes))
+      if (AttributeClass !== undefined) {
+        metadata[key] = {
+          'class': AttributeClass,
+          'getValues': (nodes, matrix) => Object.values(nodes).map(node => node[key]),
+        }
+      }
+    })
 
-    return attributes.filter(AttributeClass => AttributeClass !== undefined)
+    return metadata
   }
 
-  getAttributeClassToAdd(key, type, nodes) {
-    if (key === 'color' && UserColorAttribute.isType(nodeValues)) {
+  getAttributeClassToAdd(key, values, type) {
+    if (key === 'color' && UserColorAttribute.isType(values)) {
       return UserColorAttribute
     }
 
-    const nodeValues = Object.values(nodes).map(node => node[key])
-
     if ((type !== undefined) && (type === 'categorical')) {
-      if (ScalarCategoricalAttribute.isType(nodeValues)) {
+      if (ScalarCategoricalAttribute.isType(values)) {
         return ScalarCategoricalAttribute
       }
       else {
@@ -435,7 +452,7 @@ export class Layer {
     ]
 
     for (let AttributeClass of orderedAttributes) {
-      if (AttributeClass.isType(nodeValues)) {
+      if (AttributeClass.isType(values)) {
         return AttributeClass
       }
     }
@@ -445,10 +462,11 @@ export class Layer {
 }
 
 export class Edge {
-  constructor(source, target, weight=0) {
+  constructor(source, target, weight=0, metadata={}) {
     this.source = source
     this.target = target
     this.weight = weight
+    this.metadata = metadata
   }
 
   get nodes() {

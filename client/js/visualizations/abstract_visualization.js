@@ -63,8 +63,11 @@ export class AbstractVisualization {
 
       if (settingKeys.from === 'layer') {
         // if the setting is from a selection menu, set it to the value from there
-        let attributeInfo = this.layerAttributes[this.settings[settingKeys.input]]
-        let attributeValues = attributeInfo.getValues(Object.values(this.layer.nodes), this.layer.matrix)
+        let attributeInfo = this.layerAttributes['node'][this.settings[settingKeys.input]]
+        let attributeValues = attributeInfo.getValues(
+          Object.values(this.layer.nodes),
+          this.layer.matrix,
+        )
         this.attributeValues[name] = attributeValues
         attribute = new attributeInfo.class(this.settings[settingKeys.input], attributeValues)
       }
@@ -134,7 +137,7 @@ export class AbstractVisualization {
         widgets,
         this.settings,
         this.callHandler,
-        this.layerAttributes,
+        this.layerAttributes['node'],
       )
     }
   }

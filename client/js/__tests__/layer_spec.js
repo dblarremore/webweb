@@ -1,26 +1,31 @@
 import { Layer, Edge } from '../layer'
 import { Attribute, NameAttribute, ScalarAttribute, BinaryAttribute, DegreeAttribute, CategoricalAttribute } from '../attribute'
 
-describe("edgelist regularization", () => {
+describe("regularizeEdge", () => {
   describe("edge regularization", () => {
     it("numerical edge without weight", () => {
-      expect(Layer.regularizeEdge([0, 1])).toStrictEqual([0, 1, 1])
+      expect(Layer.regularizeEdge([0, 1])).toStrictEqual([0, 1, 1, {}])
     })
 
     it("numerical edge with integer weight", () => {
-      expect(Layer.regularizeEdge([0, 1, 2])).toStrictEqual([0, 1, 2])
+      expect(Layer.regularizeEdge([0, 1, 2])).toStrictEqual([0, 1, 2, {}])
     })
 
     it("numerical edge with float weight", () => {
-      expect(Layer.regularizeEdge([0, 1, .5])).toStrictEqual([0, 1, .5])
+      expect(Layer.regularizeEdge([0, 1, .5])).toStrictEqual([0, 1, .5, {}])
     })
 
     it("numerical edge with string float weight", () => {
-      expect(Layer.regularizeEdge([0, 1, ".5"])).toStrictEqual([0, 1, .5])
+      expect(Layer.regularizeEdge([0, 1, ".5"])).toStrictEqual([0, 1, .5, {}])
     })
 
     it("string edge without weight", () => {
-      expect(Layer.regularizeEdge(["0", "1"])).toStrictEqual([0, 1, 1])
+      expect(Layer.regularizeEdge(["0", "1"])).toStrictEqual([0, 1, 1, {}])
+    })
+
+    it("string edge with weight and metadata", () => {
+      const metadata = {'test': 'pass'}
+      expect(Layer.regularizeEdge(["0", "1", 1, metadata])).toStrictEqual([0, 1, 1, metadata])
     })
   })
 })
@@ -29,6 +34,7 @@ describe("addEdge", () => {
   it("creates a new edge when one does not exist", () => {
     expect(Layer.addEdge({}, 0, 1, 2)).toStrictEqual({0: {1: new Edge(0, 1, 2)}})
   })
+
   it("adds to an existing edge when it exists", () => {
     const edgeMap = {
       0: {
@@ -36,6 +42,23 @@ describe("addEdge", () => {
       }
     }
     expect(Layer.addEdge(edgeMap, 0, 1, 3)).toStrictEqual({0: {1: new Edge(0, 1, 5)}})
+  })
+
+  it("applies edge metadata", () => {
+    const edgeMap = {
+      0: {
+        1: new Edge(0, 1, 2, {'test': 'before', 'static': true})
+      }
+    }
+
+    let actual = Layer.addEdge(edgeMap, 0, 1, 3, {'test': 'after'})
+    let expected = {
+      0: {
+        1: new Edge(0, 1, 5, {'test': 'after', 'static': true})
+      }
+    }
+
+    expect(actual).toStrictEqual(expected)
   })
 })
 

@@ -82,9 +82,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       'edgeColor': new DivergingScalarAttribute('edgeRatio', this.edgeRatios),
     }
 
-    console.log('pre')
     this.update()
-    console.log('post')
   }
 
   update() {
@@ -172,8 +170,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       sourceIndex < targetIndex ? downwardEdges.push(edge) : upwardEdges.push(edge)
     })
 
-    console.log(this.layer.edges.length)
-    console.log(selfLoops.length + upwardEdges.length + downwardEdges.length)
+    // console.log(this.layer.edges.length)
+    // console.log(selfLoops.length + upwardEdges.length + downwardEdges.length)
 
     this.edgeSortMap = new Array(this.layer.edges.length).fill(-1)
     // this.layer.edges.forEach((edge, i) => {
@@ -231,9 +229,9 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     // console.log(this.edgeSortMap)
     console.log('bullshit aint working')
 
-    console.log(this.layer.edges.length)
-    console.log(this.layer.undirectedEdges.length)
-    console.log(this.chords.length)
+    // console.log(this.layer.edges.length)
+    // console.log(this.layer.undirectedEdges.length)
+    // console.log(this.chords.length)
     for (let [i, chord] of Object.entries(this.chords)) {
     // for (let [i, link] of Object.entries(this.layer.edges)) {
       const color = this.attributes.edgeColor.getColorValue(this.edgeRatios[i])
