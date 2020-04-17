@@ -3,9 +3,8 @@ import { Layer } from './layer'
 export class Network {
   constructor(name, data, globalMetadata, globalNodes) {
     this.name = name
-    this.metadata = {}
     this.globalMetadata = globalMetadata
-    this.globalNodes = globalNodes || {}
+    this.globalNodes = globalNodes
 
     this.layers = this.makeLayers(data)
   }

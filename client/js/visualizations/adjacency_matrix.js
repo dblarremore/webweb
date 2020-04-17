@@ -26,34 +26,10 @@ export class AdjacencyMatrixVisualization extends AbstractVisualization {
     }
 
     this.dimensions.cell = {
-      'width': this.dimensions.grid.width / this.layer.nodeCount,
-      'height': this.dimensions.grid.height / this.layer.nodeCount,
+      'width': this.dimensions.grid.width / this.layer.nodes.length,
+      'height': this.dimensions.grid.height / this.layer.nodes.length,
     }
 
-    // this.dimensions.grid.xMin = 0
-    // this.dimensions.grid.xMax = this.dimensions.grid.width
-    // this.dimensions.grid.xExtent = this.dimensions.grid.xMax - this.dimensions.grid.xMin
-    // this.dimensions.grid.yMin = -1 * this.dimensions.grid.height
-    // this.dimensions.grid.yMax = this.dimensions.grid.height
-    // this.dimensions.grid.yExtent = this.dimensions.grid.yMax - this.dimensions.grid.yMin
-
-    // this.dimensions.cell = {
-    //   'width': this.dimensions.grid.xExtent / this.layer.nodeCount,
-    //   'height': this.dimensions.grid.yExtent / this.layer.nodeCount,
-    // }
-
-    // this.horizontalScale = d3.scaleLinear().domain(
-    //   [0, this.layer.nodeCount - 1]
-    // ).range(
-    //   [this.dimensions.grid.xMin, this.dimensions.grid.xMax]
-    // )
-
-    // this.verticalScale = d3.scaleLinear().domain(
-    //   [0, this.layer.nodeCount - 1]
-    // ).range(
-    //   [this.dimensions.grid.yMin, this.dimensions.grid.yMax]
-    // )
-    console.log('11/?')
     this.update()
   }
 
@@ -88,7 +64,7 @@ export class AdjacencyMatrixVisualization extends AbstractVisualization {
     this.edgesToDraw = []
     const cellWidth = this.dimensions.cell.width
     const cellHeight = this.dimensions.cell.height
-    for (let i = 0; i <= this.layer.nodeCount; i++) {
+    for (let i = 0; i <= this.layer.nodes.length; i++) {
       const x = i * cellWidth
       const y = i * cellWidth
       this.edgesToDraw.push(new shapes.Line(x, 0, x, this.dimensions.grid.width))

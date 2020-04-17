@@ -1,521 +1,289 @@
-import { Layer } from '../layer'
+import { Layer, Edge } from '../layer'
 import { Attribute, NameAttribute, ScalarAttribute, BinaryAttribute, DegreeAttribute, CategoricalAttribute } from '../attribute'
 
-describe("layer object metadata regularization", () => {
+describe("edgelist regularization", () => {
+  describe("edge regularization", () => {
+    it("numerical edge without weight", () => {
+      expect(Layer.regularizeEdge([0, 1])).toStrictEqual([0, 1, 1])
+    })
+
+    it("numerical edge with integer weight", () => {
+      expect(Layer.regularizeEdge([0, 1, 2])).toStrictEqual([0, 1, 2])
+    })
+
+    it("numerical edge with float weight", () => {
+      expect(Layer.regularizeEdge([0, 1, .5])).toStrictEqual([0, 1, .5])
+    })
+
+    it("numerical edge with string float weight", () => {
+      expect(Layer.regularizeEdge([0, 1, ".5"])).toStrictEqual([0, 1, .5])
+    })
+
+    it("string edge without weight", () => {
+      expect(Layer.regularizeEdge(["0", "1"])).toStrictEqual([0, 1, 1])
+    })
+  })
+})
+
+describe("addEdge", () => {
+  it("creates a new edge when one does not exist", () => {
+    expect(Layer.addEdge({}, 0, 1, 2)).toStrictEqual({0: {1: new Edge(0, 1, 2)}})
+  })
+  it("adds to an existing edge when it exists", () => {
+    const edgeMap = {
+      0: {
+        1: new Edge(0, 1, 2)
+      }
+    }
+    expect(Layer.addEdge(edgeMap, 0, 1, 3)).toStrictEqual({0: {1: new Edge(0, 1, 5)}})
+  })
+})
+
+describe("regularizeEdgeList", () => {
+  it("combines duplicate edges", () => {
+    let actual = Layer.regularizeEdgeList([[0, 1], [0, 1]])[0]
+    let expected = [new Edge(0, 1, 2)]
+    expect(actual).toStrictEqual(expected)
+  })
+
+  it("undirects properly", () => {
+    let actual = Layer.regularizeEdgeList([[0, 1], [1, 0]])
+    let expected = [
+      [new Edge(0, 1, 1), new Edge(1, 0, 1)],
+      [new Edge(0, 1, 2)],
+    ]
+    expect(actual).toStrictEqual(expected)
+  })
+})
+
+describe("getNodeNames", () => {
+  // edges, all numbers
+  // edges, not all numbers
+  it("tests edge node mentions, all numbers", () => {
+    const edges = [new Edge(1, 2, 1), new Edge(0, 1, 1)]
+
+    expect(Layer.getNodeNames(edges)).toStrictEqual([0, 1, 2])
+  })
+
+  it("tests edge node mentions, not all numbers", () => {
+    const edges = [new Edge(1, 2, 1), new Edge('hunter', 2, 1)]
+
+    expect(Layer.getNodeNames(edges)).toStrictEqual([1, 2, 'hunter'])
+  })
+
+  it("tests nodeDict node mentions", () => {
+    const nodesDict = {
+      1: {
+        'test': 1,
+      },
+      'hunter': {
+        'test': 2,
+      },
+    }
+
+    expect(Layer.getNodeNames([], nodesDict)).toStrictEqual([1, 'hunter'])
+  })
+
+  it("tests counts of metadata with values", () => {
+    const metadata = {
+      'key1': {
+        'values': [1, 2]
+      },
+      'key2': {
+        'values': [1, 2, 3]
+      },
+      'key3': {},
+    }
+
+    expect(Layer.maxMetadataValuesCount(metadata)).toStrictEqual(3)
+  })
+  it("tests counts of metadata without values", () => {
+    expect(Layer.maxMetadataValuesCount()).toStrictEqual(0)
+  })
+
+
+  
+  it("tests metadata values mentions", () => {
+    const metadata = {
+      'key1': {
+        'values': [1, 2]
+      },
+    }
+
+    expect(Layer.getNodeNames([], {}, metadata)).toStrictEqual([0, 1])
+  })
+
+
+  it("tests edge dict, node dict, and metadata", () => {
+    const edges = [new Edge(0, 1, 1)]
+
+    const nodeDict = {
+      'hunter': {},
+    }
+
+    const metadata = {
+      'key1': {
+        'values': [1, 2, 3, 4]
+      },
+    }
+
+    expect(Layer.getNodeNames(edges, nodeDict, metadata)).toStrictEqual([0, 1, 'hunter', 2])
+  })
+})
+
+
+describe("metadata regularization", () => {
+  const layerMetadata = {
+    'test': {
+      'categories': ['a', 'test'],
+    }
+  }
+
   const globalMetadata = {
     'test': {
-      'categories': ["this", 'is', 'a', 'test'],
-      'type': 'categorical'
-    }
-  }
-  const globalNodes = {
-    1: {
-      'name': 1,
+      'categories': ['another', 'test', 'again'],
     },
-    2: {
-      'name': 2,
+    'anotherTest': {
+      'values': [1, 2, 3]
     },
   }
-  let layer = new Layer([], {}, {}, {}, globalMetadata, {})
 
-  it("tests that global metadata is defaulted", () => {
-    let actual = layer.regularizeMetadata({}, globalMetadata)
-    
-    expect(actual).toStrictEqual(globalMetadata)
+  it("layer metadata is used", () => {
+    expect(Layer.regularizeMetadata(layerMetadata)).toStrictEqual({
+      'test': {
+        'categories': ['a', 'test'],
+        'type': 'categorical',
+      }
+    })
   })
 
-  it("tests that layer metadata is applied", () => {
-    let actual = layer.regularizeMetadata({
+  it("global metadata is used", () => {
+    expect(Layer.regularizeMetadata({}, globalMetadata)).toStrictEqual({
       'test': {
-        'type': 'testtype',
+        'categories': ['another', 'test', 'again'],
+        'type': 'categorical',
       },
-      'other_test': {
-        'categories': ['A', 'B', 'C'],
-        'values': [1,2,3],
-      },
-    }, globalMetadata)
-    
-    expect(actual).toStrictEqual({
+      'anotherTest': {
+        'values': [1, 2, 3]
+      }
+    })
+  })
+
+  it("layer metadata is overwrites global metadata", () => {
+    expect(Layer.regularizeMetadata(layerMetadata, globalMetadata)).toStrictEqual({
       'test': {
-        'categories': ["this", 'is', 'a', 'test'],
-        'type': 'testtype'
+        'categories': ['a', 'test'],
+        'type': 'categorical',
       },
-      'other_test': {
-        'categories': ['A', 'B', 'C'],
-        'values': [1,2,3],
+      'anotherTest': {
+        'values': [1, 2, 3]
       }
     })
   })
 })
 
-describe("tests layer object nodes regularization", () => {
-  const globalMetadata = {}
-
-  let nodes = {
-    1: {
-      'hi': 1,
-    },
-    2: {
-      'hi': 2,
-    },
-    'non-int': {
-      'hi': 3,
-    }
-  }
-
-  it("tests that nodes are properly formed", () => {
-    let layer = new Layer([], nodes, {}, {}, globalMetadata, {})
-    let actual = layer.regularizeNodes(nodes, {})
-    
-    expect(actual).toStrictEqual({
-      1: {
-        "degree": 0,
-        'hi': 1,
-        "name": "1",
-        "strength": 0,
-      },
-      2: {
-        "degree": 0,
-        'hi': 2,
-        "name": "2",
-        "strength": 0,
-      },
-      'non-int': {
-        "degree": 0,
-        'hi': 3,
-        "name": "non-int",
-        "strength": 0,
+describe("node regularization", () => {
+  it("tests that layer nodes are used", () => {
+    expect(Layer.regularizeNodeDictionary({'string': {'test': 'hello'}})).toStrictEqual({
+      'string': {
+        'test': 'hello'
       }
     })
   })
 
-  it("tests that global node metadata is added to nodes, but does not overwrite", () => {
-    let globalNodes = {
+  it("tests that global nodes are used", () => {
+    expect(Layer.regularizeNodeDictionary({}, {'string': {'test': 'hello'}})).toStrictEqual({
+      'string': {
+        'test': 'hello'
+      }
+    })
+  })
+
+  it("tests that numerical strings become strings", () => {
+    expect(Layer.regularizeNodeDictionary({'1': {'test': 'hello'}})).toStrictEqual({
       1: {
-        'hi': 0,
+        'test': 'hello'
+      }
+    })
+  })
+
+  it("tests that layer nodes overwrite global nodes", () => {
+    const layerNodes = {
+      '1': {
         'name': 1,
       },
-      2: {
-        'hi': 0,
-        'name': 2,
-      },
     }
 
-    let layer = new Layer([], nodes, {}, {}, globalMetadata, globalNodes)
-    let actual = layer.regularizeNodes(nodes, globalNodes)
-    
-    expect(actual).toStrictEqual({
-      1: {
-        "degree": 0,
-        "strength": 0,
-        'hi': 1,
-        'name': "1",
-      },
-      2: {
-        "degree": 0,
-        "strength": 0,
-        'hi': 2,
-        'name': "2",
-      },
-      'non-int': {
-        "degree": 0,
-        "strength": 0,
-        'hi': 3,
-        'name': 'non-int',
-      }
-    })
-  })
-})
-
-describe("tests that nodes are pulled from their objects properly", () => {
-  let layer = new Layer([], {}, {}, {}, {}, {})
-  it("tests that edges come out as sorted when all numbers", () => {
-    let edges = [[2, 1]]
-    let nodes = {
-      4: {},
-      3: {},
-    }
-    let actual = layer.getNodesMentioned(edges, {}, nodes)
-    expect(actual).toStrictEqual([1, 2, 3, 4])
-  })
-
-  it("tests that edges come out as sorted when all numbers", () => {
-    let edges = [[2, 1]]
-    let nodes = {
-      4: {},
-      3: {},
-    }
-    let results = layer.getNodesMentioned(edges, {}, nodes)
-    expect(results).toStrictEqual([1, 2, 3, 4])
-  })
-
-  it("tests that when there are strings, things come out right", () => {
-    let edges = [["hunter", "steven"]]
-    let nodes = {
-      4: {},
-      3: {},
-    }
-    let results = layer.getNodesMentioned(edges, {}, nodes)
-    expect(results).toStrictEqual(["hunter", "steven", 3, 4])
-  })
-
-  it("tests that when there is only metadata, things come out right", () => {
-    let metadata = {
-      'test': {
-        'values': [1, 2]
-      }
-    }
-    let results = layer.getNodesMentioned([], metadata, {})
-    expect(results).toStrictEqual([null, null])
-  })
-
-  it("tests that when there is everything, and metadata, things come out right", () => {
-    let edges = [["hunter", "steven"]]
-    let nodes = {
-      4: {},
-      3: {},
-    }
-    let metadata = {
-      'test': {
-        'values': [1, 2, 3, 4, 5, 6]
-      }
-    }
-    let results = layer.getNodesMentioned(edges, metadata, nodes)
-    expect(results).toStrictEqual(["hunter", "steven", 3, 4, null, null])
-  })
-})
-
-describe("tests that values lists are counted properly", () => {
-  let layer = new Layer([], {}, {}, {}, {}, {})
-  it("tests that no metadata --> 0", () => {
-    let results = layer.maxMetadataValuesCount()
-    expect(results).toStrictEqual(0)
-  })
-
-  it("tests that metadata are properly counted", () => {
-    let results = layer.maxMetadataValuesCount({
-      'key one': {
-        'values': [1, 2],
-      },
-      'key two': {
-        'type': 'test',
-      },
-      'key three': {
-        'values': [1, 2, 3],
-      },
-    })
-    expect(results).toStrictEqual(3)
-  })
-})
-
-describe("tests that node id maps are formed properly", () => {
-  let layer = new Layer([], {}, {}, {}, {}, {})
-  it("tests that edges are properly attributed", () => {
-    let edges = [["hunter", "steven"]]
-    let nodes = {
-      4: {},
-      3: {},
-    }
-    let metadata = {
-      'test': {
-        'values': [1, 2, 3, 4, 5, 6]
-      }
-    }
-
-    let results = layer.getNodeNameToIdMap(edges, metadata, nodes)
-
-    expect(results).toStrictEqual({
-      'hunter': 0,
-      'steven': 1,
-      3: 2,
-      4: 3,
-      '5': 4,
-      '6': 5,
-    })
-  })
-})
-
-describe("metadata+node merging", () => {
-  let layer = new Layer([], {}, {}, {}, {}, {})
-
-  it("tests that metadata from metadata is properly added without nodes", () => {
-    let nodeIdToNameMap = {
-      0: "hunter",
-      1: "steve",
-      2: 2,
-      3: 3,
-    }
-    let metadata = {
-      'test': {
-        'values': [1,2,'A','B']
-      }
-    }
-
-    let results = layer.mergeMetadataWithNodes({}, metadata, nodeIdToNameMap)
-
-    expect(results).toStrictEqual({
-      "hunter": {
-        'name': 'hunter',
-        'test': 1,
-      },
-      "steve": {
-        'name': 'steve',
-        'test': 2,
-      },
-      2: {
-        'test': 'A',
-        'name': 2,
-      },
-      3: {
-        'test': 'B',
-        'name': 3,
-      }
-    })
-
-  })
-
-  it("tests that metadata from metadata is properly added with nodes", () => {
-    let nodeIdToNameMap = {
-      0: "hunter",
-      1: "steve",
-      2: 2,
-      3: 3,
-    }
-    let metadata = {
-      'test': {
-        'values': [1,2,'A','B']
-      }
-    }
-
-    let nodes = {
-      "hunter": {
-        'name': 'hunter',
-      },
-      "steve": {
-        'name': 'steve',
-      },
-    }
-
-    let results = layer.mergeMetadataWithNodes(nodes, metadata, nodeIdToNameMap)
-
-    expect(results).toStrictEqual({
-      "hunter": {
-        'name': 'hunter',
-        'test': 1,
-      },
-      "steve": {
-        'name': 'steve',
-        'test': 2,
-      },
-      2: {
-        'test': 'A',
-        'name': 2,
-      },
-      3: {
-        'test': 'B',
-        'name': 3,
-      }
-    })
-
-  })
-})
-
-describe("link formation test", () => {
-  let layer = new Layer([], {}, {}, {}, {}, {})
-  it("tests single link", () => {
-    let edges = [[0, 1]]
-    let nodeNameToIdMap = {
-      '0': 0,
-      '1': 1,
-    }
-    let results = layer.createLinks(edges, nodeNameToIdMap)
-
-    expect(results).toStrictEqual([[
-      '0',
-      '1',
-      1,
-    ]])
-  })
-
-  it("tests multiple links", () => {
-    let edges = [[0, 1], [2, 0]]
-    let nodeNameToIdMap = {
-      '0': 0,
-      '1': 1,
-      '2': 2,
-    }
-    let results = layer.createLinks(edges, nodeNameToIdMap)
-
-    expect(results).toStrictEqual([
-      [
-        '0',
-        '1',
-        1,
-      ],
-      [
-        '0',
-        '2',
-        1,
-      ],
-    ])
-  })
-
-  it("tests multiple links and repetitions", () => {
-    let edges = [[0, 1], [2, 0], [1, 0]]
-    let nodeNameToIdMap = {
-      '0': 0,
-      '1': 1,
-      '2': 2,
-    }
-    let results = layer.createLinks(edges, nodeNameToIdMap)
-
-    expect(results).toStrictEqual([
-      [
-        '0',
-        '1',
-        2,
-      ],
-      [
-        '0',
-        '2',
-        1,
-      ],
-    ])
-  })
-
-  it("tests multiple links and repetitions and weights", () => {
-    let edges = [[0, 1], [2, 0], [1, 0, 2]]
-    let nodeNameToIdMap = {
-      '0': 0,
-      '1': 1,
-      '2': 2,
-    }
-    let results = layer.createLinks(edges, nodeNameToIdMap)
-
-    expect(results).toStrictEqual([
-      [
-        '0',
-        '1',
-        3,
-      ],
-      [
-        '0',
-        '2',
-        1,
-      ],
-    ])
-  })
-})
-
-describe("weightedness test", () => {
-  let layer = new Layer([], {}, {}, {}, {}, {})
-  it("tests that unweightnetworks are shown as so", () => {
-    let nodes = {
-      '0': {
-        'strength': 1,
-        'degree': 1,
-      }
-    }
-    let results = layer.isUnweighted(nodes)
-    expect(results).toStrictEqual(true)
-  })
-  it("tests that weightnetworks are shown as so", () => {
-    let nodes = {
-      '0': {
-        'strength': 2,
-        'degree': 1,
-      }
-    }
-    let results = layer.isUnweighted(nodes)
-    expect(results).toStrictEqual(false)
-  })
-  it("tests that nodes networks work too", () => {
-    let nodes = {
-      '0': {
-        'strength': 2,
-        'degree': 1,
-      },
+    const globalNodes = {
       '1': {
-        'strength': 2,
-        'degree': 2,
-      }
-    }
-    let results = layer.isUnweighted(nodes)
-    expect(results).toStrictEqual(false)
-  })
-})
-
-describe("add edge metadata to nodes test", () => {
-  let layer = new Layer([], {}, {}, {}, {}, {})
-
-  it("adds single metadata", () => {
-    let edges = [
-      [
-        0,
-        1,
-        1
-      ]
-    ]
-    let nodes = {
-      '0': {},
-      '1': {},
-    }
-    let nodeNameToIdMap = {
-      '0': 0,
-      '1': 1,
-      '2': 2,
-    }
-    let results = layer.addEdgeMetadataToNodes(edges, nodes, nodeNameToIdMap)
-    expect(results).toStrictEqual({
-      '0': {
-        'degree': 1,
-        'strength': 1,
-      },
-      '1': {
-        'degree': 1,
-        'strength': 1,
-      }
-    })
-  })
-  it("adds multiple metadata", () => {
-    let edges = [
-      [
-        0,
-        1,
-        1
-      ],
-      [
-        0,
-        2,
-        1
-      ]
-    ]
-    let nodes = {
-      '0': {},
-      '1': {},
-      '2': {},
-    }
-    let nodeNameToIdMap = {
-      '0': 0,
-      '1': 1,
-      '2': 2,
-    }
-    let results = layer.addEdgeMetadataToNodes(edges, nodes, nodeNameToIdMap)
-    expect(results).toStrictEqual({
-      '0': {
-        'degree': 2,
-        'strength': 2,
-      },
-      '1': {
-        'degree': 1,
-        'strength': 1,
+        'name': 2,
       },
       '2': {
-        'degree': 1,
-        'strength': 1,
+        'name': 2,
+      },
+    }
+    expect(Layer.regularizeNodeDictionary(layerNodes, globalNodes)).toStrictEqual({
+      '1': {
+        'name': 1,
+      },
+      '2': {
+        'name': 2,
       },
     })
   })
 })
 
-describe("finding displayable metadata", () => {})
+describe("init tests", () => {
+  const inEdges = [[0, 1]]
+  const outEdges = [new Edge(0, 1, 1)]
+  const inNodes = {
+    0: {
+      'name': 'hunter'
+    },
+  }
+  const outNodes = [
+    {
+      'name': 'hunter',
+    },
+    {
+      'name': 1
+    },
+  ]
+
+  describe("empty", () => {
+    let layer = new Layer()
+
+    it("tests that we don't die", () => {
+      expect(layer.isWeighted).toStrictEqual(false)
+      expect(layer.isDirected).toStrictEqual(false)
+    })
+  })
+
+  describe("edge input", () => {
+    let layer = new Layer(inEdges)
+
+    it("tests that edges work", () => {
+      expect(layer.edges).toStrictEqual(outEdges)
+    })
+  })
+
+  describe("node input", () => {
+    let layer = new Layer(inEdges, inNodes)
+
+    it("tests that nodes work", () => {
+      expect(layer.nodes).toStrictEqual(outNodes)
+    })
+  })
+  describe("metadata input", () => {
+    const inMetadata = {
+      'key': {
+        'type': 'values'
+      }
+    }
+    let layer = new Layer(inEdges, inNodes, inMetadata)
+
+    it("tests that nodes work", () => {
+      expect(layer.nodes).toStrictEqual(outNodes)
+    })
+  })
+})
