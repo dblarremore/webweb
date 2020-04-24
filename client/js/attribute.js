@@ -18,7 +18,7 @@ export class Attribute {
   get colororClass() { return coloror.MultiHueColoror }
   get hasLegend() { return true }
 
-  static get displays() { return ['color', 'size'] }
+  static get displays() { return new Set(['scalar', 'color']) }
   static isType(nodeValues) { return false }
 
   constructor(key, values) {
@@ -49,7 +49,7 @@ export class Attribute {
     }
 
     this.coloror = new this.colororClass(this.valuesSet)
-    this.scaleReversed = false
+    this.scaleFlipped = false
     this.setScale()
   }
 
@@ -110,21 +110,29 @@ export class Attribute {
 
   setScale() { return }
 
-  setScaleRange(range) {
+  setRange(range) {
     if ((this.scale !== undefined) && (this.scale.range !== undefined)) {
       this.scale.range(range)
     }
   }
 
-  setScaleReverse(reverseScale) {
-    reverseScale = reverseScale ? true : false
-    if (this.scaleReversed === reverseScale) {
-      return
+  set scaleFlip(value) {
+    value = value ? true : false
+    if (this.scaleFlip !== value) {
+      this.setRange(this.scale.range().reverse())
     }
-    else {
-      this.setScaleRange(this.scale.range().reverse())
-      this.scaleReversed = reverseScale
+    this._scaleFlip = value
+  }
+
+  get scaleFlip() {
+    if (this._scaleFlip === undefined) {
+      this._scaleFlip = false
     }
+    return this._scaleFlip
+  }
+
+  setFlip(flipScale) {
+    this.scaleFlip = flipScale
   }
 
   /********************************************************************************
@@ -137,7 +145,7 @@ export class Attribute {
 }
 
 export class NoneAttribute extends Attribute {
-  static get displays() { return ['color', 'size'] }
+  static get displays() { return new Set(['scalar', 'color']) }
   get hasLegend() { return false }
 
   get colororClass() { return coloror.NoneColoror }
@@ -154,7 +162,7 @@ export class NoneAttribute extends Attribute {
 }
 
 export class ScalarAttribute extends Attribute {
-  static get displays() { return ['color', 'size'] }
+  static get displays() { return new Set(['scalar', 'color']) }
 
   static isType() { return true }
 
@@ -216,7 +224,7 @@ export class UserColorAttribute extends Attribute {
   get colororClass() { return coloror.NoneColoror }
   get hasLegend() { return false }
 
-  static get displays () { return ['color'] }
+  static get displays() { return new Set(['color']) }
 
   static isType(nodeValues) {
     const hexValues = Object.values(nodeValues).filter(
@@ -231,7 +239,7 @@ export class UserColorAttribute extends Attribute {
 }
 
 export class CategoricalAttribute extends Attribute {
-  static get displays () { return ['color'] }
+  static get displays() { return new Set(['color']) }
   get colororClass() { return coloror.CategoricalColoror }
 
   setScale() {
@@ -273,7 +281,7 @@ export class CategoricalAttribute extends Attribute {
 }
 
 export class ScalarCategoricalAttribute extends Attribute {
-  static get displays () { return ['color'] }
+  static get displays() { return new Set(['color']) }
 
   get colororClass() { return coloror.CyclicalColoror }
 

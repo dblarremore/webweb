@@ -1,28 +1,25 @@
 import { AbstractVisualization } from './abstract_visualization'
 import { DivergingScalarAttribute } from '../attribute'
-import { ChordDiagramSettings } from './chord_diagram/settings'
-import { chordDiagramWidgets } from './chord_diagram/widgets'
-import * as svgUtils from '../svg_utils'
+import { ChordDiagramParameters } from '../parameters'
 import * as shapes from '../shapes'
 import * as utils from '../utils'
 
 import * as d3 from 'd3'
 
 export class ChordDiagramVisualization extends AbstractVisualization {
-  static get settingsObject() { return ChordDiagramSettings }
+  get ParameterDefinitions() { return ChordDiagramParameters }
   
   get directed() { return false }
   get weighted() { return true }
 
-  get opacities() {
+  get listeners() {
     return {
-      'default': .5,
-      'focus': .7,
-      'fade': .3,
+      "mousemove": event => {
+        this.refocusElements()
+        this.canvas.redraw()
+      },
     }
   }
-
-  get widgets() { return chordDiagramWidgets() }
 
   get handlers() {
     return {
@@ -30,14 +27,11 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     }
   }
 
-  get listeners() {
+  get opacities() {
     return {
-      "mousemove": event => {
-        this.setFocusedElements()
-        this.fancyNodeDetection()
-        this.updateFocusedElements()
-        this.canvas.redraw()
-      },
+      'default': .5,
+      'focus': .7,
+      'fade': .3,
     }
   }
 
@@ -50,8 +44,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
         'inner': 250,
       },
     }
-
-    this.resetFocusedElements()
 
     this.chordPathFunction = d3.chord()
       .padAngle(0.03)
@@ -73,76 +65,72 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       
     this.edgePathFunction = d3.ribbon()
       .radius(this.objectSettings.radius.inner)
-
-    this.edgeRatios = this.layer.edges.map(
-      link => this.convertEdgesToRatios(link.source, link.target, this.layer.matrix)
-    )
-
-    this.availableAttributes = {
-      'edgeColor': new DivergingScalarAttribute('edgeRatio', this.edgeRatios),
-    }
-
-    this.update()
   }
 
   update() {
-    this.setActiveAttributes()
+    this.updateAttributeParameters(this.layer.nodes, this.layer.matrix, this.layer.edges)
     this.setVisualizationObjects()
 
     this.setNodesToDraw()
     this.setEdgesToDraw()
     this.setTexts()
-    this.updateFocusedElements()
+    this.refocusElements()
   }
 
-  /* fancy arc detection! 
-   *
-   * the problem:
-   * - zero width nodes can't be higlighted
-   *
-   * the solution: 
-   * - make a circular area that covers all of the chord diagram node area
-   * - store the node centroids
-   * - when the mouse moves, check if it is in the circle
-   *   - if not, no highlight at all
-   *   - if so, highlight the node of the nearest centroid
-    * */
-  fancyNodeDetection() {
-    const mX = this.mouseState.x
-    const mY = this.mouseState.y
-    if (this.canvas.isPointInPath(this.nodeCirclePath, mX, mY)) {
-      const pointsByDistance = this.nodeToCentroidMap.map(
-        (centroid, index) => [index, utils.distance(mX, mY, ...centroid)]
-      ).sort(
-        (a, b) => a[1] - b[1]
-      ).map(
-        ([index, distance]) => index
-      )
-
-      if (pointsByDistance.length) {
-        if (this.focusedElements.nodes.length === 0) {
-          this.focusedElements.nodes.push(pointsByDistance[0])
-        }
-      }
+  sortNodes() {
+    const parameter = this.attributes.nodeSort
+    
+    let sortedNodeIndices = []
+    if (parameter.key === 'none') {
+      sortedNodeIndices = Object.keys(this.layer.nodes)
     }
-    console.log('edge attributes!')
+    else {
+      sortedNodeIndices = Object.entries(parameter.values).sort(
+        (a, b) => a[1] - b[1]
+      ).map(([index, value]) => index)
+    }
+
+    if (parameter.attribute.scaleFlip) {
+      sortedNodeIndices = sortedNodeIndices.reverse()
+    }
+
+    return sortedNodeIndices
+  }
+
+  sizeNodes(matrix) {
+    const parameter = this.attributes.nodeSize
+    if (parameter.key === 'none') {
+      return matrix
+    }
+
+    Object.entries(matrix).forEach(([i, row]) => {
+      const nodeValue = parameter.values[this.reverseNodeSortMap[i]]
+      if (nodeValue !== 0) {
+        const valuesSum = row.reduce((a, b) => a + b, 0)
+        matrix[i] = row.map(element => (element / valuesSum) * nodeValue)
+      }
+      else {
+        matrix[i] = new Array(row.length).fill(0)
+      }
+    })
+    return matrix
   }
 
   setVisualizationObjects() {
-    const sortAttribute = this.settings.sortNodesBy == 'out degree' ? 'outDegrees' : 'inDegrees'
-
-    let elementsBySortAttribute = Object.entries(
-      this.layer[sortAttribute](this.layer.matrix)
-    ).sort((a, b) => a[1] - b[1])
+    const sortedNodeIndices = this.sortNodes()
 
     let matrix = []
-    this.nodeSortMap = []
+    this.nodeSortMap = {}
+    this.reverseNodeSortMap = {}
     let counter = 0
-    for (let [i, v] of elementsBySortAttribute) {
-      matrix.push(this.layer.matrix[i])
-      this.nodeSortMap[i] = counter
+    sortedNodeIndices.forEach(index => {
+      matrix.push(this.layer.matrix[index].map(x => x))
+      this.nodeSortMap[index] = counter
+      this.reverseNodeSortMap[counter] = parseInt(index)
       counter += 1
-    }
+    })
+
+    matrix = this.sizeNodes(matrix)
 
     const chordsD3 = this.chordPathFunction(matrix) 
     this.groups = chordsD3.groups
@@ -150,46 +138,20 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     this.chords = []
     for (let [key, value] of Object.entries(chordsD3)) {
       if (key !== 'groups') {
-        this.chords.push(value)
+        const chord = value
+        const source = this.reverseNodeSortMap[chord.source.index]
+        const target = this.reverseNodeSortMap[chord.source.subindex]
+
+        chord.source.index = source
+        chord.target.index = target
+        chord.source.subindex = target
+        chord.target.subindex = source
+        chord.source.value = this.layer.matrix[source][target]
+        chord.target.value = this.layer.matrix[target][source]
+
+        this.chords.push(chord)
       }
     }
-
-    // we're going to do something maybe weird:
-    // - split the adjacency matrix into three:
-    // 1. self loops
-    // 2. up the sort
-    // 3. down the sort
-
-    const selfLoops = this.layer.edges.filter(edge => edge.isSelfLoop)
-    const downwardEdges = []
-    const upwardEdges = []
-    this.layer.edges.filter(edge => ! edge.isSelfLoop).forEach(edge => {
-      const sourceIndex = this.nodeSortMap[edge.source]
-      const targetIndex = this.nodeSortMap[edge.target]
-
-      sourceIndex < targetIndex ? downwardEdges.push(edge) : upwardEdges.push(edge)
-    })
-
-    // console.log(this.layer.edges.length)
-    // console.log(selfLoops.length + upwardEdges.length + downwardEdges.length)
-
-    this.edgeSortMap = new Array(this.layer.edges.length).fill(-1)
-    // this.layer.edges.forEach((edge, i) => {
-    //   const edgeNodeSet = new Set(edge.nodes)
-    //   // let source = link.source
-    //   // let target = link.target
-
-    //   for (let [j, chord] of Object.entries(this.chords)) {
-    //     if (edgeNodeSet.has(chord.source.index) && edgeNodeSet.has(chord.target.index)) {
-    //       this.edgeSortMap[i] = j
-    //       break
-    //     }
-    //   }
-    // })
-
-    // this.layer.edges.forEach(e => console.log(e.source + ' ' + e.target))
-    // console.log('HELLOJK\n')
-    // this.chords.forEach(e => console.log(e.source.index + ' ' + e.target.index))
   }
 
   /*
@@ -199,10 +161,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     return this.groups[this.nodeSortMap[index]]
   }
 
-  getEdgeChord(index) {
-    return this.chords[this.edgeSortMap[index]]
-  }
-
   convertEdgesToRatios(source, target, matrix){
     let outWeight = matrix[source][target]
     let inWeight = matrix[target][source] || 1
@@ -210,11 +168,16 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     return outWeight / inWeight
   }
 
+  getNodeColor(index) {
+    const parameter = this.settingsHandler.attributeParameters.nodeColor
+    return parameter.attribute.getColorValue(parameter.values[index])
+  }
+
   setNodesToDraw() {
     this.nodesToDraw = []
     this.nodeToCentroidMap = []
     for (let [i, node] of Object.entries(this.layer.nodes)) {
-      const color = this.attributes.nodeColor.getColorValue(this.attributeValues.nodeColor[i])
+      const color = this.getNodeColor(i)
       const nodeArc = this.getNodeArc(i)
       const path = this.nodeArc(nodeArc)
       this.nodesToDraw.push(new shapes.Path(path, color))
@@ -224,18 +187,10 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
   setEdgesToDraw() {
     this.edgesToDraw = []
-    // console.log(this.layer.edges)
-    // console.log(this.edgeRatios)
-    // console.log(this.edgeSortMap)
-    console.log('bullshit aint working')
-
-    // console.log(this.layer.edges.length)
-    // console.log(this.layer.undirectedEdges.length)
-    // console.log(this.chords.length)
     for (let [i, chord] of Object.entries(this.chords)) {
-    // for (let [i, link] of Object.entries(this.layer.edges)) {
-      const color = this.attributes.edgeColor.getColorValue(this.edgeRatios[i])
-      // const path = this.edgePathFunction(this.getEdgeChord(i))
+      const color = this.settingsHandler.attributeParameters.edgeColor.attribute.getColorValue(
+        chord.source.value
+      )
       const path = this.edgePathFunction(chord)
       this.edgesToDraw.push(new shapes.Path(path, color))
     }
@@ -257,51 +212,82 @@ export class ChordDiagramVisualization extends AbstractVisualization {
    * If the mouse is in an edge, highlight:
    * - the edge's chord
    * - the nodes it connects
+   *
+   * the problem:
+   * - zero width nodes can't be higlighted
+   *
+   * the solution: 
+   * - make a circular area that covers all of the chord diagram node area
+   * - store the node centroids
+   * - when the mouse moves, check if it is in the circle
+   *   - if not, no highlight at all
+   *   - if so, highlight the node of the nearest centroid
     * */
-  setFocusedElements() {
-    this.resetFocusedElements()
+  getFocusedElements() {
+    const nodes = []
+    const edges = []
 
-    this.groups.forEach((group, i) => {
-      if (this.canvas.isPointInPath(this.nodesToDraw[i].path, this.mouseState.x, this.mouseState.y)) {
-        this.focusedElements.nodes.push(i)
+    const mX = this.mouseState.x
+    const mY = this.mouseState.y
+
+    if (this.canvas.isPointInPath(this.nodeCirclePath, mX, mY)) {
+      const pointsByDistance = this.nodeToCentroidMap.map(
+        (centroid, index) => [index, utils.distance(mX, mY, ...centroid)]
+      ).sort(
+        (a, b) => a[1] - b[1]
+      ).map(
+        ([index, distance]) => index
+      )
+
+      if (pointsByDistance.length) {
+        // we'll check the two nearest points
+        let point = pointsByDistance[0]
+        if (pointsByDistance.length > 2) {
+          const secondNearestPoint = pointsByDistance[1]
+          if (this.canvas.isPointInPath(this.nodesToDraw[secondNearestPoint].path, mX, mY)) {
+            point = secondNearestPoint
+          }
+        }
+
+        nodes.push(point)
         for (let [j, chord] of Object.entries(this.chords)) {
-          if (chord.source.index === i || chord.target.index === i) {
-            this.focusedElements.edges.push(j)
+          if (chord.source.index === point || chord.target.index === point) {
+            edges.push(j)
           }
         }
       }
-    })
+    }
 
     this.chords.forEach((chord, i) => {
-      if (this.canvas.isPointInPath(this.edgesToDraw[i].path, this.mouseState.x, this.mouseState.y)) {
-        this.focusedElements.edges.push(i)
-        this.focusedElements.nodes.push(chord.source.index)
+      if (this.canvas.isPointInPath(this.edgesToDraw[i].path, mX, mY)) {
+        edges.push(i)
+        nodes.push(chord.source.index)
 
         if (chord.target.index !== chord.source.index) {
-          this.focusedElements.nodes.push(chord.target.index)
+          nodes.push(chord.target.index)
         }
       }
     })
+
+    return [nodes, edges]
   }
 
-  resetFocusedElements() {
-    this.focusedElements = {
-      'nodes': [],
-      'edges': [],
-    }
+  refocusElements() {
+    const [nodes, edges] = this.getFocusedElements()
+    this.updateFocusedElements(nodes, edges)
   }
 
-  updateFocusedElements() {
-    this.textsToDraw = this.focusedElements.nodes.map(i => this.texts[i])
+  updateFocusedElements(nodes, edges) {
+    this.textsToDraw = nodes.map(i => this.texts[i])
 
-    const defaultOpacity = this.focusedElements.nodes.length > 0 || this.focusedElements.edges.length > 0
+    const defaultOpacity = nodes.length > 0 || edges.length > 0
       ? this.opacities.fade
       : this.opacities.default
 
     this.nodesToDraw.forEach(node => node.opacity = defaultOpacity)
     this.edgesToDraw.forEach(edge => edge.opacity = defaultOpacity)
 
-    this.focusedElements.edges.forEach(i => this.edgesToDraw[i].opacity = this.opacities.focus)
-    this.focusedElements.nodes.forEach(i => this.nodesToDraw[i].opacity = this.opacities.focus)
+    edges.forEach(i => this.edgesToDraw[i].opacity = this.opacities.focus)
+    nodes.forEach(i => this.nodesToDraw[i].opacity = this.opacities.focus)
   }
 }

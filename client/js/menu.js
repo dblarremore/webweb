@@ -1,83 +1,27 @@
 import * as widgetDefs from './widget'
+import { MenuParameters } from './parameters'
+import { SettingsHandler } from './settings_handler'
 
 export class Menu {
-  constructor(hideMenu) {
-    this.HTML = document.createElement('div')
-    this.HTML.classList.add('webweb-menu')
-    this.HTML.style = 'display: ' + hideMenu ? 'none' : 'flex' + ';'
+  constructor(settings, box) {
+    this.settingHandler = new SettingsHandler(MenuParameters, settings)
+    this.HTML = this.makeHTML(this.settingHandler.settings, box)
+
+    this.widgetsByKey = {}
+    this.widgetSidesByKey = {}
     this.sides = {}
-    this.hideMenu = hideMenu
-    this.widgets = {
-      'left': {},
-      'right': {},
-    }
   }
 
-  getSettingWidget(settingName, storeKey) {
-    for (let side of Object.keys(this.widgets)) {
-      const sideWidgets = this.widgets[side][storeKey] || []
-      const matches = sideWidgets.filter(widget => widget.settingName === settingName)
-      if (matches.length) {
-        return matches[0]
-      }
-    }
-    return undefined
-  }
+  makeHTML(settings, box) {
+    const HTML = document.createElement('div')
+    HTML.classList.add('webweb-menu')
+    HTML.style = 'display: flex;'
 
-  updateWidgets(settings, storeKey) {
-    for (let side of Object.keys(this.widgets)) {
-      const sideWidgets = this.widgets[side][storeKey] || []
-      sideWidgets.forEach(widget => widget.refresh(settings))
-    }
-  }
-
-  addWidgets(storeKey, side, widgetsToAdd, settings, callHandler, attributes) {
-    if (this.hideMenu) {
-      return
+    if (! settings.hideMenu) {
+      box.append(HTML)
     }
 
-    const sideElement = this.getSideElement(side)
-    let widgets = []
-    for (let [category, widgetList] of Object.entries(widgetsToAdd)) {
-      let subwidgets = []
-      for (let args of widgetList) {
-        let Constructor = args
-        let properties = undefined
-        if (args instanceof Array) {
-          [Constructor, properties] = args
-        }
-
-        subwidgets.push(new Constructor(settings, callHandler, properties, attributes))
-      }
-
-      const container = document.createElement('div')
-
-      subwidgets.forEach(subwidget => {
-        container.append(subwidget.container)
-      })
-
-      sideElement.append(container)
-
-      widgets = widgets.concat(subwidgets)
-    }
-
-    this.widgets[side][storeKey] = widgets
-
-    let widgetSettings = new Map()
-    for (let widget of widgets) {
-      if (widget.settingName) {
-        widgetSettings.set(widget.settingName, widget.HTMLValue)
-        settings[widget.settingName] = widget.HTMLValue
-      }
-    }
-  }
-
-  removeWidgets(storeKey) {
-    for (let side of ['left', 'right']) {
-      const sideWidgets = this.widgets[side][storeKey] || []
-      sideWidgets.forEach(widget => widget.container.remove())
-      delete this.widgets[side][storeKey]
-    }
+    return HTML
   }
 
   getSideElement(side) {
@@ -89,5 +33,66 @@ export class Menu {
     }
 
     return this.sides[side]
+  }
+
+  addWidgets(widgets) {
+    widgets.forEach(widget => {
+      const key = widget.settingName
+      this.widgetsByKey[key] = widget
+      this.widgetSidesByKey[key] = widget.side || "left"
+    })
+    this.displayWidgets()
+  }
+
+  removeWidgets(widgets) {
+    widgets.forEach(widget => {
+      const key = widget.settingName
+      this.widgetsByKey[key].container.innerHTML = ""
+      delete this.widgetsByKey[key]
+      delete this.widgetSidesByKey[key]
+    })
+  }
+
+  displayWidgets() {
+    const containersByKey = {}
+
+    let remaps = {}
+    Object.entries(this.widgetsByKey).forEach(([key, widget]) => {
+      remaps[key] = widget.containerKey
+    })
+
+    remaps = this.flattenContainerRemaps(remaps)
+
+    Object.entries(remaps).forEach(([from, to]) => {
+      if (containersByKey[to] === undefined) {
+        containersByKey[to] = document.createElement('div')
+      }
+      containersByKey[to].append(this.widgetsByKey[from].container)
+    })
+
+    // will need to reset the sides
+    Object.entries(containersByKey).forEach(([key, container]) => {
+      const side = this.widgetSidesByKey[key]
+
+      if (side) {
+        this.getSideElement(side).append(container)
+      }
+    })
+  }
+
+  // recursive bullshit :(
+  flattenContainerRemaps(remaps) {
+    const beingRemapped = new Set(Object.keys(remaps))
+    for (let [from, to] of Object.entries(remaps)) {
+      if (from === to || remaps[to] === to) {
+        continue
+      }
+
+      if (beingRemapped.has(to)) {
+        remaps[from] = remaps[to]
+        return this.flattenContainerRemaps(remaps)
+      }
+    }
+    return remaps
   }
 }

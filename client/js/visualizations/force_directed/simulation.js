@@ -5,7 +5,7 @@ export class Simulation {
   constructor(settings, layer, canvas, previousNodePositions={}) {
     this.settings = settings
     this.nodes = this.createNodes(layer.nodes, previousNodePositions)
-    this.links = this.createLinks(layer.links)
+    this.links = this.createLinks(layer.edges)
     this.isFrozen = false
 
     this.simulation = d3.forceSimulation(this.nodes)
@@ -24,8 +24,8 @@ export class Simulation {
     for (let [i, rawNode] of Object.entries(rawNodes)) {
       const node = new shapes.Circle()
       const previousPosition = previousNodePositions[rawNode.name] || {}
-      Object.entries(previousPosition).forEach(([key, value]) => node[key] = value)
-      Object.entries(rawNode).forEach(([key, value]) => node[key] = value)
+      Object.assign(node, previousNodePositions)
+      Object.assign(node, rawNode)
       nodes.push(node)
     }
 
@@ -57,12 +57,12 @@ export class Simulation {
     return nodePositions
   }
 
-  createLinks(links) {
-    return links.map(link => {
+  createLinks(edges) {
+    return edges.map(edge => {
       return {
-        'source': this.nodes[link.source],
-        'target': this.nodes[link.target],
-        'weight': link.weight,
+        'source': this.nodes[edge.source],
+        'target': this.nodes[edge.target],
+        'weight': edge.weight,
       }
     })
   }
@@ -84,8 +84,8 @@ export class Simulation {
       "link" : () => {
         return d3.forceLink()
           .links(this.links)
-          .distance(this.settings.linkLength)
-          .strength(this.settings.linkStrength)
+          .distance(this.settings.edgeLength)
+          .strength(this.settings.edgeStrength)
       },
     }
   }

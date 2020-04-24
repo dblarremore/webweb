@@ -1,13 +1,14 @@
 import * as d3 from 'd3'
+import { CanvasParameters } from './parameters'
+import { SettingsHandler } from './settings_handler'
 
 export class WebwebCanvas {
   get padding() { return 3 }
   get dragBoundary() { return 15 }
   get dpr() { return window.devicePixelRatio || 1}
 
-  constructor(width, height) {
-    this.width = width
-    this.height = height
+  constructor(settings, box) {
+    [this.width, this.height] = this.getDimensions(settings, box)
 
     this.canvasWidth = this.width * this.dpr
     this.canvasHeight = this.height * this.dpr
@@ -16,14 +17,28 @@ export class WebwebCanvas {
     this.HTML = this.getHTML()
 
     this.boxClass = "webweb-visualization-container"
-    this.box = this.getBox()
+    this.addToBox(box)
 
     this.context = this.HTML.getContext('2d')
     this.context.scale(this.dpr, this.dpr)
 
-    for (let [event, eventFunction] of Object.entries(this.listeners)) {
-      this.HTML.addEventListener(event, eventFunction)
+    this.addListeners(this.listeners)
+  }
+
+  getDimensions(settings, box) {
+    let heuristic = box.clientWidth - 3 * 20
+
+    if (heuristic <= 0) {
+      heuristic = 1000
     }
+
+    const widthDefault = Math.min(heuristic, 1000)
+    const heightDefault = Math.min(widthDefault, 600)
+
+    CanvasParameters.width.default = widthDefault
+    CanvasParameters.height.default = heightDefault
+    const settingHandler = new SettingsHandler(CanvasParameters, settings)
+    return [settingHandler.settings.width, settingHandler.settings.height]
   }
 
   get xTranslate() { return this._xTranslate || 0 }
@@ -45,11 +60,26 @@ export class WebwebCanvas {
     this.clear()
   }
 
+  getListener(eventName) {
+    if (this.visualization !== undefined) {
+      const listeners = this.visualization.listeners
+
+      const visualizationListener = Object.keys(listeners).includes(eventName)
+        ? listeners[eventName]
+        : () => undefined
+    }
+
+    return (event) => {
+      this.setMouseState(event)
+      visualizationListener()
+    }
+  }
+
   get listeners() {
     return {
-      "mousedown": event => this.setMouseState(event),
-      "mousemove": event => this.setMouseState(event),
-      "mouseup": event => this.setMouseState(event),
+      "mousedown": this.getListener("mousedown"),
+      "mousemove": this.getListener("mousemove"),
+      "mouseup": this.getListener("mouseup"),
     }
   }
 
@@ -66,11 +96,11 @@ export class WebwebCanvas {
     return HTML
   }
 
-  getBox() {
-    let box = document.createElement("div")
-    box.classList.add(this.boxClass)
-    box.append(this.HTML)
-    return box
+  addToBox(box) {
+    let canvasBox = document.createElement("div")
+    canvasBox.classList.add(this.boxClass)
+    canvasBox.append(this.HTML)
+    box.append(canvasBox)
   }
 
   clear() {
@@ -138,7 +168,9 @@ export class WebwebCanvas {
       time: date.getTime(),
     }
     
-    this.visualization.mouseState = this.mouseState
+    if (this.visualization !== undefined) {
+      this.visualization.mouseState = this.mouseState
+    }
   }
 
   mouseIsWithinDragBoundary(mouseState) {

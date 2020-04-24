@@ -20,28 +20,16 @@ export class Layer {
     ]
   }
 
-  constructor(layerEdgeList, layerNodes, layerMetadata, display, globalMetadata, globalNodes) {
+  constructor(layerEdgeList, layerNodes, layerMetadata, globalNodes, globalMetadata) {
     [this.edges, this.undirectedEdges, this.nodes, this.metadataTypes] = this.constructor.regularize(
       layerEdgeList,
-      layerNodes,
-      layerMetadata,
-      globalNodes,
-      globalMetadata
+      layerNodes, layerMetadata,
+      globalNodes, globalMetadata
     )
 
     this.links = this.edges
     this.isWeighted = this.constructor.areEdgesWeighted(this.edges)
     this.isDirected = this.constructor.areEdgesDirected(this.edges)
-
-    // let rawMatrix = this.constructor.regularizeEdgeListIntoMatrix(layerEdgeList)
-    // let rawNodes = this.constructor.regularizeNodes(layerNodes, globalNodes)
-    // this.metadata = this.constructor.regularizeMetadata(layerMetadata, globalMetadata)
-
-    // const [rawEdgeList, isDirected] = this.constructor.regularizeEdgeList(edgeList)
-    // this.isDirected = isDirected
-    // this.isWeighted = this.constructor.isWeighted(rawEdgeList)
-
-    // TODO: we need to handle weighted/unweighted requests
   }
 
   /*********************************************************************************
@@ -338,10 +326,22 @@ export class Layer {
    *
    *********************************************************************************/
   getAttributes(weighted, directed) {
-    return {
-      'node': this.getNodeAttributes(weighted, directed),
-      'edge': this.getEdgeAttributes(weighted, directed),
+    if (this._attributes === undefined) {
+      this._attributes = {}
     }
+
+    if (this._attributes[weighted] === undefined) {
+      this._attributes[weighted] = {}
+    }
+
+    if (this._attributes[weighted][directed] === undefined) {
+      this._attributes[weighted][directed] = {
+        'node': this.getNodeAttributes(weighted, directed),
+        'edge': this.getEdgeAttributes(weighted, directed),
+      }
+    }
+
+    return this._attributes[weighted][directed]
   }
 
   getNodeAttributes(weighted, directed) {

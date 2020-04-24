@@ -1,7 +1,11 @@
 ## 20200000 - 0.0.39
 
 - multiple visualization types.
+  - Chord Diagram.
 - webweb tries to align text intelligently (away from the center of the visualization)
+- performance improvements:
+  - initialization of networks, layers, and attributes is on demand
+  - canvas performance significantly improved
 
 ## 20191207 - 0.0.38
 

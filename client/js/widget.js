@@ -4,78 +4,82 @@ export class Widget {
   get type() { return 'input' }
   get elementType() { return this.inline ? 'span' : 'div' }
   get elementDisplay() { return this.inline ? 'inline' : 'block' }
-  get visible() { return true }
   get events() { return ['change'] }
+  get defaults() { return {} }
 
-  constructor(settings, callHandler, properties={}, attributes) {
+  constructor(settings, properties={}) {
     this.settings = settings
-    this.callHandler = callHandler
-    this.attributes = attributes
     this.inline = true
 
-    this.setProperties()
-    Object.entries(properties).forEach(([key, value]) => this[key] = value)
+    Object.assign(this, this.defaults)
+    Object.assign(this, properties)
 
-    this.init()
+    this.update(this.settings)
   }
 
-  setProperties() {
-    this.text = ''
-    this.size = undefined
-    this.settingName = undefined
-    this.setHandler = undefined
-  }
-
-  init() {
-    this.HTML = this.getHTML()
-    this.container = this.getContainer()
-
+  update(settings) {
+    this.settings = settings
     this.syncTo(this.SettingValue)
     this.setVisibility()
   }
 
-  refresh(settings) {
-    this.settings = settings
-    this.setVisibility()
+  call() {
+    if (this.setHandler !== undefined && this.callHandler !== undefined) {
+      this.callHandler(this.setHandler, this.settings)
+    }
+  }
+
+  get containerKey() {
+    return this.displayWith || this.settingName
+  }
+
+  set visible(value) { this._value = value }
+  get visible() { 
+    if (this._value === undefined) {
+      this._value = true
+    }
+
+    return this._value
   }
 
   setVisibility() {
-    this.container.style.display = this.visible ? this.elementDisplay : 'none'
+    const visible = this.alwaysVisible ? true : this.visible
+    this.container.style.display = visible ? this.elementDisplay : 'none'
   }
 
-  getContainer() {
-    let container = document.createElement(this.elementType)
+  get container() {
+    if (this._container === undefined) {
+      this._container = document.createElement(this.elementType)
 
-    if (this.text !== undefined) {
-      container.innerHTML = this.text
+      if (this.text !== undefined) {
+        this._container.innerHTML = this.text
+      }
+      this._container.append(this.HTML)
+
+      // only need listeners if we ever display this
+      this.addListeners(this.HTML)
     }
-    container.append(this.HTML)
-    return container
+
+    return this._container
   }
 
-  createHTMLElement() {
-    let HTML = document.createElement('input')
-    HTML.type = this.type || 'text'
-    HTML.size = this.size || 3
-    return HTML
-  }
+  get HTML() {
+    if (this._HTML === undefined) {
+      this._HTML = document.createElement('input')
+      this._HTML.type = this.type || 'text'
+      this._HTML.size = this.size || 3
+    }
 
-  getHTML() {
-    let HTML = this.createHTMLElement()
-    this.addListeners(HTML)
-    return HTML
+    return this._HTML
   }
 
   addListeners(HTML) {
-    if (HTML == undefined) {
-      return
-    }
-    let _this = this
-    this.events.forEach((eventName) => {
-      HTML.addEventListener(eventName, function (event) {
+    const _this = this
+    this.events.forEach(eventName => {
+      HTML.addEventListener(eventName, (event) => {
         let value = event.target.value
-        if (this.type !== undefined && this.type == 'checkbox') {
-            value = event.target.checked
+        if (_this.type !== undefined && _this.type == 'checkbox') {
+          value = event.target.checked
         }
 
         _this[eventName](value)
@@ -93,18 +97,8 @@ export class Widget {
     }
   }
 
-  get HTMLValue() {
-    if (this.HTML !== undefined) {
-      return this.HTML.value
-    }
-    return undefined
-  }
-
-  set HTMLValue(value) {
-    if (this.HTML !== undefined) {
-      this.HTML.value = value
-    }
-  }
+  get HTMLValue() { return this.HTML.value }
+  set HTMLValue(value) { this.HTML.value = value }
 
   get SettingValue() {
     if (this.settingName !== undefined) {
@@ -117,65 +111,24 @@ export class Widget {
       this.settings[this.settingName] = value
     }
 
-    this.postValueSet()
-
-    if (this.setHandler !== undefined) {
-      if (this.callHandler !== undefined) {
-        this.callHandler(this.setHandler, this.settings)
-      }
-    }
+    this.call()
   }
 
-  postValueSet() {
-    return
-  }
-
-  // called at input
-  change(value) {
-    this.syncTo(value)
-  }
-
-  input(value) {
-    this.syncTo(value)
-  }
+  change(value) { this.syncTo(value) }
+  input(value) { this.syncTo(value) }
 }
+
 export class CheckboxWidget extends Widget {
   get type() { return 'checkbox' }
+  get defaults() { return {'size': 10} }
 
-  setProperties() {
-    this.size = 10
-  }
-
-  get HTMLValue() {
-    if (this.HTML !== undefined) {
-      return this.HTML.checked ? true : false
-    }
-    return undefined
-  }
-
-  set HTMLValue(value) {
-    if (this.HTML !== undefined) {
-      this.HTML.checked = value ? true : false
-    }
-  }
+  get HTMLValue() { return this.HTML.checked ? true : false }
+  set HTMLValue(value) { this.HTML.checked = value ? true : false }
 }
 
 export class SelectWidget extends Widget {
   get type() { return 'select' }
-  get visible() { return this.options.length > 1 ? true : false }
-
-  init() {
-    super.init()
-    this.setSelectOptions(this.HTML, this.options)
-    this.HTMLValue = this.SettingValue
-  }
-
-  refresh(settings) {
-    this.settings = settings
-    // new settings can change the selectlist options
-    this.setSelectOptions(this.HTML, this.options)
-    this.setVisibility()
-  }
+  get defaults() { return {'options': []} }
 
   setSelectOptions(HTML, options) {
     let lastValue = HTML.value
@@ -198,129 +151,65 @@ export class SelectWidget extends Widget {
         }
       }
     }
+
   }
 
-  createHTMLElement() {
-    let HTML = document.createElement('select')
-    this.setSelectOptions(HTML, this.options)
-    return HTML
+  get HTML() {
+    if (this._HTML === undefined) {
+      this._HTML = document.createElement('select')
+      this.setSelectOptions(this._HTML, this.options)
+    }
+
+    return this._HTML
   }
 
   get HTMLValue() {
-    if (this.HTML !== undefined) {
-      if (this.HTML.options !== undefined) {
-        let index = this.HTML.selectedIndex
+    if (this.HTML.options !== undefined) {
+      let index = this.HTML.selectedIndex
 
-        if (this.HTML.options[index] !== undefined) {
-          return this.HTML.options[index].text
-        }
+      if (this.HTML.options[index] !== undefined) {
+        return this.HTML.options[index].text
       }
     }
+
     return undefined
   }
 
   set HTMLValue(value) {
-    if (this.HTML !== undefined) {
-      for (let i = 0; i < this.HTML.options.length; i++) {
-        if (this.HTML.options[i].innerHTML == value) {
-          this.HTML.selectedIndex = i
-        }
+    for (let i = 0; i < this.HTML.options.length; i++) {
+      if (this.HTML.options[i].innerHTML == value) {
+        this.HTML.selectedIndex = i
       }
     }
   }
+
+  set options(options) {
+    this._options = options
+    this.setSelectOptions(this.HTML, this._options)
+    this.visible = this._options.length > 1
+  }
+
+  get options() { return this._options }
 }
 
 export class ButtonWidget extends Widget {
   get type() { return 'button' }
   get events() { return ['click'] }
 
-  createHTMLElement() {
-    let HTML = document.createElement('button')
-    HTML.type = 'button'
-    HTML.size = this.size || 3
-    HTML.innerHTML = this.value
-    return HTML
+  get HTML() {
+    if (this._HTML === undefined) {
+      this._HTML = document.createElement('button')
+      this._HTML.type = 'button'
+      this._HTML.size = this.size || 3
+      this._HTML.innerHTML = this.value
+    }
+
+    return this._HTML
   }
 
-  click() {
-    this.callHandler(this.setHandler, this.settings)
-  }
+  click() { this.call() }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-// Basic webweb Widgets
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-export function BasicWebwebWidgets() {
-  return {
-    'network': [
-      NetworkSelectWidget,
-      NetworkLayerSelectWidget
-    ],
-    'plotType': [
-      [
-        SelectWidget,
-        {
-          'text': "Visualization type ",
-          'settingName': 'plotType',
-          'setHandler': 'display-network',
-          'options': [
-            'Force Directed',
-            'Chord Diagram',
-            'Adjacency Matrix',
-          ]
-        }
-      ],
-    ],
-    'save': [
-      [ 
-        ButtonWidget,
-        {
-          'size': 10,
-          'text': 'Save as ',
-          'value': 'SVG',
-          'setHandler': 'save-svg',
-        }
-      ],
-      [
-        ButtonWidget,
-        {
-          'size': 10,
-          'value': 'PNG',
-          'setHandler': 'save-canvas',
-        }
-      ],
-    ]
-  }
-}
-
-class NetworkSelectWidget extends SelectWidget {
-  setProperties() {
-    this.text = "Display data from "
-    this.settingName = 'networkName'
-    this.setHandler = 'display-network'
-  }
-
-  get visible() { return true }
-  get options() { return this.settings.networkNames }
-  postValueSet() { this.settings.networkLayer = 0 }
-}
-
-class NetworkLayerSelectWidget extends SelectWidget {
-  setProperties() {
-    this.text = " layer "
-    this.settingName = 'networkLayer'
-    this.setHandler = 'display-network'
-  }
-
-  get layerCount() {
-    return this.settings.networkLayers[this.settings.networkName]
-  }
-
-  get options() {
-    return [...Array(this.layerCount).keys()]
-  }
+export class TextWidget extends Widget {
+  get events() { return ['input'] }
 }

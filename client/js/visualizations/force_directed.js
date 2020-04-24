@@ -1,18 +1,18 @@
 import { AbstractVisualization } from './abstract_visualization'
 import { Simulation } from './force_directed/simulation'
-import { ForceDirectedSettings } from './force_directed/settings'
 import { forceDirectedWidgets } from './force_directed/widgets'
 import { Legend } from '../legend'
+import { ForceDirectedParameters } from '../parameters'
 import { ScalarAttribute } from '../attribute'
 import { Coloror } from '../coloror'
 import * as shapes from '../shapes'
 
 export class ForceDirectedVisualization extends AbstractVisualization {
-  static get settingsObject() { return ForceDirectedSettings }
-  get TextRadiusMultiplier() { return 1.1 }
-  get NodeFocusRadiusMultiplier() { return 1.3 }
+  get ParameterDefinitions() { return ForceDirectedParameters }
 
-  get widgets() { return forceDirectedWidgets() }
+  get directed() { return false }
+  get weighted() { return true }
+  // get widgets() { return forceDirectedWidgets() }
 
   get handlers() {
     return {
@@ -40,30 +40,28 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
   get nodePositions() { return this.simulation.nodePositions }
 
+  get TextRadiusMultiplier() { return 1.1 }
+  get NodeFocusRadiusMultiplier() { return 1.3 }
+
   initialize() {
-    console.log('need to give things the undirected version')
-    this.simulation = new Simulation(this.settings, this.layer, this.canvas, this.previousNodePositions)
-
-    const edgeWeights = this.layer.links.map(link => link.weight)
-
-    this.availableAttributes = {
-      'linkWidth': new ScalarAttribute('edgeWeight', edgeWeights),
-      'linkOpacity': new ScalarAttribute('edgeWeight', edgeWeights),
-    }
-
-    this.update()
+    this.simulation = new Simulation(
+      this.settingsHandler.settings,
+      this.layer,
+      this.canvas,
+      this.previousNodePositions
+    )
   }
 
   update() {
-    this.setActiveAttributes()
+    this.updateAttributeParameters(this.layer.nodes, this.layer.matrix, this.layer.edges)
 
-    this.legend = new Legend(
-      this.settings.showLegend,
-      this.settings.radius,
-      this.attributes.nodeSize,
-      this.attributes.nodeColor,
-      this.canvas,
-    )
+    // this.legend = new Legend(
+    //   this.settings.showLegend,
+    //   this.settings.radius,
+    //   this.attributes.nodeSize,
+    //   this.attributes.nodeColor,
+    //   this.canvas,
+    // )
 
     // if we've frozen node movement manually tick so new edges are evaluated.
     // (I don't think we need to do this)
@@ -73,22 +71,27 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   }
 
   get edgesToDraw() {
-    return this.simulation.links.map(link => new shapes.Line(
-      link.source.x, link.source.y,
-      link.target.x, link.target.y,
-      this.attributes.linkWidth.getNumericalValue(link.weight),
-      this.attributes.linkOpacity.getNumericalValue(link.weight),
+    return this.simulation.links.map(edge => new shapes.Line(
+      edge.source.x, edge.source.y,
+      edge.target.x, edge.target.y,
+      this.attributes.edgeWidth.attribute.getNumericalValue(edge.weight),
+      this.attributes.edgeOpacity.attribute.getNumericalValue(edge.weight),
       Coloror.defaultColor,
     ))
   }
 
   get nodesToDraw() {
-    return this.simulation.nodes.map(node => {
+    return this.simulation.nodes.map((node, i) => {
       const focusOnNode = this.focusOnNode(node)
-      node.radius = this.settings.radius * this.attributes.nodeSize.getNodeNumericalValue(node)
+      node.radius = this.settingsHandler.settings.radius
+      node.radius *= this.attributes.nodeSize.attribute.getNumericalValue(
+        this.attributes.nodeSize.values[i]
+      )
       node.radius *= focusOnNode ? this.NodeFocusRadiusMultiplier : 1
       node.outline = focusOnNode ? 'black' : Coloror.defaultColor
-      node.color = this.attributes.nodeColor.getNodeColorValue(node)
+      node.color = this.attributes.nodeColor.attribute.getColorValue(
+        this.attributes.nodeColor.values[i]
+      )
       node.makePath()
       return node
     })
@@ -108,7 +111,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
 
     let nodes = this.simulation.nodes
-    if (this.settings.showNodeNames) {
+    if (this.settingsHandler.settings.showNodeNames) {
       return nodes
     }
     else {
@@ -122,7 +125,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   }
 
   get namesToMatch() {
-    let matchString = this.settings.nameToMatch || ''
+    let matchString = this.settingsHandler.settings.nameToMatch || ''
     let namesToMatch = matchString.indexOf(',') >= 0
       ? matchString.split(',')
       : [matchString]
@@ -151,7 +154,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   endDragging() {
     this.simulation.simulation.alphaTarget(0)
 
-    if (! this.settings.freezeNodeMovement) {
+    if (! this.settingsHandler.settings.freezeNodeMovement) {
       this.mouseoverNode.fx = null
       this.mouseoverNode.fy = null
     }

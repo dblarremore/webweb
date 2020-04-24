@@ -1,17 +1,18 @@
-# Bugs:
+# Performance:
+> - don't initialize attributes
+> - don't initialize layers
+
+# bugs/outstanding:
+- node hightlighting for force directed
 - fix layer switching
 - listener removal
-- chord diagram mouseover should use centroids and "if within the circumference, highlight nearest"
-
-# Performance:
-- don't initialize attributes
-- don't initialize layers
-
-# outstanding unfixed:
-- force diagram isn't dealing with undirected
-- chord diagram should double down on chords, so that D3 does directed stuff :(
-- fix settings to not be gibberish
-  - single place to define default + complex attributes
+- widget removal
+- global listeners
+- add validators for settings
+> - force diagram isn't dealing with undirected
+> - fix settings to not be gibberish
+>   - single place to define default + complex attributes
+> - chord diagram mouseover should use centroids and "if within the circumference, highlight nearest"
 
 # Features:
 - text:
@@ -27,9 +28,10 @@
   - naming layers
   - naming network types
 - visualizations:
-  - settings:
-    - node size
-    - spacers
-    - degree
-  - hover events
-    - state edge weights
+  - chord diagram:
+    - legend
+    - settings:
+      - radiuses
+      - spacers
+    - hover events
+      - state edge weights
