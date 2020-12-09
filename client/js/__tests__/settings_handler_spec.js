@@ -1,4 +1,4 @@
-import { SettingsHandler, AttributeParameterGroup, Parameter } from '../settings_handler'
+import { Controller, ParameterCollection, AttributeParameterGroup, Parameter } from '../settings_handler'
 import * as parameters from '../parameters'
 import { Widget } from '../widget'
 
@@ -8,15 +8,15 @@ describe("SettingsHandler", () => {
       'testKey': { "default": 'testDefault' },
     }
     const rawSettings = {}
+    const controller = new Controller(rawSettings)
 
-    const handler = new SettingsHandler(definitions, rawSettings)
+    controller.addParameterCollection('test', definitions)
 
-    const actual = handler.settings
+    const actual = controller.settings
     const expected = {
       'testKey': 'testDefault',
     }
     expect(actual).toStrictEqual(expected)
-
   })
 })
 

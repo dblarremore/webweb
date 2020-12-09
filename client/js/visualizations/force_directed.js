@@ -24,7 +24,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
         else {
           this.simulation.unfreeze()
         }
-        this.canvas.redraw()
+        this.controller.canvas.redraw()
       }
     }
   }
@@ -44,15 +44,15 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
   initialize() {
     this.simulation = new Simulation(
-      this.settingsHandler.settings,
+      this.controller.settings,
       this.layer,
-      this.canvas,
+      this.controller.canvas,
       this.previousNodePositions
     )
   }
 
   update() {
-    this.updateAttributeParameters(this.layer.nodes, this.layer.matrix, this.layer.edges)
+    this.updateAttributeParameters()
 
     // this.legend = new Legend(
     //   this.settings.showLegend,
@@ -82,7 +82,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   get nodesToDraw() {
     return this.simulation.nodes.map((node, i) => {
       const focusOnNode = this.focusOnNode(node)
-      node.radius = this.settingsHandler.settings.radius
+      node.radius = this.controller.settings.radius
       node.radius *= this.attributes.nodeSize.attribute.getNumericalValue(
         this.attributes.nodeSize.values[i]
       )
@@ -110,7 +110,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
     }
 
     let nodes = this.simulation.nodes
-    if (this.settingsHandler.settings.showNodeNames) {
+    if (this.controller.settings.showNodeNames) {
       return nodes
     }
     else {
@@ -124,7 +124,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   }
 
   get namesToMatch() {
-    let matchString = this.settingsHandler.settings.nameToMatch || ''
+    let matchString = this.controller.settings.nameToMatch || ''
     let namesToMatch = matchString.indexOf(',') >= 0
       ? matchString.split(',')
       : [matchString]
@@ -143,7 +143,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   setMouseoverNode() {
     this.mouseoverNode = undefined
     for (let node of this.simulation.nodes) {
-      if (this.canvas.isPointInPath(node.path, this.mouseState.x, this.mouseState.y)) {
+      if (this.controller.canvas.isPointInPath(node.path, this.mouseState.x, this.mouseState.y)) {
         this.mouseoverNode = node
         return
       }
@@ -153,7 +153,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
   endDragging() {
     this.simulation.simulation.alphaTarget(0)
 
-    if (! this.settingsHandler.settings.freezeNodeMovement) {
+    if (! this.controller.settings.freezeNodeMovement) {
       this.mouseoverNode.fx = null
       this.mouseoverNode.fy = null
     }
@@ -180,7 +180,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
   mouseMoveListener() {
     if (this.dragging) {
-      if (this.canvas.mouseIsWithinDragBoundary(this.mouseState)) {
+      if (this.controller.canvas.mouseIsWithinDragBoundary(this.mouseState)) {
         this.endDragging()
       }
       else {
@@ -194,7 +194,7 @@ export class ForceDirectedVisualization extends AbstractVisualization {
       this.setMouseoverNode()
     }
 
-    this.canvas.redraw()
+    this.controller.canvas.redraw()
   }
 
   mouseDownListener() {

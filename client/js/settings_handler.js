@@ -1,16 +1,37 @@
 import * as widgets from './widget'
 import * as parameters from './parameters'
 import { NoneAttribute } from './attribute'
+import { Menu } from './menu'
 
-export class SettingsHandler {
-  constructor(parameterDefinitions, settings, callHandler, menu) {
-    this.menu = menu
+export class Controller {
+  constructor(settings) {
+    this.settings = settings
+    this.collections = {}
+    this.menu = new Menu()
+  }
+
+  addParameterCollection(name, definitions, callHandler) {
+    let collection = new ParameterCollection(definitions, this)
+    this.collections[name] = collection
+    this.menu.addWidgets(collection.widgets, callHandler)
+  }
+
+  removeParameterCollection(name) {
+    let collection = this.collections[name]
+    this.menu.removeWidgets(collection.widgets)
+    this.settings = collection.resetSettings(this.settings)
+  }
+}
+
+export class ParameterCollection {
+  constructor(definitions, controller) {
     this.parameters = {}
+    this.controller = controller
     this.attributeParameters = {}
 
-    Object.entries(parameterDefinitions).forEach(([key, definition]) => {
+    Object.entries(definitions).forEach(([key, definition]) => {
       if (AttributeParameterGroup.isType(definition)) {
-        const group = new AttributeParameterGroup(key, settings, definition)
+        const group = new AttributeParameterGroup(key, controller.settings, definition)
         this.attributeParameters[key] = group
 
         Object.values(group.parameters).forEach(parameter => {
@@ -18,49 +39,33 @@ export class SettingsHandler {
         })
       }
       else {
-        this.parameters[key] = new Parameter(key, settings, definition)
+        this.parameters[key] = new Parameter(key, controller.settings, definition)
       }
     })
 
-    this.widgets.forEach(widget => widget.callHandler = callHandler)
-
-    if (this.menu !== undefined) {
-      this.menu.addWidgets(this.widgets)
-    }
-
-    this.updateSettings(settings)
+    this.updateSettings()
   }
 
-  remove(settings) {
-    if (this.menu !== undefined) {
-      this.menu.removeWidgets(this.widgets)
-    }
-    return this.undefaultSettings(settings)
-  }
-
-  undefaultSettings(settings) {
-    Object.values(this.parameters).filter(
-      parameter => parameter.defaultedSetting
-    ).forEach(
-      parameter => settings[parameter.key] = undefined
-    )
+  resetSettings(settings) {
+    Object.values(this.parameters).forEach(parameter => settings = parameter.resetParameterValue())
 
     return settings
   }
 
-  updateAttributeParameters(attributes, nodes, matrix, edges) {
+  updateAttributeParameters(attributes, layer) {
     Object.values(this.attributeParameters).forEach(group => {
-      group.update(this.settings, attributes, nodes, matrix, edges)
+      group.update(this.controller.settings, attributes, layer)
     })
   }
 
-  updateSettings(settings) {
+  updateSettings() {
+    let settings = this.controller.settings
     Object.values(this.parameters).forEach(parameter => {
       settings = parameter.setParameterValue(settings)
     })
 
-    this.settings = settings
     this.widgets.forEach(widget => widget.update(settings))
+    return settings
   }
 
   get widgets() {
@@ -117,6 +122,15 @@ export class Parameter {
     settings[this.key] = this.value
     return settings
   }
+
+  resetParameterValue(settings) {
+    if (this.defaultedSetting === true) {
+      settings[this.key] = undefined
+    }
+
+    return settings
+  }
+
 }
 
 export class AttributeParameterGroup {
@@ -205,7 +219,7 @@ export class AttributeParameterGroup {
     return parameters
   }
 
-  update(settings, attributes, nodes, matrix, edges) {
+  update(settings, attributes, layer) {
     // what we do:
     // - set the call handlers on all the attribers
     // - set the options on the lists
@@ -218,6 +232,9 @@ export class AttributeParameterGroup {
     //   - Range
     //   - Flip
     //   - Enabled
+    const nodes = layer.nodes
+    const matrix = layer.matrix
+    const edges = layer.edges
     const attributeOptions = this.getAttributeOptions(attributes)
     const [key, attributeClass, valuesGetter] = this.getActiveAttribute(attributeOptions, settings)
     this.values = valuesGetter(nodes, matrix, edges)

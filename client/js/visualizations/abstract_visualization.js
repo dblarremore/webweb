@@ -1,6 +1,5 @@
 import * as utils from '../utils'
 import { NoneAttribute } from '../attribute'
-import { SettingsHandler } from '../settings_handler'
 
 export class AbstractVisualization {
   get ParameterDefinitions() { return }
@@ -13,25 +12,28 @@ export class AbstractVisualization {
 
   get nodePositions() { return {} }
 
-  constructor(settings, menu, canvas, layer, previousNodePositions) {
-    this.menu = menu
-
-    this.settingsHandler = new SettingsHandler(
+  constructor(controller, layer, previousNodePositions) {
+  // constructor(settings, menu, canvas, layer, previousNodePositions) {
+    this.controller = controller
+    this.controller.addParameterCollection(
+      'visualization',
       this.ParameterDefinitions,
-      settings,
       this.callHandler,
-      this.menu,
-    )
+  )
 
     this.layer = layer
     this.previousNodePositions = previousNodePositions || {}
 
-    this.canvas = canvas
-    this.canvas.reset()
-    this.canvas.setTranslation(canvas.width / 2, canvas.height / 2)
+    this.controller.canvas.visualization = this
+    this.controller.canvas.reset()
+    this.controller.canvas.setTranslation(
+      this.controller.canvas.width / 2,
+      this.controller.canvas.height / 2,
+    )
 
     this.initialize()
     this.update()
+    this.redraw(this.controller.settings)
   }
 
   get callHandler() {
@@ -46,14 +48,16 @@ export class AbstractVisualization {
   initialize() { return }
   update() { return }
 
-  updateAttributeParameters(nodes, matrix, edges) {
-    this.settingsHandler.updateAttributeParameters(
+  updateAttributeParameters() {
+    this.controller.collections['visualization'].updateAttributeParameters(
       this.layer.getAttributes(this.weighted, this.directed),
-      nodes, matrix, edges
+      this.layer,
     )
-
+    
     this.attributes = {}
-    Object.entries(this.settingsHandler.attributeParameters).forEach(([key, parameter]) => {
+    Object.entries(
+      this.controller.collections['visualization'].attributeParameters
+    ).forEach(([key, parameter]) => {
       this.attributes[key] = {
         'key': parameter.attribute.key,
         'attribute': parameter.attribute,
@@ -63,9 +67,9 @@ export class AbstractVisualization {
   }
 
   redraw(settings) {
-    this.settings = this.settingsHandler.updateSettings(settings)
+    this.controller.collections['visualization'].updateSettings(settings)
     this.update()
-    this.canvas.redraw()
+    this.controller.canvas.redraw()
   }
 
   get objectsToDraw() {

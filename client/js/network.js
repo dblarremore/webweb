@@ -14,10 +14,10 @@ export class Network {
       'Adjacency Matrix': AdjacencyMatrixVisualization,
     }
   }
-  constructor(networkData, global, menu, canvas) {
+
+  constructor(networkData, global, controller) {
+    this.controller = controller
     this.global = global
-    this.menu = menu
-    this.canvas = canvas
 
     // if there are no layers, put things into layers
     this.rawLayers = networkData.layers || [{
@@ -29,21 +29,25 @@ export class Network {
 
     this.layers = new Array(this.rawLayers.length)
 
-    // TODO
-    // we should later slurp in `network` settings here
-    // and apply them so there's 'inherited' settings
-    this.settingsHandler = this.makeSettingsHandler(this.global.settings)
+    this.makeParameters()
   }
 
-  makeSettingsHandler(settings) {
+  makeParameters(settings) {
+    // TODO
+    // we should later slurp in `network` settings here and apply them so
+    // there's 'inherited' settings
+    if (this.controller.collections['network'] !== undefined) {
+      return
+    }
+
     const definitions = NetworkParameters
     definitions.layer.options = [...Array(this.layers.length).keys()]
 
-    return new SettingsHandler(
+
+    this.controller.addParameterCollection(
+      'network',
       definitions,
-      settings,
       utils.getCallHandler(this.handlers),
-      this.menu,
     )
   }
 
@@ -55,7 +59,7 @@ export class Network {
   }
 
   get layer() {
-    const layerIndex = this.settingsHandler.settings.layer
+    const layerIndex = this.controller.settings.layer
 
     if (this.layers[layerIndex] === undefined) {
       const rawLayer = this.rawLayers[layerIndex]
@@ -71,44 +75,25 @@ export class Network {
       layer = 0
     }
 
-    this.settingsHandler.settings.layer = layer
-    this.settingsHandler.updateSettings(this.settingsHandler.settings)
-    this.displayVisualization(this.settingsHandler.settings.plotType)
+    this.controller.settings.layer = layer
+    this.controller.updateSettings(this.controller.settings)
+    this.displayVisualization(this.controller.settings.plotType)
   }
 
   displayVisualization(plotType) {
-    this.settingsHandler.plotType = plotType
+    this.controller.plotType = plotType
 
     if (this.visualization !== undefined) {
-      this.settingsHandler.settings = this.visualization.settingsHandler.remove(
-        this.settingsHandler.settings
-    )
+      this.controller.removeParameterCollection('visualization')
       this.nodePositions = this.visualization.nodePositions
     }
 
-    this.visualization = plotType
-    this.visualization.redraw(this.settingsHandler.settings)
-  }
-
-  get visualization() { return this._visualization }
-  set visualization(plotType) {
-    if (plotType === undefined) {
-      this._visualization = undefined
-    }
-    else {
-      const VisualizationConstructor = this.visualizationTypes[plotType]
-      this._visualization = new VisualizationConstructor(
-        this.global.settings,
-        this.menu,
-        this.canvas,
-        this.layer,
-        this.nodePositions,
-      )
-
-      this.canvas.visualization = this._visualization
-    }
-    
-    return this._visualization
+    const VisualizationConstructor = this.visualizationTypes[this.controller.plotType]
+    this.visualization = new VisualizationConstructor(
+      this.controller,
+      this.layer,
+      this.nodePositions,
+    )
   }
 
   get nodePositions() { return this._nodePositions }

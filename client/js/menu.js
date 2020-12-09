@@ -1,11 +1,7 @@
 import * as widgetDefs from './widget'
-import { MenuParameters } from './parameters'
-import { SettingsHandler } from './settings_handler'
 
 export class Menu {
-  constructor(settings) {
-    this.settingHandler = new SettingsHandler(MenuParameters, settings)
-
+  constructor(HTML) {
     this.widgetsByKey = {}
     this.widgetSidesByKey = {}
     this.sides = {}
@@ -32,8 +28,9 @@ export class Menu {
     return this.sides[side]
   }
 
-  addWidgets(widgets) {
+  addWidgets(widgets, callHandler) {
     widgets.forEach(widget => {
+      widget.callHandler = callHandler
       const key = widget.settingName
       this.widgetsByKey[key] = widget
       this.widgetSidesByKey[key] = widget.side || "left"

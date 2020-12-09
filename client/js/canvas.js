@@ -1,14 +1,14 @@
 import * as d3 from 'd3'
 import { CanvasParameters } from './parameters'
-import { SettingsHandler } from './settings_handler'
 
 export class WebwebCanvas {
   get padding() { return 3 }
   get dragBoundary() { return 15 }
   get dpr() { return window.devicePixelRatio || 1}
 
-  constructor(settings, clientWidth, box) {
-    [this.width, this.height] = this.getDimensions(settings, clientWidth)
+  constructor(controller, clientWidth) {
+    this.controller = controller
+    this.setDimensions(clientWidth)
 
     this.canvasWidth = this.width * this.dpr
     this.canvasHeight = this.height * this.dpr
@@ -19,7 +19,7 @@ export class WebwebCanvas {
     this.addListeners(this.listeners)
   }
 
-  getDimensions(settings, clientWidth) {
+  setDimensions(clientWidth) {
     let heuristic = clientWidth - 3 * 20
 
     if (heuristic <= 0) {
@@ -31,8 +31,11 @@ export class WebwebCanvas {
 
     CanvasParameters.width.default = widthDefault
     CanvasParameters.height.default = heightDefault
-    const settingHandler = new SettingsHandler(CanvasParameters, settings)
-    return [settingHandler.settings.width, settingHandler.settings.height]
+
+    this.controller.addParameterCollection('canvas', CanvasParameters)
+
+    this.width = this.controller.settings.width
+    this.height = this.controller.settings.height
   }
 
   get xTranslate() { return this._xTranslate || 0 }

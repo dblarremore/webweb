@@ -1,6 +1,6 @@
 import * as widgets from './widget'
 
-export const CommonParameters = {
+export const GlobalParameters = {
   "networkName": {
     "text": "Display data from ",
     "setHandler": "display-network",
@@ -24,6 +24,15 @@ export const CommonParameters = {
     'setHandler': 'save-canvas',
     'widgetClass': widgets.ButtonWidget,
     "displayWith": "saveSVG",
+  },
+  "hideMenu": {
+    "default": false,
+  },
+  "showNodeNames": {
+    "default": false,
+  },
+  "nameToMatch": {
+    "default": "",
   },
 }
 
@@ -52,18 +61,6 @@ export const NetworkParameters = {
 export const CanvasParameters = {
   "width":  { "default": undefined, "aliases": ["w"], },
   "height": { "default": undefined, "aliases": ["h"], },
-}
-
-export const MenuParameters = {
-  "showNodeNames": {
-    "default": false,
-  },
-  "nameToMatch": {
-    "default": "",
-  },
-  "hideMenu": {
-    "default": false,
-  },
 }
 
 export const ChordDiagramParameters = {

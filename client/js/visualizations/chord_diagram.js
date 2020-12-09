@@ -16,7 +16,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     return {
       "mousemove": event => {
         this.refocusElements()
-        this.canvas.redraw()
+        this.controller.canvas.redraw()
       },
     }
   }
@@ -68,7 +68,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   }
 
   update() {
-    this.updateAttributeParameters(this.layer.nodes, this.layer.matrix, this.layer.edges)
+    this.updateAttributeParameters()
     this.setVisualizationObjects()
 
     this.setNodesToDraw()
@@ -169,7 +169,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   }
 
   getNodeColor(index) {
-    const parameter = this.settingsHandler.attributeParameters.nodeColor
+    const parameter = this.controller.collections['visualization'].attributeParameters.nodeColor
     return parameter.attribute.getColorValue(parameter.values[index])
   }
 
@@ -188,7 +188,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   setEdgesToDraw() {
     this.edgesToDraw = []
     for (let [i, chord] of Object.entries(this.chords)) {
-      const color = this.settingsHandler.attributeParameters.edgeColor.attribute.getColorValue(
+      const color = this.controller.collections['visualization'].attributeParameters.edgeColor.attribute.getColorValue(
         chord.source.value
       )
       const path = this.edgePathFunction(chord)
@@ -230,7 +230,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     const mX = this.mouseState.x
     const mY = this.mouseState.y
 
-    if (this.canvas.isPointInPath(this.nodeCirclePath, mX, mY)) {
+    if (this.controller.canvas.isPointInPath(this.nodeCirclePath, mX, mY)) {
       const pointsByDistance = this.nodeToCentroidMap.map(
         (centroid, index) => [index, utils.distance(mX, mY, ...centroid)]
       ).sort(
@@ -244,7 +244,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
         let point = pointsByDistance[0]
         if (pointsByDistance.length > 2) {
           const secondNearestPoint = pointsByDistance[1]
-          if (this.canvas.isPointInPath(this.nodesToDraw[secondNearestPoint].path, mX, mY)) {
+          if (this.controller.canvas.isPointInPath(this.nodesToDraw[secondNearestPoint].path, mX, mY)) {
             point = secondNearestPoint
           }
         }
@@ -259,7 +259,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     }
 
     this.chords.forEach((chord, i) => {
-      if (this.canvas.isPointInPath(this.edgesToDraw[i].path, mX, mY)) {
+      if (this.controller.canvas.isPointInPath(this.edgesToDraw[i].path, mX, mY)) {
         edges.push(i)
         nodes.push(chord.source.index)
 
