@@ -3,7 +3,7 @@ import * as parameters from '../parameters'
 import { Widget } from '../widget'
 
 describe("SettingsHandler", () => {
-  it("tests that basics work?", () => {
+  it("tests that basics work", () => {
     const definitions = {
       'testKey': { "default": 'testDefault' },
     }

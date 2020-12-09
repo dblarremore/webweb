@@ -19,7 +19,7 @@ export class Controller {
   removeParameterCollection(name) {
     let collection = this.collections[name]
     this.menu.removeWidgets(collection.widgets)
-    this.settings = collection.resetSettings(this.settings)
+    this.settings = collection.resetSettings()
   }
 }
 
@@ -31,7 +31,7 @@ export class ParameterCollection {
 
     Object.entries(definitions).forEach(([key, definition]) => {
       if (AttributeParameterGroup.isType(definition)) {
-        const group = new AttributeParameterGroup(key, controller.settings, definition)
+        const group = new AttributeParameterGroup(key, this.controller.settings, definition)
         this.attributeParameters[key] = group
 
         Object.values(group.parameters).forEach(parameter => {
@@ -39,16 +39,17 @@ export class ParameterCollection {
         })
       }
       else {
-        this.parameters[key] = new Parameter(key, controller.settings, definition)
+        this.parameters[key] = new Parameter(key, this.controller.settings, definition)
       }
     })
 
     this.updateSettings()
   }
 
-  resetSettings(settings) {
-    Object.values(this.parameters).forEach(parameter => settings = parameter.resetParameterValue())
-
+  resetSettings() {
+    let settings = this.controller.settings
+    console.log(JSON.stringify(settings))
+    Object.values(this.parameters).forEach(parameter => settings = parameter.resetParameterValue(settings))
     return settings
   }
 
@@ -65,7 +66,6 @@ export class ParameterCollection {
     })
 
     this.widgets.forEach(widget => widget.update(settings))
-    return settings
   }
 
   get widgets() {
@@ -106,7 +106,7 @@ export class Parameter {
    *    - use 'colorBy' for 'nodeColorAttribute'
   */
   setParameterValue(settings) {
-    this.value = undefined
+    this.value = settings[this.key]
 
     this.aliases.forEach(alias => {
       if (settings[alias] !== undefined && this.value === undefined) {
@@ -259,12 +259,8 @@ export class AttributeParameterGroup {
     }
 
     const rangeParameter = this.parameters.Range
-    // console.log('when we unwind a viz, we need to null all the defaulted settings')
-    // console.log(this.key)
     if (rangeParameter !== undefined) {
       this.attribute.setRange(settings[rangeParameter.key])
-      // console.log('has range parameter')
-      // console.log(settings[rangeParameter.key])
 
       rangeParameter.widget.visible = rangeParameter.visible && showWidget
       rangeParameter.widget.update(settings)

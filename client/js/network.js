@@ -76,7 +76,7 @@ export class Network {
     }
 
     this.controller.settings.layer = layer
-    this.controller.updateSettings(this.controller.settings)
+    this.controller.collections['network'].updateSettings()
     this.displayVisualization(this.controller.settings.plotType)
   }
 

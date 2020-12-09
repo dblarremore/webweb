@@ -45,7 +45,7 @@ export class Webweb {
     this.controller.addParameterCollection('global', definitions, this.callHandler)
 
     if (! this.controller.settings.hideMenu) {
-      this.HTML.append(this.menu.HTML)
+      this.HTML.append(this.controller.menu.HTML)
     }
 
     this.controller.canvas = new WebwebCanvas(this.controller, this.HTML.clientWidth)

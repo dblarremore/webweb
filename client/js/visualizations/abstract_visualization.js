@@ -67,7 +67,8 @@ export class AbstractVisualization {
   }
 
   redraw(settings) {
-    this.controller.collections['visualization'].updateSettings(settings)
+    this.controller.settings = settings
+    this.controller.collections['visualization'].updateSettings()
     this.update()
     this.controller.canvas.redraw()
   }
