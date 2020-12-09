@@ -12,7 +12,6 @@ export class ForceDirectedVisualization extends AbstractVisualization {
 
   get directed() { return false }
   get weighted() { return true }
-  // get widgets() { return forceDirectedWidgets() }
 
   get handlers() {
     return {

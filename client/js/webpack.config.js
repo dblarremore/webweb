@@ -4,7 +4,7 @@ module.exports = {
       fs: 'empty'
   },
   mode: 'development',
-  entry: './webweb.v6.js',
+  entry: './webweb.js',
   output: {
     path: __dirname,
     filename: 'webweb.bundle.js',

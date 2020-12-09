@@ -14,7 +14,11 @@ export class Network {
       'Adjacency Matrix': AdjacencyMatrixVisualization,
     }
   }
-  constructor(networkData, globalData, settings, menu, canvas) {
+  constructor(networkData, global, menu, canvas) {
+    this.global = global
+    this.menu = menu
+    this.canvas = canvas
+
     // if there are no layers, put things into layers
     this.rawLayers = networkData.layers || [{
       'edgeList' : networkData.edgeList,
@@ -25,12 +29,10 @@ export class Network {
 
     this.layers = new Array(this.rawLayers.length)
 
-    this.settingsHandler = this.makeSettingsHandler(settings)
-    this.makeSettingsHandler(settings)
-
-    this.global = globalData
-    this.menu = menu
-    this.canvas = canvas
+    // TODO
+    // we should later slurp in `network` settings here
+    // and apply them so there's 'inherited' settings
+    this.settingsHandler = this.makeSettingsHandler(this.global.settings)
   }
 
   makeSettingsHandler(settings) {
@@ -41,68 +43,65 @@ export class Network {
       definitions,
       settings,
       utils.getCallHandler(this.handlers),
+      this.menu,
     )
   }
 
   get handlers() {
     return {
-      'change-layer': settings => this.displayLayer(settings),
-      'change-visualization': settings => this.displayVisualization(settings),
+      'change-layer': settings => this.displayLayer(settings.layer),
+      'change-visualization': settings => this.displayVisualization(settings.plotType),
     }
   }
 
-  getLayer(settings) {
-    const layerIndex = settings.layer
+  get layer() {
+    const layerIndex = this.settingsHandler.settings.layer
+
     if (this.layers[layerIndex] === undefined) {
       const rawLayer = this.rawLayers[layerIndex]
-      this.layers[layerIndex] = new Layer(
-        rawLayer.edgeList,
-        rawLayer.nodes, rawLayer.metadata,
-        this.global.nodes, this.global.metadata,
-      )
+      this.layers[layerIndex] = new Layer(this.rawLayers[layerIndex], this.global)
     }
+
     return this.layers[layerIndex]
   }
 
-  displayLayer(settings) {
+  displayLayer(layer) {
     // when we start displaying, default the layer to 0 unless it's specified
-    if (settings.layer === undefined || settings.layer < 0 || this.layers.length < settings.layer - 1) {
-      settings.layer = 0
+    if (layer === undefined || layer < 0 || this.layers.length < layer - 1) {
+      layer = 0
     }
 
-    this.settingsHandler.updateSettings(settings)
-
-    this.menu.addWidgets(this.settingsHandler.widgets)
-
-    this.displayVisualization(this.settingsHandler.settings)
+    this.settingsHandler.settings.layer = layer
+    this.settingsHandler.updateSettings(this.settingsHandler.settings)
+    this.displayVisualization(this.settingsHandler.settings.plotType)
   }
 
-  displayVisualization(settings) {
+  displayVisualization(plotType) {
+    this.settingsHandler.plotType = plotType
+
     if (this.visualization !== undefined) {
-      this.settings = this.visualization.settingsHandler.removeFromSettingsAndMenu(settings, menu)
+      this.settingsHandler.settings = this.visualization.settingsHandler.remove(
+        this.settingsHandler.settings
+    )
       this.nodePositions = this.visualization.nodePositions
     }
 
-    this.visualization = this.settings.plotType
-    this.visualization.redraw(this.settings)
+    this.visualization = plotType
+    this.visualization.redraw(this.settingsHandler.settings)
   }
 
-  get visualization() {
-    return this._visualization
-  }
-
+  get visualization() { return this._visualization }
   set visualization(plotType) {
     if (plotType === undefined) {
       this._visualization = undefined
     }
     else {
       const VisualizationConstructor = this.visualizationTypes[plotType]
-
       this._visualization = new VisualizationConstructor(
-        this.settings,
+        this.global.settings,
         this.menu,
         this.canvas,
-        this.getLayer(settings),
+        this.layer,
         this.nodePositions,
       )
 
@@ -113,7 +112,6 @@ export class Network {
   }
 
   get nodePositions() { return this._nodePositions }
-
   set nodePositions(newNodePositions) {
     if (this._nodePositions == undefined) {
       this._nodePositions = {}

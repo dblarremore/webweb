@@ -9,6 +9,7 @@
 - widget removal
 - global listeners
 - add validators for settings
+- freeze nodes
 > - force diagram isn't dealing with undirected
 > - fix settings to not be gibberish
 >   - single place to define default + complex attributes

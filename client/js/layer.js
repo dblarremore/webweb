@@ -20,11 +20,9 @@ export class Layer {
     ]
   }
 
-  constructor(layerEdgeList, layerNodes, layerMetadata, globalNodes, globalMetadata) {
+  constructor(rawLayer={}, global={}) {
     [this.edges, this.undirectedEdges, this.nodes, this.metadataTypes] = this.constructor.regularize(
-      layerEdgeList,
-      layerNodes, layerMetadata,
-      globalNodes, globalMetadata
+      rawLayer, global
     )
 
     this.links = this.edges
@@ -39,10 +37,11 @@ export class Layer {
    * 
    *
    *********************************************************************************/
-  static regularize(layerEdgeList, layerNodes, layerMetadata, globalNodes, globalMetadata) {
-    let [directedEdges, undirectedEdges] = this.regularizeEdgeList(layerEdgeList)
-    let nodeDictionary = this.regularizeNodeDictionary(layerNodes, globalNodes)
-    let metadata = this.regularizeMetadata(layerMetadata, globalMetadata)
+  static regularize(rawLayer={}, global={}) {
+    let [directedEdges, undirectedEdges] = this.regularizeEdgeList(rawLayer.edgeList)
+
+    let nodeDictionary = this.regularizeNodeDictionary(rawLayer.nodes, global.nodes)
+    let metadata = this.regularizeMetadata(rawLayer.metadata, global.metadata)
 
     const nodeNames = this.getNodeNames(directedEdges, nodeDictionary, metadata)
 
@@ -86,6 +85,7 @@ export class Layer {
     let directedList = Object.values(directed).reduce((a, b) => a.concat(Object.values(b)), [])
 
     let undirectedList = Object.values(undirected).reduce((a, b) => a.concat(Object.values(b)), [])
+
     return [directedList, undirectedList]
   }
 

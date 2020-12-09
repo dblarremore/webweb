@@ -7,17 +7,11 @@ export class WebwebCanvas {
   get dragBoundary() { return 15 }
   get dpr() { return window.devicePixelRatio || 1}
 
-  constructor(settings, box) {
-    [this.width, this.height] = this.getDimensions(settings, box)
+  constructor(settings, clientWidth, box) {
+    [this.width, this.height] = this.getDimensions(settings, clientWidth)
 
     this.canvasWidth = this.width * this.dpr
     this.canvasHeight = this.height * this.dpr
-
-    this.HTMLClass = "webweb-vis-canvas"
-    this.HTML = this.getHTML()
-
-    this.boxClass = "webweb-visualization-container"
-    this.addToBox(box)
 
     this.context = this.HTML.getContext('2d')
     this.context.scale(this.dpr, this.dpr)
@@ -25,8 +19,8 @@ export class WebwebCanvas {
     this.addListeners(this.listeners)
   }
 
-  getDimensions(settings, box) {
-    let heuristic = box.clientWidth - 3 * 20
+  getDimensions(settings, clientWidth) {
+    let heuristic = clientWidth - 3 * 20
 
     if (heuristic <= 0) {
       heuristic = 1000
@@ -61,17 +55,20 @@ export class WebwebCanvas {
   }
 
   getListener(eventName) {
-    if (this.visualization !== undefined) {
-      const listeners = this.visualization.listeners
-
-      const visualizationListener = Object.keys(listeners).includes(eventName)
-        ? listeners[eventName]
-        : () => undefined
-    }
-
     return (event) => {
       this.setMouseState(event)
-      visualizationListener()
+
+      if (this.visualization !== undefined) {
+        const listeners = this.visualization.listeners
+
+        if (listeners !== undefined) {
+          const listener = listeners[eventName]
+
+          if (listener !== undefined) {
+            listener()
+          }
+        }
+      }
     }
   }
 
@@ -83,24 +80,30 @@ export class WebwebCanvas {
     }
   }
 
-  getHTML() {
-    let HTML = document.createElement("canvas")
-    HTML.classList.add(this.HTMLClass)
+  get HTML() {
+    if (this._HTML === undefined) {
 
-    HTML.style.width = this.width + "px"
-    HTML.style.height = this.height + "px"
+      this._HTML = document.createElement("canvas")
+      this._HTML.classList.add("webweb-vis-canvas")
 
-    HTML.width = this.canvasWidth
-    HTML.height = this.canvasHeight
+      this._HTML.style.width = this.width + "px"
+      this._HTML.style.height = this.height + "px"
 
-    return HTML
+      this._HTML.width = this.canvasWidth
+      this._HTML.height = this.canvasHeight
+    }
+
+    return this._HTML
   }
 
-  addToBox(box) {
-    let canvasBox = document.createElement("div")
-    canvasBox.classList.add(this.boxClass)
-    canvasBox.append(this.HTML)
-    box.append(canvasBox)
+  get container() {
+    if (this._container === undefined) {
+      this._container = document.createElement("div")
+      this._container.classList.add("webweb-visualization-container")
+      this._container.append(this.HTML)
+    }
+
+    return this._container
   }
 
   clear() {

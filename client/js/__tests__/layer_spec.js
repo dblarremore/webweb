@@ -283,7 +283,7 @@ describe("init tests", () => {
   })
 
   describe("edge input", () => {
-    let layer = new Layer(inEdges)
+    let layer = new Layer({'edgeList': inEdges})
 
     it("tests that edges work", () => {
       expect(layer.edges).toStrictEqual(outEdges)
@@ -291,19 +291,27 @@ describe("init tests", () => {
   })
 
   describe("node input", () => {
-    let layer = new Layer(inEdges, inNodes)
+    let layer = new Layer({
+      'edgeList': inEdges,
+      'nodes': inNodes,
+    })
 
     it("tests that nodes work", () => {
       expect(layer.nodes).toStrictEqual(outNodes)
     })
   })
+
   describe("metadata input", () => {
     const inMetadata = {
       'key': {
         'type': 'values'
       }
     }
-    let layer = new Layer(inEdges, inNodes, inMetadata)
+    let layer = new Layer({
+      'edgeList': inEdges,
+      'nodes': inNodes,
+      'metadata': inMetadata,
+    })
 
     it("tests that nodes work", () => {
       expect(layer.nodes).toStrictEqual(outNodes)

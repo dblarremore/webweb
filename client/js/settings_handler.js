@@ -3,9 +3,11 @@ import * as parameters from './parameters'
 import { NoneAttribute } from './attribute'
 
 export class SettingsHandler {
-  constructor(parameterDefinitions, settings, callHandler) {
+  constructor(parameterDefinitions, settings, callHandler, menu) {
+    this.menu = menu
     this.parameters = {}
     this.attributeParameters = {}
+
     Object.entries(parameterDefinitions).forEach(([key, definition]) => {
       if (AttributeParameterGroup.isType(definition)) {
         const group = new AttributeParameterGroup(key, settings, definition)
@@ -22,20 +24,27 @@ export class SettingsHandler {
 
     this.widgets.forEach(widget => widget.callHandler = callHandler)
 
+    if (this.menu !== undefined) {
+      this.menu.addWidgets(this.widgets)
+    }
+
     this.updateSettings(settings)
   }
 
-  removeFromSettingsAndMenu(settings, menu) {
-    menu.removeWidgets(this.widgets)
+  remove(settings) {
+    if (this.menu !== undefined) {
+      this.menu.removeWidgets(this.widgets)
+    }
     return this.undefaultSettings(settings)
   }
 
   undefaultSettings(settings) {
-    Object.values(this.parameters).forEach(parameter => {
-      if (parameter.defaultedSetting) {
-        settings[parameter.key] = undefined
-      }
-    })
+    Object.values(this.parameters).filter(
+      parameter => parameter.defaultedSetting
+    ).forEach(
+      parameter => settings[parameter.key] = undefined
+    )
+
     return settings
   }
 
@@ -47,8 +56,9 @@ export class SettingsHandler {
 
   updateSettings(settings) {
     Object.values(this.parameters).forEach(parameter => {
-      settings = parameter.dealiasSettings(settings)
+      settings = parameter.setParameterValue(settings)
     })
+
     this.settings = settings
     this.widgets.forEach(widget => widget.update(settings))
   }
@@ -77,27 +87,34 @@ export class Parameter {
       }
     }
 
+    settings = this.setParameterValue(settings)
+
     if (widgetClass) {
       definition.settingName = this.key
       this.widget = new widgetClass(settings, definition)
     }
   }
 
-  dealiasSettings(settings) {
-    let sawAlias = false
-    Object.keys(settings).forEach(key => {
-      if (this.aliases.has(key)) {
-        settings[this.key] = settings[key]
-        sawAlias = true
-        delete settings[key]
+  /*
+   * 1. Dealias the settings names. eg, if there is:
+   *    - 'colorBy' and not 'nodeColorAttribute'
+   *    - use 'colorBy' for 'nodeColorAttribute'
+  */
+  setParameterValue(settings) {
+    this.value = undefined
+
+    this.aliases.forEach(alias => {
+      if (settings[alias] !== undefined && this.value === undefined) {
+        this.value = settings[alias]
+        this.defaultedSetting = true
       }
     })
 
-    if (sawAlias === false && settings[this.key] === undefined) {
-      settings[this.key] = this.default
-      this.defaultedSetting = true
+    if (this.value === undefined) {
+      this.value = this.default
     }
 
+    settings[this.key] = this.value
     return settings
   }
 }
@@ -113,7 +130,6 @@ export class AttributeParameterGroup {
       "Attribute": {
         "default":"none",
         "visible": true,
-        // "displayWith": "Enabled",
         "widgetClass": widgets.SelectWidget,
       },
       "Palette": {
@@ -202,7 +218,6 @@ export class AttributeParameterGroup {
     //   - Range
     //   - Flip
     //   - Enabled
-
     const attributeOptions = this.getAttributeOptions(attributes)
     const [key, attributeClass, valuesGetter] = this.getActiveAttribute(attributeOptions, settings)
     this.values = valuesGetter(nodes, matrix, edges)

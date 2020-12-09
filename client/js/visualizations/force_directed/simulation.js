@@ -95,9 +95,7 @@ export class Simulation {
   }
 
   update(settings) { 
-    if (this.settings !== undefined) {
-      this.settings = settings
-    }
+    this.settings = settings
     let forcesToUpdate = Object.keys(this.forces)
 
     for (let [forceName, forceFunction] of Object.entries(this.forces)) {
@@ -108,7 +106,9 @@ export class Simulation {
       }
     }
 
-    this.simulation.alpha(1).restart()
+    if (! this.settings.freezeNodeMovement) {
+      this.simulation.alpha(1).restart()
+    }
   }
 
   freeze() {

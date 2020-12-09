@@ -220,3 +220,35 @@ export const ForceDirectedParameters = {
     "widgetClass": widgets.CheckboxWidget,
   },
 }
+
+// Adjacency Matrix?
+// "colorNodesBy": "none",
+// "nodeColorPalette": undefined,
+// "flipNodeColorScale": false,
+// "colorEdges": true,
+// "edgeColorPalette": undefined,
+// "flipEdgeColorScale": false,
+
+// "sortNodesBy": "out degree",
+// "sortNodes": 'descending',
+
+// so far these don't exist
+// "sizeNodesBy": "none",
+// "flipNodeSizeScale": false,
+// "nodeSizeScaleRange": [0.5, 1],
+// "nodesToShow": -1,
+//     'nodeColor': {
+//       'input': 'colorNodesBy',
+//       'flip': 'flipNodeColorScale',
+//       'colorPalette': 'nodeColorPalette',
+//       'type': 'color',
+//       'from': 'layer',
+//     },
+//     'edgeColor': {
+//       'flip': 'flipEdgeColorScale',
+//       'colorPalette': 'edgeColorPalette',
+//       'on': 'colorEdges',
+//       'from': 'visualization',
+//     },
+//   }
+// }

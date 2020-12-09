@@ -1,5 +1,4 @@
 import { AbstractVisualization } from './abstract_visualization'
-import { AdjacencyMatrixSettings } from './adjacency_matrix/settings'
 // import { chordDiagramWidgets } from './chord_diagram/widgets'
 // import * as svgUtils from '../svg_utils'
 import * as shapes from '../shapes'
@@ -8,7 +7,7 @@ import { Coloror } from '../coloror'
 import * as d3 from 'd3'
 
 export class AdjacencyMatrixVisualization extends AbstractVisualization {
-  static get settingsObject() { return AdjacencyMatrixSettings }
+  // static get settingsObject() { return AdjacencyMatrixSettings }
   // get widgets() { return chordDiagramWidgets() }
 
   get handlers() {

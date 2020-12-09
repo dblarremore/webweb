@@ -3,25 +3,22 @@ import { MenuParameters } from './parameters'
 import { SettingsHandler } from './settings_handler'
 
 export class Menu {
-  constructor(settings, box) {
+  constructor(settings) {
     this.settingHandler = new SettingsHandler(MenuParameters, settings)
-    this.HTML = this.makeHTML(this.settingHandler.settings, box)
 
     this.widgetsByKey = {}
     this.widgetSidesByKey = {}
     this.sides = {}
   }
 
-  makeHTML(settings, box) {
-    const HTML = document.createElement('div')
-    HTML.classList.add('webweb-menu')
-    HTML.style = 'display: flex;'
-
-    if (! settings.hideMenu) {
-      box.append(HTML)
+  get HTML() {
+    if (this._HTML === undefined) {
+      this._HTML = document.createElement('div')
+      this._HTML.classList.add('webweb-menu')
+      this._HTML.style = 'display: flex;'
     }
 
-    return HTML
+    return this._HTML
   }
 
   getSideElement(side) {

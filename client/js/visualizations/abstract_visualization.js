@@ -14,14 +14,14 @@ export class AbstractVisualization {
   get nodePositions() { return {} }
 
   constructor(settings, menu, canvas, layer, previousNodePositions) {
+    this.menu = menu
+
     this.settingsHandler = new SettingsHandler(
       this.ParameterDefinitions,
       settings,
-      utils.getCallHandler(this.handlers),
+      this.callHandler,
+      this.menu,
     )
-
-    this.menu = menu
-    this.menu.addWidgets(this.settingsHandler.widgets)
 
     this.layer = layer
     this.previousNodePositions = previousNodePositions || {}
@@ -33,6 +33,15 @@ export class AbstractVisualization {
     this.initialize()
     this.update()
   }
+
+  get callHandler() {
+    if (this._callHandler === undefined) {
+      this._callHandler = utils.getCallHandler(this.handlers)
+    }
+
+    return this._callHandler
+  }
+
 
   initialize() { return }
   update() { return }
