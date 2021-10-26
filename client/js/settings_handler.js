@@ -17,9 +17,11 @@ export class Controller {
   }
 
   removeParameterCollection(name) {
-    let collection = this.collections[name]
-    this.menu.removeWidgets(collection.widgets)
-    this.settings = collection.resetSettings()
+    if (this.collections[name] !== undefined) {
+      let collection = this.collections[name]
+      this.menu.removeWidgets(collection.widgets)
+      this.settings = collection.resetSettings()
+    }
   }
 }
 
@@ -48,7 +50,6 @@ export class ParameterCollection {
 
   resetSettings() {
     let settings = this.controller.settings
-    console.log(JSON.stringify(settings))
     Object.values(this.parameters).forEach(parameter => settings = parameter.resetParameterValue(settings))
     return settings
   }

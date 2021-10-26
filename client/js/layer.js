@@ -50,7 +50,7 @@ export class Layer {
     nodeNames.forEach((name, index) => {
       nameToIdMap[utils.safeNumberCast(name)] = index
       nameToIdMap[name] = index
-      nodes.push({ 'name': index })
+      nodes.push({'name': name})
     })
 
     // now we rename things and merge all the different data sources into a

@@ -51,9 +51,7 @@ export class Webweb {
     this.controller.canvas = new WebwebCanvas(this.controller, this.HTML.clientWidth)
     this.HTML.append(this.controller.canvas.container)
 
-    // listeners isn't going to work right now while we don't have the
-    // appropriate layersettings stuff
-    // this.listeners = new GlobalListeners(this.callHandler)
+    this.listeners = new GlobalListeners(this)
     this.displayNetwork(this.controller.settings.networkName)
   }
 
@@ -102,6 +100,7 @@ export class Webweb {
   displayNetwork(networkName) {
     this.controller.settings.networkName = networkName
     this.getNetwork(networkName).displayLayer(this.controller.settings.layer)
+    this.controller.collections['global'].updateSettings()
   }
 
   ////////////////////////////////////////////////////////////////////////////////

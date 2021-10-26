@@ -1,7 +1,7 @@
 export class GlobalListeners {
-  constructor(callHandler) {
+  constructor(webweb) {
     const _this = this
-    this.callHandler = callHandler
+    this.webweb = webweb
 
     const eventKeyCodeListeners = {
       'keydown': {
@@ -23,19 +23,19 @@ export class GlobalListeners {
         let keyCode = event.keyCode
         let listener = keyCodeToListener[keyCode]
         if (listener !== undefined) {
-            listener(_this.settings)
+            listener(_this.webweb.controller.settings)
         }
       })
     }
   }
 
   gotoPreviousNetworkListener(settings) {
-    let currentNetworkIndex = settings.networkNames.indexOf(settings.networkName)
+    let currentNetworkIndex = this.webweb.networkNames.indexOf(settings.networkName)
     this.switchToAdjacentNetwork(settings, currentNetworkIndex - 1)
   }
 
   gotoNextNetworkListener(settings) {
-    let currentNetworkIndex = settings.networkNames.indexOf(settings.networkName)
+    let currentNetworkIndex = this.webweb.networkNames.indexOf(settings.networkName)
     this.switchToAdjacentNetwork(settings, currentNetworkIndex + 1)
   }
 
@@ -43,44 +43,38 @@ export class GlobalListeners {
     if (networkIndex == undefined) {
       return
     }
-    if ((0 <= networkIndex) && (networkIndex < settings.networkNames.length)) {
-      settings.networkName = settings.networkNames[networkIndex]
-      this.callHandler('display-network', settings)
+    if ((0 <= networkIndex) && (networkIndex < this.webweb.networkNames.length)) {
+      settings.networkName = this.webweb.networkNames[networkIndex]
+      this.webweb.callHandler('display-network', settings)
     }
-  }
-  gotoNextLayerListener(settings) {
-    this.switchToAdjacentLayer(settings, settings.networkLayer + 1)
-  }
-  gotoPreviousLayerListener(settings) {
-    this.switchToAdjacentLayer(settings, settings.networkLayer - 1)
   }
 
-  switchToAdjacentLayer(settings, layerIndex) {
-    if (layerIndex === undefined) {
+  gotoNextLayerListener(settings) {
+    this.switchToAdjacentLayer(settings, settings.layer + 1)
+  }
+
+  gotoPreviousLayerListener(settings) {
+    this.switchToAdjacentLayer(settings, settings.layer - 1)
+  }
+
+  switchToAdjacentLayer(settings, layer) {
+    if (layer === undefined) {
       return
     }
-    const layerCount = settings.networkLayers[settings.networkName]
-    if ((0 <= layerIndex) && (layerIndex < layerCount)) {
-      settings.networkLayer = parseInt(layerIndex)
-      this.callHandler('display-network', settings)
-    }
-  }
-  addEventListeners() {
-    let _this = this
-    for (let [eventName, keyCodeToListener] of Object.entries(this.eventTokeyCodesToListeners)) {
-      window.addEventListener(eventName, (event) => {
-        let keyCode = event.keyCode
-        let listener = keyCodeToListener[keyCode]
-        if (listener !== undefined) {
-          listener(_this.settings, event)
-        }
-      })
+
+    const network = this.webweb.getNetwork(settings.networkName)
+    const layerCount = network.layers.length
+
+    if ((0 <= layer) && (layer < layerCount)) {
+      settings.layer = parseInt(layer)
+      this.webweb.callHandler('display-network', settings)
     }
   }
 }
-function playNetworkLayers() {
-  window.setTimeout(function() {
-    changeNetworkLayerListener({'keyCode' : 39})
-    playNetworkLayers()
-  }, 1000)
-}
+
+// function playNetworkLayers() {
+//   window.setTimeout(function() {
+//     changeNetworkLayerListener({'keyCode' : 39})
+//     playNetworkLayers()
+//   }, 1000)
+// }

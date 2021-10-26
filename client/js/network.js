@@ -37,12 +37,11 @@ export class Network {
     // we should later slurp in `network` settings here and apply them so
     // there's 'inherited' settings
     if (this.controller.collections['network'] !== undefined) {
-      return
+      this.controller.removeParameterCollection('network')
     }
 
     const definitions = NetworkParameters
     definitions.layer.options = [...Array(this.layers.length).keys()]
-
 
     this.controller.addParameterCollection(
       'network',
@@ -70,30 +69,39 @@ export class Network {
   }
 
   displayLayer(layer) {
-    // when we start displaying, default the layer to 0 unless it's specified
-    if (layer === undefined || layer < 0 || this.layers.length < layer - 1) {
-      layer = 0
-    }
-
-    this.controller.settings.layer = layer
-    this.controller.collections['network'].updateSettings()
+    this.controller.settings.layer = this.layerIsValid(layer) ? layer : 0
     this.displayVisualization(this.controller.settings.plotType)
   }
 
   displayVisualization(plotType) {
-    this.controller.plotType = plotType
+    this.controller.settings.plotType = plotType
+
+    this.controller.removeParameterCollection('visualization')
 
     if (this.visualization !== undefined) {
-      this.controller.removeParameterCollection('visualization')
       this.nodePositions = this.visualization.nodePositions
     }
 
-    const VisualizationConstructor = this.visualizationTypes[this.controller.plotType]
+    const VisualizationConstructor = this.visualizationTypes[this.controller.settings.plotType]
     this.visualization = new VisualizationConstructor(
       this.controller,
       this.layer,
       this.nodePositions,
     )
+
+    this.controller.collections['network'].updateSettings()
+  }
+
+  layerIsValid(layer) {
+    if (layer === undefined || ! utils.isInt(layer)) {
+      return false
+    }
+
+    if ((0 < layer) && (layer < this.layers.length)) {
+      return true
+    }
+
+    return false
   }
 
   get nodePositions() { return this._nodePositions }
