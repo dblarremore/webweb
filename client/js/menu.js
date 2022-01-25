@@ -28,13 +28,15 @@ export class Menu {
     return this.sides[side]
   }
 
-  addWidgets(widgets, callHandler) {
+  addWidgets(widgets, callHandler, widgetsToShowByKey) {
     widgets.forEach(widget => {
       widget.callHandler = callHandler
       const key = widget.settingName
       this.widgetsByKey[key] = widget
       this.widgetSidesByKey[key] = widget.side || "left"
     })
+
+    this.updateVisibilityFromSettings(widgetsToShowByKey)
     this.displayWidgets()
   }
 
@@ -45,6 +47,19 @@ export class Menu {
       delete this.widgetsByKey[key]
       delete this.widgetSidesByKey[key]
     })
+  }
+
+  updateVisibilityFromSettings(widgetsToShowByKey) {
+    Object.entries(this.widgetsByKey).forEach(([key, widget]) => {
+      widget.resetVisibilityFromSettings()
+    })
+
+    if (widgetsToShowByKey !== undefined) {
+      Object.entries(this.widgetsByKey).forEach(([key, widget]) => {
+        widget.visibilityFromSettings = widgetsToShowByKey.includes(key)
+        widget.setVisibility()
+      })
+    }
   }
 
   displayWidgets() {

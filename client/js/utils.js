@@ -112,3 +112,59 @@ export function roundup(x, dec) {
 export function zip(arr, ...arrs) {
   return arr.map((val, i) => arrs.reduce((a, arr) => [...a, arr[i]], [val]))
 }
+
+export function degreeToRadians(degree) {
+  return degree * (Math.PI / 180)
+}
+
+export function hexToRgb(hex) {
+  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null
+}
+
+export function isObject(value) {
+  return typeof one === 'object'
+}
+
+export function objectsAreDeepEqual(one, two) {
+  if ((! isObject(one)) || (! isObject(two))) {
+    return false
+  }
+
+  let keysInOne = []
+  for (let [key, val] of Object.entries(one)) {
+    if (! itemsAreDeepEqual(val, two[key])) {
+      return false
+    }
+
+    keysInOne.push(key)
+  }
+
+  for (let [key, value] of Object.entries(two)) {
+    if (keysInOne.includes(key)) {
+      continue
+    }
+
+    if (! itemsAreDeepEqual(val, one[key])) {
+      return false
+    }
+  }
+
+  return true
+}
+
+export function itemsAreDeepEqual(one, two) {
+  if (isObject(one) && isObject(two)) {
+    return objectsAreDeepEqual(one, two)
+  }
+  else if ((! isObject(one)) && (! isObject(two))) {
+    return one === two
+  }
+  else {
+    return false
+  }
+}

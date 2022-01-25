@@ -28,6 +28,8 @@ export class Layer {
     this.links = this.edges
     this.isWeighted = this.constructor.areEdgesWeighted(this.edges)
     this.isDirected = this.constructor.areEdgesDirected(this.edges)
+
+    this.edgeMetadata = this.makeEdgeMetadataLookup()
   }
 
   /*********************************************************************************
@@ -318,6 +320,21 @@ export class Layer {
     return matrix
   }
 
+  makeEdgeMetadataLookup(){
+    let edgeMetadata = {}
+
+    this.edges.forEach(edge => {
+      if (edgeMetadata[edge.source] === undefined) {
+        edgeMetadata[edge.source] = {}
+      }
+
+        edgeMetadata[edge.source][edge.target] = edge.metadata
+        edgeMetadata[edge.source][edge.target]['weight'] = edge.weight
+    })
+
+    return edgeMetadata
+  }
+
   /*********************************************************************************
    * 
    *
@@ -391,16 +408,20 @@ export class Layer {
         'getValues': (nodes, matrix, edges) => edges.map(edge => edge.weight),
       },
     }
-
+    
     Object.assign(
       attributes,
-      this.getElementMetadataAttributes(this.edges.map(edge => edge.metadata), this.metadataTypes)
+      this.getElementMetadataAttributes(this.edges.map(edge => edge.metadata), this.metadataTypes, true)
     )
+
+    if (attributes.mouseOverLabel !== undefined) {
+      delete attributes.mouseOverLabel
+    }
 
     return attributes
   }
 
-  getElementMetadataAttributes(metadataElements, metadataTypes={}) {
+  getElementMetadataAttributes(metadataElements, metadataTypes={}, edgeAttributes=false) {
     let metadataValues = {}
     metadataElements.forEach((element, index) => {
       const attributeKeys = utils.getObjectAttributeKeys(element, this.nonMetadataKeys)
@@ -420,9 +441,17 @@ export class Layer {
       const AttributeClass = this.getAttributeClassToAdd(key, values, metadataTypes[key])
 
       if (AttributeClass !== undefined) {
-        metadata[key] = {
-          'class': AttributeClass,
-          'getValues': (nodes, matrix) => Object.values(nodes).map(node => node[key]),
+        if (edgeAttributes) {
+          metadata[key] = {
+            'class': AttributeClass,
+            'getValues': (nodes, matrix, edges) => Object.values(edges).map(edge => edge['metadata'][key]),
+          }
+        }
+        else {
+          metadata[key] = {
+            'class': AttributeClass,
+            'getValues': (nodes, matrix) => Object.values(nodes).map(node => node[key]),
+          }
         }
       }
     })

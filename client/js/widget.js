@@ -6,6 +6,7 @@ export class Widget {
   get elementDisplay() { return this.inline ? 'inline' : 'block' }
   get events() { return ['change'] }
   get defaults() { return {} }
+  get forceInvisible() { return false }
 
   constructor(settings, properties={}) {
     this.settings = settings
@@ -33,17 +34,39 @@ export class Widget {
     return this.displayWith || this.settingName
   }
 
-  set visible(value) { this._value = value }
+  set visible(value) { this._visibility = value }
   get visible() { 
-    if (this._value === undefined) {
-      this._value = true
+    if (this._visibility === undefined) {
+      this._visibility = true
     }
 
-    return this._value
+    return this._visibility
   }
 
+  set visibilityFromSettings(value) {
+    this._visibilityFromSettings = value
+  }
+  get visibilityFromSettings() { 
+    if (this._visibilityFromSettings === undefined) {
+      this.resetVisibilityFromSettings()
+    }
+
+    return this._visibilityFromSettings
+  }
+
+  resetVisibilityFromSettings() { this.visibilityFromSettings = 'none'}
+
+  /*
+   * if we have a defined visibilityFromSettings, use that.
+   * Otherwise, use the widgets's own understanding of when it should be visible
+  */
   setVisibility() {
-    const visible = this.alwaysVisible ? true : this.visible
+    let visible = this.visibilityFromSettings === 'none'
+      ? this.alwaysVisible ? true : this.visible
+      : this.visibilityFromSettings
+
+    visible = this.forceInvisible ? false : visible
+      
     this.container.style.display = visible ? this.elementDisplay : 'none'
   }
 
@@ -116,6 +139,29 @@ export class Widget {
 
   change(value) { this.syncTo(value) }
   input(value) { this.syncTo(value) }
+}
+
+export class InformationWidget extends Widget {
+  get forceInvisible() { return this.SettingValue === undefined }
+
+  update(settings) {
+    this.settings = settings
+    this.syncTo(this.SettingValue)
+
+    this.container.style['font-size'] = this.settings.preambleTextFontSize
+
+    this.setVisibility()
+  }
+
+  get HTML() {
+    if (this._HTML === undefined) {
+      this._HTML = document.createElement('p')
+    }
+
+    return this._HTML
+  }
+
+  set HTMLValue(value) { this.HTML.innerHTML = value === undefined ? '' : value }
 }
 
 export class CheckboxWidget extends Widget {

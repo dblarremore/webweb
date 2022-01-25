@@ -1,6 +1,12 @@
 import * as widgets from './widget'
 
 export const GlobalParameters = {
+  "preamble": {
+    "widgetClass": widgets.InformationWidget,
+  },
+  "preambleTextFontSize": {
+    "default": 16,
+  },
   "networkName": {
     "text": "Display data from ",
     "setHandler": "display-network",
@@ -45,7 +51,9 @@ export const NetworkParameters = {
     "displayWith": "networkName",
     "setHandler": 'change-layer',
   },
-  "showLegend":    { "default": true, },
+  "showLegend": {
+    "default": true,
+  },
   "plotType": {
     'text': "Visualization type ",
     "widgetClass": widgets.SelectWidget,
@@ -104,6 +112,21 @@ export const ChordDiagramParameters = {
     "Range": true,
     "Flip": true,
     "Palette": true
+  },
+  "chordDiagramRadiusFraction": {
+    "default": .75,
+    "visible": false,
+    "widgetClass": widgets.Widget,
+  },
+  "chordDiagramPadAngle": {
+    "default": .015,
+    "visible": false,
+    "widgetClass": widgets.Widget,
+  },
+  "chordDiagramRingDepth": {
+    "default": .03,
+    "visible": false,
+    "widgetClass": widgets.Widget,
   },
 }
 

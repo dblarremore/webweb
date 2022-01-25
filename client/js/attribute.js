@@ -15,7 +15,8 @@ import * as d3 from 'd3'
  *    - slapping them onto the nodes
 ********************************************************************************/
 export class Attribute {
-  get colororClass() { return coloror.MultiHueColoror }
+  // get colororClass() { return coloror.MultiHueColoror }
+  get colororClass() { return coloror.AllPalettesColorer }
   get hasLegend() { return true }
 
   static get displays() { return new Set(['scalar', 'color']) }
@@ -96,8 +97,9 @@ export class Attribute {
     return this.scale(this.transformValue(value))
   }
 
-  getColorValue(value) {
-    return d3.rgb(this.coloror.color(this.getNumericalValue(value)))
+  getColorValue(value, scale=true) {
+    let newValue = scale ? this.getNumericalValue(value) : value
+    return d3.rgb(this.coloror.color(newValue))
   }
 
   getNodeNumericalValue(node) {
@@ -166,7 +168,8 @@ export class ScalarAttribute extends Attribute {
 
   static isType() { return true }
 
-  get colororClass() { return coloror.SingleHueColoror }
+  // get colororClass() { return coloror.SingleHueColoror }
+  get colororClass() { return coloror.AllPalettesColorer }
 
   setScale() {
     this.scale = d3.scaleLinear()
@@ -180,7 +183,8 @@ export class ScalarAttribute extends Attribute {
 }
 
 export class DivergingScalarAttribute extends ScalarAttribute {
-  get colororClass() { return coloror.DiveringColoror }
+  get colororClass() { return coloror.AllPalettesColorer }
+  // get colororClass() { return coloror.DivergingColoror }
 }
 
 export class BinaryAttribute extends Attribute {

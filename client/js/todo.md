@@ -1,7 +1,6 @@
 # Performance:
 > - don't initialize attributes
 > - don't initialize layers
-- require cursor to pause before evaluating chord diagram overlay
 
 # bugs/outstanding:
 > - listener removal (I think)
@@ -31,13 +30,13 @@
   - naming network types
 - visualizations:
   - chord diagram:
-    - edge attributes
+    - flip is broken (only for some?)
+    - hide chordDiagramCircleAnnotationLabels when text is too near
     - legend
-    - settings:
-      - radiuses
-      - spacers
-    - hover events
-      - state edge weights
-      - hide other edges when over-overed
-      - only highlight edges when nodes
-    - reverse is broken (only for some?)
+    - settings, in %s, with defaults:
+      - radiuses (chordDiagramRadius)
+      - spacers (chordDiagramPadAngle)
+    - maybe swap canvases for faster performance
+- documentation:
+  - widgetsToShowByKey
+  - edge labeling

@@ -1,14 +1,15 @@
 import * as d3 from 'd3'
 import { CanvasParameters } from './parameters'
+import * as shapes from './shapes'
 
 export class WebwebCanvas {
   get padding() { return 3 }
   get dragBoundary() { return 15 }
   get dpr() { return window.devicePixelRatio || 1}
 
-  constructor(controller, clientWidth) {
+  constructor(controller, clientWidth, clientHeight, menuHeight) {
     this.controller = controller
-    this.setDimensions(clientWidth)
+    this.setDimensions(clientWidth, clientHeight, menuHeight)
 
     this.canvasWidth = this.width * this.dpr
     this.canvasHeight = this.height * this.dpr
@@ -19,15 +20,12 @@ export class WebwebCanvas {
     this.addListeners(this.listeners)
   }
 
-  setDimensions(clientWidth) {
-    let heuristic = clientWidth - 3 * 20
+  setDimensions(clientWidth, clientHeight, menuHeight) {
+    const availableHeight = clientHeight - menuHeight
 
-    if (heuristic <= 0) {
-      heuristic = 1000
-    }
-
-    const widthDefault = Math.min(heuristic, 1000)
-    const heightDefault = Math.min(widthDefault, 600)
+    // const widthDefault = Math.min(clientWidth, availableHeight)
+    const widthDefault = clientWidth
+    const heightDefault = availableHeight
 
     CanvasParameters.width.default = widthDefault
     CanvasParameters.height.default = heightDefault
@@ -123,31 +121,80 @@ export class WebwebCanvas {
     this.draw()
   }
 
+  resetObjectsToDraw() {
+    this.objectsByDrawProperties = undefined
+    this.pathsByDrawProperties = undefined
+  }
+
   draw() {
-    let objectsByDrawProperties = {}
-    let pathsByDrawProperties = {}
+    if (this.elementsToDrawByDrawProperties === undefined) {
+      this.organizeElementsToDraw()
+    }
+
+    for (let [key, objects] of Object.entries(this.elementsToDrawByDrawProperties.objects)) {
+      objects[0].setCanvasContextProperties(this.context)
+      objects.forEach(object => object.write(this.context))
+      this.context.fill(this.elementsToDrawByDrawProperties.paths[key])
+      this.context.stroke(this.elementsToDrawByDrawProperties.paths[key])
+    }
+
+    if (this.saveState) {
+      this.savePreviousElementsToDrawByDrawProperties()
+    }
+
+    // reset the objects to draw afterward so that the default behavior is to recalculate what to draw
+    this.elementsToDrawByDrawProperties = undefined
+    this.saveState = false
+  }
+
+  savePreviousElementsToDrawByDrawProperties() {
+    this.previousElementsToDrawByDrawProperties = {
+      'objects': {},
+      'paths': this.elementsToDrawByDrawProperties.paths,
+    }
+
+    for (let [key, objects] of Object.entries(this.elementsToDrawByDrawProperties.objects)) {
+      let deepCopiedObjects = []
+      for (let object of objects) {
+        let newObjectClass = shapes.getClassForInstanceOfClass(object)
+
+        let constructorArgs = []
+        newObjectClass.constructorArgs.forEach(key => constructorArgs.push(object[key]))
+
+        let newObject = new newObjectClass(...constructorArgs)
+
+        for (let [_key, _val] of Object.entries(object)) {
+          newObject[_key] = _val
+        }
+
+        deepCopiedObjects.push(newObject)
+      }
+
+      this.previousElementsToDrawByDrawProperties.objects[key] = deepCopiedObjects
+    }
+  }
+
+  organizeElementsToDraw() {
+    this.elementsToDrawByDrawProperties = {
+      'objects': {},
+      'paths': {}
+    }
+
     for (let object of this.visualization.objectsToDraw) {
       const propertyKey = object.stringifiedDrawProperties
-      if (objectsByDrawProperties[propertyKey] === undefined) {
-        objectsByDrawProperties[propertyKey] = []
+      if (this.elementsToDrawByDrawProperties.objects[propertyKey] === undefined) {
+        this.elementsToDrawByDrawProperties.objects[propertyKey] = []
       }
       
-      objectsByDrawProperties[propertyKey].push(object)
+      this.elementsToDrawByDrawProperties.objects[propertyKey].push(object)
 
-      if (pathsByDrawProperties[propertyKey] === undefined) {
-        pathsByDrawProperties[propertyKey] = new Path2D()
+      if (this.elementsToDrawByDrawProperties.paths[propertyKey] === undefined) {
+        this.elementsToDrawByDrawProperties.paths[propertyKey] = new Path2D()
       }
 
       if (object.path) {
-        pathsByDrawProperties[propertyKey].addPath(object.path)
+        this.elementsToDrawByDrawProperties.paths[propertyKey].addPath(object.path)
       }
-    }
-
-    for (let [key, objects] of Object.entries(objectsByDrawProperties)) {
-      objects[0].setCanvasContextProperties(this.context)
-      objects.forEach(object => object.write(this.context))
-      this.context.fill(pathsByDrawProperties[key])
-      this.context.stroke(pathsByDrawProperties[key])
     }
   }
 

@@ -2,6 +2,7 @@ import * as widgets from './widget'
 import * as parameters from './parameters'
 import { NoneAttribute } from './attribute'
 import { Menu } from './menu'
+import { WebwebCanvas } from './canvas'
 
 export class Controller {
   constructor(settings) {
@@ -13,7 +14,7 @@ export class Controller {
   addParameterCollection(name, definitions, callHandler) {
     let collection = new ParameterCollection(definitions, this)
     this.collections[name] = collection
-    this.menu.addWidgets(collection.widgets, callHandler)
+    this.menu.addWidgets(collection.widgets, callHandler, this.settings.widgetsToShowByKey)
   }
 
   removeParameterCollection(name) {
@@ -22,6 +23,24 @@ export class Controller {
       this.menu.removeWidgets(collection.widgets)
       this.settings = collection.resetSettings()
     }
+  }
+
+  get canvas() {
+    // update visibility before drawing canvas to get as much screen real estate as possible
+    this.menu.updateVisibilityFromSettings(this.widgetsToShowByKey)
+
+    if (this._canvas === undefined) {
+      this._canvas = new WebwebCanvas(
+        this,
+        this.HTML.clientWidth,
+        this.HTML.clientHeight,
+        this.menu.HTML.clientHeight,
+      )
+
+      this.HTML.append(this._canvas.container)
+    }
+
+    return this._canvas
   }
 }
 
@@ -237,8 +256,10 @@ export class AttributeParameterGroup {
     const matrix = layer.matrix
     const edges = layer.edges
     const attributeOptions = this.getAttributeOptions(attributes)
+
     const [key, attributeClass, valuesGetter] = this.getActiveAttribute(attributeOptions, settings)
     this.values = valuesGetter(nodes, matrix, edges)
+
     this.attribute = new attributeClass(key, this.values)
 
     let showWidget = this.widgetsEnabled(settings)

@@ -1,6 +1,23 @@
 import * as svgUtils from './svg_utils'
 import * as d3 from 'd3'
 
+export function getClassForInstanceOfClass(instance) {
+  const prototypeToClass = {
+    'Circle': Circle,
+    'Path': Path,
+    'Rectangle': Rectangle,
+    'Line': Line,
+    'Text': Text,
+  }
+
+  const instanceClassName = Object.getPrototypeOf(instance).constructor.name
+
+  const instanceClass = prototypeToClass[instanceClassName]
+
+  return instanceClass
+
+}
+
 class Shape {
   translate(x, y) {
     this.x += x
@@ -17,12 +34,13 @@ class Shape {
   get stringifiedDrawProperties() {
     let string = ""
     for (let property of this.drawProperties.sort()) {
-      if (string.length) {
-        string += '-'
+      if (this[property] !== undefined) {
+        if (string.length) {
+          string += '-'
+        }
+
+        string += this[property].toString()
       }
-      const str = this[property] !== undefined ? this[property].toString() : undefined
-      string += str
-      // string += this[property].toString()
     }
     return string
   }
@@ -65,6 +83,8 @@ class Shape {
 export class Circle extends Shape {
   get drawProperties() { return ['outline', 'color'] }
 
+  static get constructorArgs() { return ['x', 'y', 'radius', 'outline', 'color'] }
+
   constructor(x, y, radius, outline, color) {
     super()
     this.x = x
@@ -87,6 +107,8 @@ export class Circle extends Shape {
 
 export class Line extends Shape {
   get drawProperties() { return ['outline', 'width', 'opacity'] }
+
+  static get constructorArgs() { return ['x1', 'y1', 'x2', 'y2', 'width', 'opacity', 'color'] }
 
   constructor(x1, y1, x2, y2, width, opacity, color) {
     super()
@@ -125,6 +147,8 @@ export class Line extends Shape {
 export class Rectangle extends Shape {
   get drawProperties() { return ['outline', 'color', 'opacity'] }
 
+  static get constructorArgs() { return ['x', 'y', 'width', 'height', 'opacity', 'color', 'outline'] }
+
   constructor(x, y, width, height, opacity, color, outline) {
     super()
     this.x = x
@@ -143,6 +167,14 @@ export class Rectangle extends Shape {
     this.path.rect(this.x, this.y, this.width, this.height)
   }
 
+  get x2() {
+    return this.x + this.width
+  }
+
+  get y2() {
+    return this.y + this.height
+  }
+
   get svg() {
     console.log('not implemented yet')
     // return svgUtils.drawLine(
@@ -153,15 +185,19 @@ export class Rectangle extends Shape {
 }
 
 export class Text extends Shape {
-  get drawProperties() { return ['color', 'font'] }
+  get drawProperties() { return ['color', 'font', 'rotate'] }
 
-  constructor(value, x, y, font='12px', align='left', color='black') {
+  static get constructorArgs() { return ['value', 'x', 'y', 'font', 'align', 'color', 'rotate', 'baseline'] }
+
+  constructor(value, x, y, font='12px', align='left', color='black', rotate=0, baseline='middle') {
     super()
     this.value = value
     this.color = color
     this.x = x
     this.y = y
     this.font = font
+    this.rotate = rotate
+    this.textBaseline = baseline
   }
 
   write(context) {
@@ -179,7 +215,26 @@ export class Text extends Shape {
       context.textBaseline = this.textBaseline
     }
 
-    context.fillText(this.value, this.x, this.y)
+    context.font = this.font + ' Arial'
+
+    if (this.rotate) {
+      context.save()
+      context.translate(this.x, this.y)
+      context.rotate(this.rotate)
+      this.writeOverMultipleLines(context, 0, 0)
+      context.restore()
+    }
+    else {
+      this.writeOverMultipleLines(context, this.x, this.y)
+    }
+  }
+
+  writeOverMultipleLines(context, x, y) {
+    const segments = this.value.split('\n')
+
+    Object.entries(segments).forEach(([i, segment]) => {
+      context.fillText(segment, x, y + (i * parseInt(this.font.replace('px', ''))))
+    })
   }
 
   get svg() {
@@ -190,6 +245,9 @@ export class Text extends Shape {
 export class Path extends Shape {
   get pathSamples() { return 200 }
   get drawProperties() { return ['color', 'outline', 'opacity'] }
+
+  static get constructorArgs() { return ['pathstring', 'color', 'opacity', 'outline'] }
+
   constructor(pathString, color, opacity, outline) {
     super()
     this.pathString = pathString

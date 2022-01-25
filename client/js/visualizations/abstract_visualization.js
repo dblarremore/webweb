@@ -13,7 +13,6 @@ export class AbstractVisualization {
   get nodePositions() { return {} }
 
   constructor(controller, layer, previousNodePositions) {
-  // constructor(settings, menu, canvas, layer, previousNodePositions) {
     this.controller = controller
     this.controller.addParameterCollection(
       'visualization',
@@ -69,6 +68,7 @@ export class AbstractVisualization {
   redraw(settings) {
     this.controller.settings = settings
     this.controller.collections['visualization'].updateSettings()
+    this.controller.canvas.resetObjectsToDraw()
     this.update()
     this.controller.canvas.redraw()
   }

@@ -10,7 +10,6 @@
 
 import { GlobalListeners } from './listeners'
 import { Network } from './network'
-import { WebwebCanvas } from './canvas'
 import * as utils from './utils'
 import { GlobalParameters } from './parameters'
 import { Controller } from './settings_handler'
@@ -29,7 +28,7 @@ export class Webweb {
     this.raw = webwebData
     this.title = this.raw.title || 'webweb'
     this.networkNames = Object.keys(this.raw.networks) || ['webweb']
-    this.networks = {}
+    this.network = undefined
     this.global = {
       'nodes': this.raw.display.nodes,
       'metadata': this.raw.display.metadata,
@@ -37,6 +36,7 @@ export class Webweb {
     }
 
     this.controller = new Controller(this.global.settings)
+    this.controller.HTML = this.HTML
 
     // Parameter Collection
     const definitions = GlobalParameters
@@ -47,9 +47,6 @@ export class Webweb {
     if (! this.controller.settings.hideMenu) {
       this.HTML.append(this.controller.menu.HTML)
     }
-
-    this.controller.canvas = new WebwebCanvas(this.controller, this.HTML.clientWidth)
-    this.HTML.append(this.controller.canvas.container)
 
     this.listeners = new GlobalListeners(this)
     this.displayNetwork(this.controller.settings.networkName)
@@ -86,15 +83,15 @@ export class Webweb {
   }
 
   getNetwork(name) {
-    if (this.networks[name] === undefined) {
-      this.networks[name] = new Network(
-        this.raw.networks[name],
-        this.global,
-        this.controller,
-      )
-    }
+    delete this.network
 
-    return this.networks[name]
+    this.network = new Network(
+      this.raw.networks[name],
+      this.global,
+      this.controller,
+    )
+
+    return this.network
   }
 
   displayNetwork(networkName) {

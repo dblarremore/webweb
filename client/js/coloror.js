@@ -37,7 +37,56 @@ export class NoneColoror extends Coloror {
   }
 }
 
-export class DiveringColoror extends Coloror {
+export class AllPalettesColorer extends Coloror {
+  static get palettes() {
+    return [
+      // Divering
+      "BrBG",
+      "PRGn",
+      "PiYG",
+      "PuOr",
+      "RdBu",
+      "RdGy",
+      "RdYlBu",
+      "RdYlGn",
+      "Spectral",
+      // Sequential
+      "BuGn",
+      "BuPu",
+      "GnBu",
+      "OrRd",
+      "PuBuGn",
+      "PuBu",
+      "PuRd",
+      "RdPu",
+      "YlGnBu",
+      "YlGn",
+      "YlOrBr",
+      "YlOrRd",
+      // SingleHue
+      "Blues",
+      "Greens",
+      "Greys",
+      "Oranges",
+      "Purples",
+      "Reds",
+      // Multihue
+      "Viridis",
+      "Inferno",
+      "Magma",
+      "Plasma",
+      "Warm",
+      "Cool",
+      "Rainbow",
+      "CubehelixDefault",
+      // Cyclical
+      'Rainbow',
+      'Sinebow',
+    ]
+  }
+}
+
+export class DivergingColoror extends Coloror {
   static get palettes() {
     return [
       "BrBG",

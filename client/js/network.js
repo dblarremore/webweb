@@ -71,6 +71,7 @@ export class Network {
   displayLayer(layer) {
     this.controller.settings.layer = this.layerIsValid(layer) ? layer : 0
     this.displayVisualization(this.controller.settings.plotType)
+    this.controller.menu.updateVisibilityFromSettings(this.controller.settings.widgetsToShowByKey)
   }
 
   displayVisualization(plotType) {
