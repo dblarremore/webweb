@@ -540,14 +540,11 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       edge.outline.opacity = edge.opacity
 
       if ((this.focalNode === undefined) && (this.edgesToDraw.length > 1000)) {
+        console.log("hacking edge opacity")
         if (edge.weight === 1) {
           edge.outline.opacity = edge.opacity * .5
         }
       }
-
-      // edge.outline.opacity = edge.opacity
-      // edge.outline = 
-      // edge.outline = edge.outline.darker().hex()
     })
 
 

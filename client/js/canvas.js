@@ -2,6 +2,15 @@ import * as d3 from 'd3'
 import { CanvasParameters } from './parameters'
 import * as shapes from './shapes'
 
+/*
+  * how to implement canvas saving?
+  *
+  * client side experience:
+  * 1. on draw, save canvas with a key
+  * 2. on new draw, draw on new canvas
+  * 3. on some later draw, be able to draw on saved canvas
+  * */
+
 export class WebwebCanvas {
   get padding() { return 3 }
   get dragBoundary() { return 15 }
@@ -23,7 +32,6 @@ export class WebwebCanvas {
   setDimensions(clientWidth, clientHeight, menuHeight) {
     const availableHeight = clientHeight - menuHeight
 
-    // const widthDefault = Math.min(clientWidth, availableHeight)
     const widthDefault = clientWidth
     const heightDefault = availableHeight
 

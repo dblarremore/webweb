@@ -32,6 +32,14 @@ export class Network {
     this.makeParameters()
   }
 
+  get callHandler() {
+    if (this._callHandler === undefined) {
+      this._callHandler = utils.getCallHandler(this.handlers)
+    }
+
+    return this._callHandler
+  }
+
   makeParameters(settings) {
     // TODO
     // we should later slurp in `network` settings here and apply them so
@@ -46,7 +54,7 @@ export class Network {
     this.controller.addParameterCollection(
       'network',
       definitions,
-      utils.getCallHandler(this.handlers),
+      this.callHandler,
     )
   }
 
@@ -59,7 +67,6 @@ export class Network {
 
   get layer() {
     const layerIndex = this.controller.settings.layer
-
     if (this.layers[layerIndex] === undefined) {
       const rawLayer = this.rawLayers[layerIndex]
       this.layers[layerIndex] = new Layer(this.rawLayers[layerIndex], this.global)
@@ -69,6 +76,7 @@ export class Network {
   }
 
   displayLayer(layer) {
+    layer = parseInt(layer)
     this.controller.settings.layer = this.layerIsValid(layer) ? layer : 0
     this.displayVisualization(this.controller.settings.plotType)
     this.controller.menu.updateVisibilityFromSettings(this.controller.settings.widgetsToShowByKey)

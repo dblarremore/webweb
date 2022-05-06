@@ -427,12 +427,17 @@ class Network(dict):
 
     @staticmethod
     def get_adjacency_type(adjacency):
+        """
+        we use a dumb heuristic here:
+        if the length of the list is the same as the length of the first
+        element in the list, it's a matrix
+
+        things are also only an adjacency if all elements in the first element are the same type
+        """
         if len(adjacency) and len(adjacency) > 3:
-            # we use a dumb heuristic here:
-            # if the length of the list is the same as the length of the first
-            # element in the list, it's a matrix
             if len(adjacency) == len(adjacency[0]):
-                return "matrix"
+                if len({type(a) for a in adjacency[0]}) == 1:
+                    return "matrix"
 
         return 'list'
 
