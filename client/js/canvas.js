@@ -14,22 +14,20 @@ import * as shapes from './shapes'
 export class WebwebCanvas {
   get padding() { return 3 }
   get dragBoundary() { return 15 }
-  get dpr() { return window.devicePixelRatio || 1}
+  get dpr() { return window.devicePixelRatio || 1 }
+  get defaultCanvasKey() { return 'primaryCanvas' }
 
   constructor(controller, clientWidth, clientHeight, menuHeight) {
     this.controller = controller
-    this.setDimensions(clientWidth, clientHeight, menuHeight)
+    this.defineDimensions(clientWidth, clientHeight, menuHeight)
 
-    this.canvasWidth = this.width * this.dpr
-    this.canvasHeight = this.height * this.dpr
+    this.initializeCanvases()
+    // this.canvases = {}
 
-    this.context = this.HTML.getContext('2d')
-    this.context.scale(this.dpr, this.dpr)
-
-    this.addListeners(this.listeners)
+    // this.addListeners(this.HTML)
   }
 
-  setDimensions(clientWidth, clientHeight, menuHeight) {
+  defineDimensions(clientWidth, clientHeight, menuHeight) {
     const availableHeight = clientHeight - menuHeight
 
     const widthDefault = clientWidth
@@ -49,6 +47,12 @@ export class WebwebCanvas {
 
   get yTranslate() { return this._yTranslate || 0 }
   set yTranslate(value) { this._yTranslate = value }
+
+  get canvasWidthHTML() { return this.width + "px" }
+  get canvasHeightHTML() { return this.height + "px" }
+
+  get canvasWidth() { return this.width * this.dpr }
+  get canvasHeight() { return this.height * this.dpr }
 
   setTranslation(x=0, y=0) {
     this.xTranslate = x
@@ -89,44 +93,126 @@ export class WebwebCanvas {
     }
   }
 
-  get HTML() {
-    if (this._HTML === undefined) {
+  // get HTML() {
+  //   if (this._HTML === undefined) {
+  //     this._HTML = this.makeCanvas()
+  //   }
 
-      this._HTML = document.createElement("canvas")
-      this._HTML.classList.add("webweb-vis-canvas")
+  //   return this._HTML
+  // }
 
-      this._HTML.style.width = this.width + "px"
-      this._HTML.style.height = this.height + "px"
+  initializeCanvases() {
+    this.canvases = {}
+    this.canvases[this.defaultCanvasKey] = this.makeCanvas(this.defaultCanvasKey)
+    this.setActiveCanvas()
+  }
 
-      this._HTML.width = this.canvasWidth
-      this._HTML.height = this.canvasHeight
+  setActiveCanvas(key) {
+    if (key === undefined) {
+      key = this.defaultCanvasKey
     }
 
-    return this._HTML
+    if (this.canvases[key] === undefined) {
+      this.canvases[key] = this.makeCanvas(key)
+    }
+
+    if ((this.activeCanvasKey === undefined) || (this.activeCanvasKey !== key)) {
+      this.activeCanvas = this.canvases[key]
+      this.addListeners(this.activeCanvas)
+
+      this.context = this.activeCanvas.getContext("2d")
+      this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      this.context.translate(this.xTranslate, this.yTranslate)
+
+      this.activeCanvas.style.display = 'block'
+
+      Object.entries(this.canvases).forEach(([canvasKey, canvas]) => {
+        if (canvasKey !== key) {
+          this.removeListeners(canvas)
+
+          canvas.style.display = 'none'
+        }
+      })
+
+      this.activeCanvasKey = key
+    }
+  }
+
+  clearCanvases() {
+      Object.entries(this.canvases).forEach(([key, canvas]) => {
+        if (key !== this.defaultCanvasKey) {
+          delete this.canvases[key]
+        }
+      })
+  }
+
+  canvasId(key) {
+    if (key === undefined) {
+      key = this.defaultCanvasKey
+    }
+
+    return "webweb-vis-canvas-" + key
+  }
+
+  makeCanvas(key) {
+    const canvas = document.createElement("canvas")
+    canvas.classList.add("webweb-vis-canvas")
+    canvas.id = this.canvasId(key)
+
+    canvas.style.display = 'none'
+
+    canvas.style.width = this.canvasWidthHTML
+    canvas.style.height = this.canvasHeightHTML
+
+    canvas.width = this.canvasWidth
+    canvas.height = this.canvasHeight
+
+    // the below may fuck things up hard
+    this.xTranslate = this.width / 2
+    this.yTranslate = this.height / 2
+    // canvas.getContext('2d').translate(this.xTranslate, this.yTranslate)
+    // the above may fuck things up hard
+
+    canvas.getContext('2d').scale(this.dpr, this.dpr)
+
+    this.container.append(canvas)
+
+    return canvas
   }
 
   get container() {
     if (this._container === undefined) {
       this._container = document.createElement("div")
       this._container.classList.add("webweb-visualization-container")
-      this._container.append(this.HTML)
+      // this._container.append(this.HTML)
     }
 
     return this._container
   }
 
-  clear() {
+  clear(canvasKey) {
+    this.setActiveCanvas(canvasKey)
+
     this.context.save()
     this.context.setTransform(1, 0, 0, 1, 0, 0)
-    this.context.clearRect(0, 0, this.HTML.width, this.HTML.height)
+    this.context.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
     this.context.fillStyle = 'white'
-    this.context.fillRect(0, 0, this.HTML.width, this.HTML.height)
+    this.context.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
     this.context.restore()
   }
 
-  redraw() {
-    this.clear()
-    this.draw()
+  redraw(canvasKey) {
+    this.clear(canvasKey)
+    this.draw(canvasKey)
+  }
+
+  restoreCanvasKey(canvasKey) {
+    let shouldDraw = this.canvases[canvasKey] === undefined
+    this.setActiveCanvas(canvasKey)
+
+    if (shouldDraw) {
+      this.draw(canvasKey)
+    }
   }
 
   resetObjectsToDraw() {
@@ -134,76 +220,74 @@ export class WebwebCanvas {
     this.pathsByDrawProperties = undefined
   }
 
-  draw() {
-    if (this.elementsToDrawByDrawProperties === undefined) {
-      this.organizeElementsToDraw()
-    }
+  draw(canvasKey) {
+    this.setActiveCanvas(canvasKey)
 
-    for (let [key, objects] of Object.entries(this.elementsToDrawByDrawProperties.objects)) {
-      objects[0].setCanvasContextProperties(this.context)
-      objects.forEach(object => object.write(this.context))
-      this.context.fill(this.elementsToDrawByDrawProperties.paths[key])
-      this.context.stroke(this.elementsToDrawByDrawProperties.paths[key])
-    }
+    const objectsByZorder = this.sortElementsByZorder()
+    const zorders = [... new Set(Object.keys(objectsByZorder))].sort((a, b) => parseInt(a) - parseInt(b))
 
-    if (this.saveState) {
-      this.savePreviousElementsToDrawByDrawProperties()
-    }
+    for (let zorder of zorders) {
+      let elementsToDrawByDrawProperties = this.organizeElementsToDraw(objectsByZorder[zorder])
 
-    // reset the objects to draw afterward so that the default behavior is to recalculate what to draw
-    this.elementsToDrawByDrawProperties = undefined
-    this.saveState = false
-  }
-
-  savePreviousElementsToDrawByDrawProperties() {
-    this.previousElementsToDrawByDrawProperties = {
-      'objects': {},
-      'paths': this.elementsToDrawByDrawProperties.paths,
-    }
-
-    for (let [key, objects] of Object.entries(this.elementsToDrawByDrawProperties.objects)) {
-      let deepCopiedObjects = []
-      for (let object of objects) {
-        let newObjectClass = shapes.getClassForInstanceOfClass(object)
-
-        let constructorArgs = []
-        newObjectClass.constructorArgs.forEach(key => constructorArgs.push(object[key]))
-
-        let newObject = new newObjectClass(...constructorArgs)
-
-        for (let [_key, _val] of Object.entries(object)) {
-          newObject[_key] = _val
-        }
-
-        deepCopiedObjects.push(newObject)
+      for (let [key, objects] of Object.entries(elementsToDrawByDrawProperties.objects)) {
+        objects[0].setCanvasContextProperties(this.context)
+        objects.forEach(object => object.write(this.context))
+        this.context.fill(elementsToDrawByDrawProperties.paths[key])
+        this.context.stroke(elementsToDrawByDrawProperties.paths[key])
       }
-
-      this.previousElementsToDrawByDrawProperties.objects[key] = deepCopiedObjects
     }
   }
 
-  organizeElementsToDraw() {
-    this.elementsToDrawByDrawProperties = {
+  /*
+   * Here's the order:
+   * 1. text is always last (this is done implicitly by using -1 as the highest zorder)
+   * 2. then go by zorder (higher zorder = drawn later)
+    * */
+  sortElementsByZorder() {
+    let objectsByZorder = {}
+
+    let maxZorder = -1
+
+    for (let object of this.visualization.objectsToDraw) {
+      let zorder = object.zorder
+      maxZorder = Math.max(zorder, maxZorder)
+
+      if (objectsByZorder[zorder] === undefined) {
+        objectsByZorder[zorder] = []
+      }
+      objectsByZorder[zorder].push(object)
+    }
+  
+    objectsByZorder[maxZorder] = objectsByZorder[-1]
+    delete objectsByZorder[-1]
+
+    return objectsByZorder
+  }
+
+  organizeElementsToDraw(objects) {
+    let elementsToDrawByDrawProperties = {
       'objects': {},
       'paths': {}
     }
 
-    for (let object of this.visualization.objectsToDraw) {
+    for (let object of objects) {
       const propertyKey = object.stringifiedDrawProperties
-      if (this.elementsToDrawByDrawProperties.objects[propertyKey] === undefined) {
-        this.elementsToDrawByDrawProperties.objects[propertyKey] = []
+      if (elementsToDrawByDrawProperties.objects[propertyKey] === undefined) {
+        elementsToDrawByDrawProperties.objects[propertyKey] = []
       }
       
-      this.elementsToDrawByDrawProperties.objects[propertyKey].push(object)
+      elementsToDrawByDrawProperties.objects[propertyKey].push(object)
 
-      if (this.elementsToDrawByDrawProperties.paths[propertyKey] === undefined) {
-        this.elementsToDrawByDrawProperties.paths[propertyKey] = new Path2D()
+      if (elementsToDrawByDrawProperties.paths[propertyKey] === undefined) {
+        elementsToDrawByDrawProperties.paths[propertyKey] = new Path2D()
       }
 
       if (object.path) {
-        this.elementsToDrawByDrawProperties.paths[propertyKey].addPath(object.path)
+        elementsToDrawByDrawProperties.paths[propertyKey].addPath(object.path)
       }
     }
+
+    return elementsToDrawByDrawProperties
   }
 
   isPointInPath(path, x, y) {
@@ -221,7 +305,8 @@ export class WebwebCanvas {
   }
 
   setMouseState(event) {
-    let box = this.HTML.getBoundingClientRect()
+    let box = this.activeCanvas.getBoundingClientRect()
+    // let box = this.HTML.getBoundingClientRect()
     let date = new Date()
     this.mouseState = {
       x: event.clientX - box.left - this.padding - this.xTranslate,
@@ -249,15 +334,15 @@ export class WebwebCanvas {
     return false
   }
 
-  addListeners(listeners) {
-    for (let [event, eventFunction] of Object.entries(listeners)) {
-      this.HTML.addEventListener(event, eventFunction)
+  addListeners(canvas) {
+    for (let [event, eventFunction] of Object.entries(this.listeners)) {
+      canvas.addEventListener(event, eventFunction)
     }
   }
 
-  removeListeners(listeners) {
-    for (let [event, eventFunction] of Object.entries(listeners)) {
-      this.HTML.removeEventListener(event, eventFunction)
+  removeListeners(canvas) {
+    for (let [event, eventFunction] of Object.entries(this.listeners)) {
+      canvas.removeEventListener(event, eventFunction)
     }
   }
 }

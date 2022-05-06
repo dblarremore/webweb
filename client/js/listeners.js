@@ -2,6 +2,7 @@ export class GlobalListeners {
   constructor(webweb) {
     const _this = this
     this.webweb = webweb
+    this.settings = this.webweb.controller.settings
 
     const eventKeyCodeListeners = {
       'keydown': {
@@ -12,9 +13,11 @@ export class GlobalListeners {
         40: (settings) => _this.gotoNextNetworkListener(settings),
         // binds the left/right arrow keys to change layers
         // left arrow
-        37: (settings) => _this.gotoPreviousLayerListener(settings),
+        39: (settings) => _this.switchToAdjacentLayer(settings, _this.previousLayer),
         // right arrow
-        39: (settings) => _this.gotoNextLayerListener(settings),
+        39: (settings) => _this.switchToAdjacentLayer(settings, _this.nextLayer),
+        // space
+        32: (settings) => _this.playNetworkLayers(settings),
       }
     }
 
@@ -39,6 +42,10 @@ export class GlobalListeners {
     this.switchToAdjacentNetwork(settings, currentNetworkIndex + 1)
   }
 
+  get currentLayer() { return this.webweb.controller.settings.layer }
+  get nextLayer() { return this.currentLayer + 1 }
+  get previousLayer() { return this.currentLayer - 1 }
+
   switchToAdjacentNetwork(settings, networkIndex) {
     if (networkIndex == undefined) {
       return
@@ -49,32 +56,20 @@ export class GlobalListeners {
     }
   }
 
-  gotoNextLayerListener(settings) {
-    this.switchToAdjacentLayer(settings, settings.layer + 1)
-  }
-
-  gotoPreviousLayerListener(settings) {
-    this.switchToAdjacentLayer(settings, settings.layer - 1)
-  }
-
   switchToAdjacentLayer(settings, layer) {
-    if (layer === undefined) {
-      return
+    if (this.webweb.getNetwork(settings.networkName).layerIsValid(layer)) {
+      settings.layer = layer
+      this.webweb.network.callHandler('change-layer', settings)
     }
+  }
 
-    const network = this.webweb.getNetwork(settings.networkName)
-    const layerCount = network.layers.length
-
-    if ((0 <= layer) && (layer < layerCount)) {
-      settings.layer = parseInt(layer)
-      this.webweb.callHandler('display-network', settings)
+  playNetworkLayers() {
+    if (this.webweb.network.layerIsValid(this.nextLayer)) {
+      window.setTimeout(() => {
+          this.switchToAdjacentLayer(this.webweb.controller.settings, this.nextLayer)
+          this.playNetworkLayers()
+      }, 1000)
     }
   }
 }
 
-// function playNetworkLayers() {
-//   window.setTimeout(function() {
-//     changeNetworkLayerListener({'keyCode' : 39})
-//     playNetworkLayers()
-//   }, 1000)
-// }

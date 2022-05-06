@@ -73,7 +73,7 @@ export class Webweb {
         'save-canvas': settings => {
           const link = document.createElement('a')
           link.download = settings.networkName + ".png"
-          link.href = this.controller.canvas.HTML.toDataURL()
+          link.href = this.controller.canvas.activeCanvas.toDataURL()
           link.click()
         }
       })

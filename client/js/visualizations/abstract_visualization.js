@@ -25,10 +25,6 @@ export class AbstractVisualization {
 
     this.controller.canvas.visualization = this
     this.controller.canvas.reset()
-    this.controller.canvas.setTranslation(
-      this.controller.canvas.width / 2,
-      this.controller.canvas.height / 2,
-    )
 
     this.initialize()
     this.update()

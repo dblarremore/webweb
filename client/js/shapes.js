@@ -83,15 +83,16 @@ class Shape {
 export class Circle extends Shape {
   get drawProperties() { return ['outline', 'color'] }
 
-  static get constructorArgs() { return ['x', 'y', 'radius', 'outline', 'color'] }
+  static get constructorArgs() { return ['x', 'y', 'radius', 'outline', 'color', 'zorder'] }
 
-  constructor(x, y, radius, outline, color) {
+  constructor(x, y, radius, outline, color, zorder) {
     super()
     this.x = x
     this.y = y
     this.radius = radius
     this.outline = outline
     this.color = color
+    this.zorder = zorder || 1
     this.makePath()
   }
 
@@ -108,9 +109,9 @@ export class Circle extends Shape {
 export class Line extends Shape {
   get drawProperties() { return ['outline', 'width', 'opacity'] }
 
-  static get constructorArgs() { return ['x1', 'y1', 'x2', 'y2', 'width', 'opacity', 'color'] }
+  static get constructorArgs() { return ['x1', 'y1', 'x2', 'y2', 'width', 'opacity', 'color', 'zorder'] }
 
-  constructor(x1, y1, x2, y2, width, opacity, color) {
+  constructor(x1, y1, x2, y2, width, opacity, color, zorder) {
     super()
     this.x1 = x1
     this.y1 = y1
@@ -119,6 +120,7 @@ export class Line extends Shape {
     this.width = width
     this.opacity = opacity
     this.outline = color
+    this.zorder = zorder || 1
     this.makePath()
   }
 
@@ -147,9 +149,9 @@ export class Line extends Shape {
 export class Rectangle extends Shape {
   get drawProperties() { return ['outline', 'color', 'opacity'] }
 
-  static get constructorArgs() { return ['x', 'y', 'width', 'height', 'opacity', 'color', 'outline'] }
+  static get constructorArgs() { return ['x', 'y', 'width', 'height', 'opacity', 'color', 'outline', 'zorder'] }
 
-  constructor(x, y, width, height, opacity, color, outline) {
+  constructor(x, y, width, height, opacity, color, outline, zorder) {
     super()
     this.x = x
     this.y = y
@@ -158,6 +160,7 @@ export class Rectangle extends Shape {
     this.opacity = opacity
     this.color = color
     this.outline = outline
+    this.zorder = zorder || 1
     this.makePath()
   }
 
@@ -187,9 +190,11 @@ export class Rectangle extends Shape {
 export class Text extends Shape {
   get drawProperties() { return ['color', 'font', 'rotate'] }
 
-  static get constructorArgs() { return ['value', 'x', 'y', 'font', 'align', 'color', 'rotate', 'baseline'] }
+  static get constructorArgs() {
+    return ['value', 'x', 'y', 'font', 'align', 'color', 'rotate', 'baseline', 'zorder']
+  }
 
-  constructor(value, x, y, font='12px', align='left', color='black', rotate=0, baseline='middle') {
+  constructor(value, x, y, font='12px', align='left', color='black', rotate=0, baseline='middle', zorder=-1) {
     super()
     this.value = value
     this.color = color
@@ -198,6 +203,7 @@ export class Text extends Shape {
     this.font = font
     this.rotate = rotate
     this.textBaseline = baseline
+    this.zorder = zorder || -1
   }
 
   write(context) {
@@ -246,14 +252,15 @@ export class Path extends Shape {
   get pathSamples() { return 200 }
   get drawProperties() { return ['color', 'outline', 'opacity'] }
 
-  static get constructorArgs() { return ['pathstring', 'color', 'opacity', 'outline'] }
+  static get constructorArgs() { return ['pathstring', 'color', 'opacity', 'outline', 'zorder'] }
 
-  constructor(pathString, color, opacity, outline) {
+  constructor(pathString, color, opacity, outline, zorder) {
     super()
     this.pathString = pathString
     this.color = color
     this.opacity = opacity
     this.outline = outline || d3.rgb(color).darker().hex()
+    this.zorder = zorder || 1
 
     this.makePath()
   }

@@ -12,6 +12,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   get directed() { return false }
   get weighted() { return true }
 
+  get randomEdgeZorderRange() { return 5 }
+
   get listeners() {
     return {
       "mousemove": event => this.mouseMoveEvent(),
@@ -58,6 +60,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
     this.resetFocusState()
     this.exteriorAnnotationLabels = this.defineExteriorAnnotationLabels()
+
+
   }
 
   defineObjectSettings() {
@@ -81,9 +85,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   }
 
   update() {
-    this.clearDefaultStateVisualizationElements()
-    console.log('maybe deleted default-case visualization data appropriately, but check')
-
     this.updateAttributeParameters()
     this.setVisualizationObjects()
 
@@ -206,6 +207,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
   setEdgesToDraw() {
     this.edgesToDraw = []
+    this.edgeZorders = []
 
     const attribute = this.controller.collections['visualization'].attributeParameters.edgeColor.attribute
 
@@ -227,6 +229,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       edge.weight = metadata.weight
 
       this.edgesToDraw.push(edge)
+
+      this.edgeZorders.push(Math.round(Math.random() * this.randomEdgeZorderRange))
     }
   }
 
@@ -285,30 +289,15 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   mouseMoveEvent() {
     this.setFocusedElements()
 
-    // if ((this.defaultState) && (this.defaultStateElements === undefined)) {
-    //   this.controller.canvas.saveState = true
-    // }
-    // if ((this.defaultState) && (this.defaultStateElements !== undefined)) {
-    //   this.controller.canvas.elementsToDrawByDrawProperties = this.defaultStateElements
-    // }
-    // else {
-    //   this.updateFocusedElements()
-    // }
     this.updateFocusedElements()
 
-    this.controller.canvas.redraw()
 
     if (this.defaultState) {
-      this.storeDefaultStateVisualizationElements()
+      this.controller.canvas.restoreCanvasKey('default-state')
     }
-  }
-
-  storeDefaultStateVisualizationElements() {
-    this.defaultStateElements = this.controller.canvas.previousElementsToDrawByDrawProperties
-  }
-
-  clearDefaultStateVisualizationElements() {
-    this.defaultStateElements = undefined
+    else {
+      this.controller.canvas.redraw()
+    }
   }
 
   resetFocusState() {
@@ -534,17 +523,19 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       this.textsToDraw.push(this.edgeText)
     }
 
-    this.edgesToDraw.forEach(edge => {
+    console.log("hacking edge opacity")
+    this.edgesToDraw.forEach((edge, i) => {
       edge.outline = edge.color
 
       edge.outline.opacity = edge.opacity
 
       if ((this.focalNode === undefined) && (this.edgesToDraw.length > 1000)) {
-        console.log("hacking edge opacity")
         if (edge.weight === 1) {
           edge.outline.opacity = edge.opacity * .5
         }
       }
+
+      edge.zorder = this.edgeZorders[i]
     })
 
 
