@@ -13,6 +13,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
   get weighted() { return true }
 
   get randomEdgeZorderRange() { return 5 }
+  get annotationHideThresholdDegrees () { return 2 }
 
   get listeners() {
     return {
@@ -500,10 +501,30 @@ export class ChordDiagramVisualization extends AbstractVisualization {
       ? this.opacities.default
       : this.opacities.fade
 
-    this.nodesToDraw.forEach(node => node.opacity = defaultNodeOpacity)
+    this.nodesToDraw.forEach(node => {
+      node.opacity = defaultNodeOpacity
+      node.zorder = 4
+    })
 
     if (this.focalNode !== undefined) {
       this.nodesToDraw[this.focalNode].opacity = this.opacities.focus
+
+      let [x, y] = this.nodeToCentroidMap[this.focalNode]
+      const degrees = Math.atan(y / x) * (180 / Math.PI)
+
+      let textsToDraw = []
+      Object.entries(this.nodeToCentroidMap).forEach(([i, [x, y]]) => {
+        let nodeDegrees = Math.atan(y / x) * (180 / Math.PI)
+
+        let farEnough = Math.abs(nodeDegrees - degrees) >= this.annotationHideThresholdDegrees
+
+        if (farEnough) {
+          textsToDraw.push(this.texts[i])
+        }
+      })
+
+      this.textsToDraw = textsToDraw
+      this.textsToDraw.push(this.texts[this.focalNode])
     }
 
     // edge drawing
