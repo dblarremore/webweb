@@ -56,6 +56,7 @@ export class Webweb {
     if (this._callHandler === undefined) {
       this._callHandler = utils.getCallHandler({
         'display-network': settings => this.displayNetwork(settings.networkName),
+        'save-canvas': settings => this.controller.canvas.saveCanvas(),
         'save-svg': () => {
           let svg = this.controller.canvas.svgDraw()
           const title = this.controller.settings.networkName
@@ -70,12 +71,6 @@ export class Webweb {
             alert("can't save :(")
           }
         },
-        'save-canvas': settings => {
-          const link = document.createElement('a')
-          link.download = settings.networkName + ".png"
-          link.href = this.controller.canvas.activeCanvas.toDataURL()
-          link.click()
-        }
       })
     }
 

@@ -36,7 +36,10 @@
     - settings, in %s, with defaults:
       - radiuses (chordDiagramRadius)
       - spacers (chordDiagramPadAngle)
-    - maybe swap canvases for faster performance
+      - chordDiagramFadeLowWeightEdgesWhenTooManyEdges
+      - chordDiagramTooManyEdgesThreshold
+      - chordDiagramTooManyEdgesWeightFadeThreshold
+    > - maybe swap canvases for faster performance
 - documentation:
   - widgetsToShowByKey
   - edge labeling

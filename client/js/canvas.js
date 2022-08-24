@@ -258,8 +258,10 @@ export class WebwebCanvas {
       objectsByZorder[zorder].push(object)
     }
   
-    objectsByZorder[maxZorder] = objectsByZorder[-1]
-    delete objectsByZorder[-1]
+    if (objectsByZorder[-1] !== undefined) {
+      objectsByZorder[maxZorder] = objectsByZorder[-1]
+      delete objectsByZorder[-1]
+    }
 
     return objectsByZorder
   }
@@ -344,5 +346,18 @@ export class WebwebCanvas {
     for (let [event, eventFunction] of Object.entries(this.listeners)) {
       canvas.removeEventListener(event, eventFunction)
     }
+  }
+
+  saveCanvas(url) {
+    if (url === undefined) {
+      url = this.controller.settings.networkName + '.png'
+    }
+
+    const link = document.createElement('a')
+    link.href = this.controller.canvas.activeCanvas.toDataURL()
+
+    link.download = url
+    
+    link.click()
   }
 }
