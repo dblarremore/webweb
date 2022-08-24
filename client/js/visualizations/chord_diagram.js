@@ -76,6 +76,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
         this.resetFocusState()
         this.exteriorAnnotationLabels = this.defineExteriorAnnotationLabels()
+
+        this.listen = true
     }
 
     defineObjectSettings() {
@@ -301,6 +303,10 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     * (for now we're not doing this, because of weird bugs)
     */
     mouseMoveEvent() {
+        if (! this.listen) {
+            return
+        }
+
         this.setFocusedElements()
 
         this.updateFocusedElements()
@@ -553,6 +559,9 @@ export class ChordDiagramVisualization extends AbstractVisualization {
             this.edgesToDraw[i].opacity = 0
         }
 
+        console.log("hungs")
+        console.log(this.edgesToDraw)
+
         if (this.focalEdge !== undefined) {
             this.edgesToDraw[this.focalEdge].opacity = this.opacities.focus
 
@@ -621,7 +630,6 @@ export class ChordDiagramVisualization extends AbstractVisualization {
     //         return
     //     }
     // }
-
 
     makeLegendElements() {
         this.legendTexts = []

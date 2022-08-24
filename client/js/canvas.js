@@ -18,10 +18,11 @@ export class WebwebCanvas {
   get defaultCanvasKey() { return 'primaryCanvas' }
 
   constructor(controller, clientWidth, clientHeight, menuHeight) {
-    this.controller = controller
-    this.defineDimensions(clientWidth, clientHeight, menuHeight)
+      this.controller = controller
+      this.defineDimensions(clientWidth, clientHeight, menuHeight)
 
-    this.initializeCanvases()
+      this.initializeCanvases()
+      this.listen = true
     // this.canvases = {}
 
     // this.addListeners(this.HTML)
@@ -68,21 +69,23 @@ export class WebwebCanvas {
   }
 
   getListener(eventName) {
-    return (event) => {
-      this.setMouseState(event)
+      return (event) => {
+          this.setMouseState(event)
 
-      if (this.visualization !== undefined) {
-        const listeners = this.visualization.listeners
+          if (this.visualization !== undefined) {
+              const listeners = this.visualization.listeners
 
-        if (listeners !== undefined) {
-          const listener = listeners[eventName]
+              if (listeners !== undefined) {
+                  const listener = listeners[eventName]
 
-          if (listener !== undefined) {
-            listener()
+                  if (listener !== undefined) {
+                      if (this.listen) {
+                          listener()
+                      }
+                  }
+              }
           }
-        }
       }
-    }
   }
 
   get listeners() {
@@ -337,9 +340,9 @@ export class WebwebCanvas {
   }
 
   addListeners(canvas) {
-    for (let [event, eventFunction] of Object.entries(this.listeners)) {
-      canvas.addEventListener(event, eventFunction)
-    }
+      for (let [event, eventFunction] of Object.entries(this.listeners)) {
+          canvas.addEventListener(event, eventFunction)
+      }
   }
 
   removeListeners(canvas) {

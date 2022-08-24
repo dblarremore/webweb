@@ -60,8 +60,6 @@ export class ParameterCollection {
                 })
             }
             else {
-                console.log(key)
-                console.log(definition)
                 this.parameters[key] = new Parameter(key, this.controller.settings, definition)
             }
         })
