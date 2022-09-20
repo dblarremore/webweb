@@ -91,6 +91,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
         const smallerDimension = Math.min(this.controller.canvas.width, this.controller.canvas.height)
         const maxRadius = smallerDimension / 2
 
+        objectSettings.radius.pad = ringDepth * maxRadius
         objectSettings.radius.inner = maxRadius * radiusFraction
         objectSettings.radius.outer = (ringDepth * maxRadius) + objectSettings.radius.inner
         objectSettings.radius.outside = (ringDepth * maxRadius) + objectSettings.radius.outer
@@ -247,6 +248,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
             this.edgesToDraw.push(edge)
 
             this.edgeZorders.push(Math.round(Math.random() * this.randomEdgeZorderRange))
+            // this.edgeZorders.push(i % 5)
         }
     }
 
@@ -559,15 +561,13 @@ export class ChordDiagramVisualization extends AbstractVisualization {
             this.edgesToDraw[i].opacity = 0
         }
 
-        console.log("hungs")
-        console.log(this.edgesToDraw)
-
         if (this.focalEdge !== undefined) {
             this.edgesToDraw[this.focalEdge].opacity = this.opacities.focus
 
             this.textsToDraw.push(this.edgeText)
         }
 
+        // console.log(this.edgeZorders)
         this.edgesToDraw.forEach((edge, i) => {
             edge.outline = edge.color
 
@@ -582,13 +582,12 @@ export class ChordDiagramVisualization extends AbstractVisualization {
             edge.zorder = this.edgeZorders[i]
         })
 
-
         if (this.exteriorAnnotationLabels.length) {
             this.textsToDraw = this.textsToDraw.concat(this.exteriorAnnotationLabels)
         }
 
         this.legendTexts.forEach(text => this.textsToDraw.push(text))
-        this.legendNodes.forEach(node => this.textsToDraw.push(node))
+        this.legendNodes.forEach(node => this.nodesToDraw.push(node))
     }
 
     get fadeLowWeightEdges() {
@@ -635,14 +634,14 @@ export class ChordDiagramVisualization extends AbstractVisualization {
         this.legendTexts = []
         this.legendNodes = []
 
-        const edgeLegendSettings = this.controller.settings.chordDiagramLegend
-        if (edgeLegendSettings === undefined) {
+        const legendSettings = this.controller.settings.chordDiagramLegend
+        if (legendSettings === undefined) {
             return
         }
 
-        let [xQuadrant, yQuadrant] = edgeLegendSettings.location === undefined
+        let [xQuadrant, yQuadrant] = legendSettings.location === undefined
             ? [-1, -1]
-            : edgeLegendSettings.location
+            : legendSettings.location
 
         const writeBottomToTop = yQuadrant === -1
         const writeRightToLeft = xQuadrant === 1
@@ -650,8 +649,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
         // invert the yQuadrant because we write things upside-down
         yQuadrant *= -1
 
-        const legendXPad = edgeLegendSettings.pad.x === undefined ? edgeLegendSettings.pad.x : 10
-        const legendYPad = edgeLegendSettings.pad.y === undefined ? edgeLegendSettings.pad.y : 10
+        const legendXPad = legendSettings.pad.x === undefined ? legendSettings.pad.x : 10
+        const legendYPad = legendSettings.pad.y === undefined ? legendSettings.pad.y : 10
 
         let xLocation = xQuadrant * (this.controller.canvas.width / 2)
         let yLocation = yQuadrant * (this.controller.canvas.height / 2)
@@ -661,10 +660,10 @@ export class ChordDiagramVisualization extends AbstractVisualization {
 
         const attribute = this.controller.collections['visualization'].attributeParameters.edgeColor.attribute
 
-        const data = edgeLegendSettings.data
+        const data = legendSettings.data
 
         const colorBoxToTextPad = 5
-        const legendItemVerticalPad = this.legendBoxHeight + 5
+        const legendItemVerticalPad = legendSettings.box.height + 5
 
         let yCoordinate = yLocation
 
@@ -675,11 +674,11 @@ export class ChordDiagramVisualization extends AbstractVisualization {
         }
 
         let colorBoxXCoordinate = xLocation
-        let textXCoordinate = colorBoxXCoordinate + this.legendBoxWidth + colorBoxToTextPad
+        let textXCoordinate = colorBoxXCoordinate + legendSettings.box.width + colorBoxToTextPad
         let textAlign = 'left'
 
         if (writeRightToLeft) {
-            colorBoxXCoordinate = xLocation - this.legendBoxWidth
+            colorBoxXCoordinate = xLocation - legendSettings.box.width
             textXCoordinate = colorBoxXCoordinate - colorBoxToTextPad
             textAlign = 'right'
         }
@@ -687,7 +686,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
         let legendLabelText = new shapes.Text(
             "chord colors",
             colorBoxXCoordinate,
-            yCoordinate + (this.legendBoxHeight / 2),
+            yCoordinate + (legendSettings.box.height / 2),
         )
 
         legendLabelText.textAlign = textAlign
@@ -702,8 +701,8 @@ export class ChordDiagramVisualization extends AbstractVisualization {
             let colorBox = new shapes.Rectangle(
                 colorBoxXCoordinate,
                 yCoordinate,
-                this.legendBoxWidth,
-                this.legendBoxHeight,
+                legendSettings.box.width,
+                legendSettings.box.height,
                 this.opacities.default,
                 color,
                 color,
@@ -712,7 +711,7 @@ export class ChordDiagramVisualization extends AbstractVisualization {
             let text = new shapes.Text(
                 legendItem.text,
                 textXCoordinate,
-                yCoordinate + (this.legendBoxHeight / 2),
+                yCoordinate + (legendSettings.box.height / 2),
             )
 
             text.textAlign = textAlign

@@ -94,13 +94,12 @@ export class Webweb {
         this.controller.settings.networkName = networkName
         this.getNetwork(networkName).displayLayer(this.controller.settings.layer)
         this.controller.collections['global'].updateSettings()
-        this.startTutorial()
     }
 
     startTutorial() {
+        this.controller.collections['global'].updateSettings()
         this.tutorial = new Tutorial(this)
     }
-
 
     ////////////////////////////////////////////////////////////////////////////////
     // HTML Manipulations
@@ -111,6 +110,7 @@ export class Webweb {
 
             if (HTMLParentElementId !== undefined) {
                 this._HTML = document.getElementById(HTMLParentElementId)
+                this._HTML.classList.add('webweb-center')
             }
             else {
                 this._HTML = document.createElement('div')

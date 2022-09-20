@@ -13,7 +13,7 @@ export class GlobalListeners {
         40: (settings) => _this.gotoNextNetworkListener(settings),
         // binds the left/right arrow keys to change layers
         // left arrow
-        39: (settings) => _this.switchToAdjacentLayer(settings, _this.previousLayer),
+        37: (settings) => _this.switchToAdjacentLayer(settings, _this.previousLayer),
         // right arrow
         39: (settings) => _this.switchToAdjacentLayer(settings, _this.nextLayer),
         // space
